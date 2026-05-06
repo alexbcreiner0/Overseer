@@ -1,11 +1,11 @@
 $ErrorActionPreference = "Stop"
 
-$AppName = "Modeling-Tools"
+$AppName = "Overseer"
 
 # User-specific locations outside the install directory
 $ConfigDir = Join-Path $env:APPDATA $AppName # evals to AppData/Roaming
 $CacheDir  = Join-Path $env:LOCALAPPDATA "$AppName\Cache"
-$ModelsDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Modeling-Tools"
+$ModelsDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Overseer"
 
 function Remove-IfExists {
     param([string]$Path)

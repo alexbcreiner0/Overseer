@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_data_files
 
 datas = []
-datas += collect_data_files('modeling_tools')
+datas += collect_data_files('overseer')
 datas += collect_data_files('scienceplots')
 
 
@@ -11,7 +11,7 @@ a = Analysis(
     pathex=['..\\..\\..\\src'],
     binaries=[],
     datas=datas,
-    hiddenimports=['modeling_tools.tools.log_formatter'],
+    hiddenimports=['overseer.tools.log_formatter'],
     hookspath=['.'],
     hooksconfig={},
     runtime_hooks=[],
@@ -37,7 +37,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['..\\..\\..\\src\\modeling_tools\\assets\\icon.ico'],
+    icon=['..\\..\\..\\src\\overseer\\assets\\icon.ico'],
 )
 coll = COLLECT(
     exe,

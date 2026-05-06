@@ -16,7 +16,7 @@ env = os.environ.copy()
 env["PYTHONPATH"] = str(SRC_DIR) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
 
 subprocess.Popen(
-    [str(PYTHON_EXE), "-m", "modeling_tools", *sys.argv[1:]],
+    [str(PYTHON_EXE), "-m", "overseer", *sys.argv[1:]],
     cwd=str(APP_ROOT),
     env=env,
 )

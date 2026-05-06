@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "modeling-tools"
-version = "2.0.0"
+name = "overseer"
+version = "1.0.0"
 description = "Model visualization and simulation tool"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,7 +23,7 @@ dependencies = [
 ]
 
 [project.scripts]
-modeling-tools = "modeling_tools.__main__:main"
+overseer = "overseer.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -33,7 +33,7 @@ include-package-data = true
 where = ["src"]
 
 [tool.setuptools.package-data]
-modeling_tools = [
+overseer = [
     "*",
     "assets/**/*",
     "defaults/**/*",

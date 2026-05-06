@@ -20,12 +20,12 @@ pyinstaller \
   --noconfirm \
   --windowed \
   --onedir \
-  --icon ../../../src/modeling_tools/assets/icon.icns \
+  --icon ../../../src/overseer/assets/icon.icns \
   --additional-hooks-dir=. \
-  --collect-data modeling_tools \
+  --collect-data overseer \
   --collect-data scienceplots \
   --collect-all mesa \
-  --hidden-import modeling_tools.tools.log_formatter \
+  --hidden-import overseer.tools.log_formatter \
   --paths ../../../src \
   --osx-bundle-identifier "$BUNDLE_ID" \
   --codesign-identity "$IDENTITY" \

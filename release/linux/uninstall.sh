@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="Modeling-Tools"
+APP_NAME="Overseer"
 APP_AUTHOR="Alex Creiner"
 
 INSTALL_ROOT="$HOME/.local/share/$APP_NAME"
-DESKTOP_FILE="$HOME/.local/share/applications/modeling-tools.desktop"
-ICON_FILE="$HOME/.local/share/icons/hicolor/256x256/apps/modeling-tools.png"
+DESKTOP_FILE="$HOME/.local/share/applications/overseer.desktop"
+ICON_FILE="$HOME/.local/share/icons/hicolor/256x256/apps/overseer.png"
 
 # These should match your Python-side defaults / platformdirs usage.
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/$APP_NAME"
@@ -14,7 +14,7 @@ DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/$APP_NAME"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/$APP_NAME"
 
 # Your user models location, based on your current design discussions.
-MODELS_DIR="$HOME/Documents/Modeling-Tools"
+MODELS_DIR="$HOME/Documents/Overseer"
 
 confirm() {
     local prompt="$1"

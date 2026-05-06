@@ -14,4 +14,4 @@ fi
 # UNCOMMENT FOR DEVELOPMENT
 # export PYTHONPATH="$INSTALL_ROOT/src/${PYTHONPATH:+:$PYTHONPATH}"
 
-exec "$VENV_PYTHON" -m modeling_tools "$@"
+exec "$VENV_PYTHON" -m overseer "$@"

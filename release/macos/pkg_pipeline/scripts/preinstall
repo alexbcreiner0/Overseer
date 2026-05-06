@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-LOG_FILE="/tmp/modeling-tools-preinstall.log"
+LOG_FILE="/tmp/overseer-preinstall.log"
 exec > "$LOG_FILE" 2>&1
 
 echo "preinstall started"
@@ -12,9 +12,9 @@ env | sort
 USER_NAME="$(stat -f%Su /dev/console)"
 USER_HOME="$(dscl . -read "/Users/$USER_NAME" NFSHomeDirectory | awk '{print $2}')"
 
-# rm -rf "/Applications/Modeling Tools.app"
+# rm -rf "/Applications/Overseer.app"
 
-APP_SUPPORT="/Library/Application Support/Modeling-Tools"
+APP_SUPPORT="/Library/Application Support/Overseer"
 
 if [ -d "$APP_SUPPORT/.venv" ]; then
     rm -rf "$APP_SUPPORT/.venv"

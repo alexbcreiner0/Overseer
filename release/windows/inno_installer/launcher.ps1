@@ -9,4 +9,4 @@ if (-not (Test-Path $PythonExe)) {
 }
 
 
-& $PythonExe -m modeling_tools @args
+& $PythonExe -m overseer @args

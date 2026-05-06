@@ -12,13 +12,13 @@ APP_IDENTITY="Developer ID Application: Alex Creiner (YJG3692G9D)"
 PKG_IDENTITY="Developer ID Installer: Alex Creiner (YJG3692G9D)"
 NOTARY_PROFILE="AC_PROFILE"
 
-UNSIGNED_PKG="$DIST_DIR/Modeling-Tools-unsigned.pkg"
-SIGNED_PKG="$DIST_DIR/Modeling-Tools.pkg"
+UNSIGNED_PKG="$DIST_DIR/Overseer-unsigned.pkg"
+SIGNED_PKG="$DIST_DIR/Overseer.pkg"
 
-APP_SUPPORT_DST="$PAYLOAD_DIR/Library/Application Support/Modeling-Tools"
-APP_BUNDLE_DST="$PAYLOAD_DIR/Applications/Modeling Tools.app"
+APP_SUPPORT_DST="$PAYLOAD_DIR/Library/Application Support/Overseer"
+APP_BUNDLE_DST="$PAYLOAD_DIR/Applications/Overseer.app"
 
-rm -rf "$PAYLOAD_DIR" "$DIST_DIR/ModelingTools.pkg"
+rm -rf "$PAYLOAD_DIR" "$DIST_DIR/Overseer.pkg"
 mkdir -p "$APP_SUPPORT_DST" "$PAYLOAD_DIR/Applications" "$DIST_DIR"
 
 # Copy project files
@@ -31,9 +31,9 @@ mkdir -p "$APP_BUNDLE_DST/Contents/MacOS"
 mkdir -p "$APP_BUNDLE_DST/Contents/Resources"
 
 cp "$MACOS_DIR/pkg_pipeline/app-template/Info.plist" "$APP_BUNDLE_DST/Contents/Info.plist"
-cp "$MACOS_DIR/pkg_pipeline/app-template/Modeling Tools" "$APP_BUNDLE_DST/Contents/MacOS/Modeling Tools"
-chmod +x "$APP_BUNDLE_DST/Contents/MacOS/Modeling Tools"
-cp "$ROOT/src/modeling_tools/assets/icon.icns" "$APP_BUNDLE_DST/Contents/Resources/AppIcon.icns"
+cp "$MACOS_DIR/pkg_pipeline/app-template/Overseer" "$APP_BUNDLE_DST/Contents/MacOS/Overseer"
+chmod +x "$APP_BUNDLE_DST/Contents/MacOS/Overseer"
+cp "$ROOT/src/overseer/assets/icon.icns" "$APP_BUNDLE_DST/Contents/Resources/AppIcon.icns"
 
 codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" "$APP_BUNDLE_DST"
 codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE_DST"
@@ -45,7 +45,7 @@ pkgbuild --analyze --root "$PAYLOAD_DIR" "$COMPONENT_PLIST"
 pkgbuild \
   --root "$PAYLOAD_DIR" \
   --scripts "$SCRIPTS_DIR" \
-  --identifier "edu.modeling-tools.installer" \
+  --identifier "edu.overseer.installer" \
   --component-plist "$COMPONENT_PLIST" \
   --version "1.0.0" \
   "$UNSIGNED_PKG"
