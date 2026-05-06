@@ -27,7 +27,12 @@ def put_latest(q, msg, stop_event):
             except py_queue.Empty:
                 pass
 
-def child_run(queue, run_id, module_path, func_name, params_path, params, stop_event, pause_event, sleep_value, yield_every):
+def child_run(
+        queue, run_id, module_path,
+        func_name, params_path, params,
+        stop_event, pause_event, sleep_value,
+        yield_every
+    ):
     try:
         mod = importlib.import_module(module_path)
         func = getattr(mod, func_name)
@@ -38,10 +43,10 @@ def child_run(queue, run_id, module_path, func_name, params_path, params, stop_e
         if inspect.isgenerator(result):
             iterator = result
         else:
-            traj, t = result
-            iterator = [(traj, t)]
+            # make it so we can iterate over
+            iterator = [result]
 
-        for i, (traj, t) in enumerate(iterator):
+        for i, output in enumerate(iterator):
             if stop_event.is_set():
                 break
 
@@ -55,7 +60,12 @@ def child_run(queue, run_id, module_path, func_name, params_path, params, stop_e
                 time.sleep(dt)
 
             if yield_every <= 1 or (i % yield_every) == 0:
-                if not put_latest(queue, (run_id, traj, t), stop_event):
+                if isinstance(output, tuple):
+                    payload = (run_id,)+output
+                else:
+                    payload = (run_id, output)
+
+                if not put_latest(queue, payload, stop_event):
                     break
                 # queue.put((run_id, traj, t))
 

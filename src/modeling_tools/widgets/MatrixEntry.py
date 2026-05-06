@@ -18,6 +18,7 @@ class MatrixEntry(qw.QWidget):
         root.setSpacing(0)
         self.name = name
         self.dim = dim
+        print(f"{dim=}")
         self._bulk_updating = False
         self._cell_timers = []
 
@@ -50,7 +51,10 @@ class MatrixEntry(qw.QWidget):
                 entry = qw.QLineEdit()
                 self.entries[i].append(entry)
                 matrix_layout.addWidget(entry, i, j)
-                entry.setText(str(initial[i][j]))
+                try:
+                    entry.setText(str(initial[i][j]))
+                except Exception:
+                    pass
 
                 timer = qc.QTimer(entry)
                 timer.setSingleShot(True)

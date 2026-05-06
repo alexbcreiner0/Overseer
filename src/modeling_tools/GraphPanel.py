@@ -105,7 +105,7 @@ class GraphPanel(qw.QWidget):
 
         # start an initial sim
         self._sim_run_id: int = 0
-        self.plot_slot(0,0, {}, slot_config= None)
+        self.plot_slot_from_scratch(0,0, {}, slot_config= None)
         self.dragging = False
 
         self.canvas.mpl_connect("button_press_event", self._on_press)
@@ -565,7 +565,6 @@ class GraphPanel(qw.QWidget):
     def _plot_on_axis(self, ax, slot_index, choice_name, traj, t, dropdown_choice, options):
         _, plots = self._choice_and_plots(dropdown_choice)
         # t = np.asarray(t)
-        t_base = np.asarray(t)
 
         for plot_name, plot_dict in plots.items():
             if not self._plot_enabled(plot_dict, options):
@@ -611,18 +610,18 @@ class GraphPanel(qw.QWidget):
                     raise KeyError(key)
 
                 y = np.asarray(traj[key])
-                shape = y.shape
                 # n = len(plot_dict.get("labels", [0]))
-
-                t_plot = t_base
+                t_base = np.asarray(traj.get("t")) if t is None else np.asarray(t)
+                print(f"{t_base=}")
                 alt_t_name = plot_dict.get("traj_key_x", None)
                 if alt_t_name is not None and alt_t_name in traj:
-                    t_plot = np.asarray(traj[alt_t_name])
+                    t_base = np.asarray(traj[alt_t_name])
+
                 if y.ndim == 1:
-                    tt, yy = self._safe_align_xy(t_plot, y)
+                    tt, yy = self._safe_align_xy(t_base, y)
                     self._plot_line_scalar(ax, slot_index, choice_name, plot_name, plot_dict, tt, yy)
                 else:
-                    tt = t_plot
+                    tt = t_base
                     Y = y
                     # if Y.shape[0] != len(t):
                     if Y.shape[0] != len(tt):
@@ -1273,9 +1272,12 @@ class GraphPanel(qw.QWidget):
         n = min(len(t), len(y))
         return t[:n], y[:n]
 
-    def plot_slot(self, slot_index, dropdown_choice, options, slot_config=None, source= "checkbox", load_idx_defaults= False, rescale_legend= False):
-        """ apply plots to a slot """
-        if self.traj is None or self.t is None:
+    def plot_slot_from_scratch(self, slot_index, dropdown_choice, options, slot_config=None, source= "checkbox", load_idx_defaults= False, rescale_legend= False):
+        """ 
+            Constructs plots 'from scratch', i.e. when GraphPanel anticipates presence
+            of artist GIDs that don't exist yet, and then registersthem
+        """
+        if self.traj is None:
             self.canvas.draw_idle()
             return
         if slot_index < 0 or slot_index >= len(self.axes):
@@ -1588,6 +1590,9 @@ class GraphPanel(qw.QWidget):
     # ----------------------------
 
     def _choice_name_from_index(self, dropdown_choice: int) -> str:
+        if self.data is None:
+            return ""
+
         if len(self.data.keys()) == 0:
             return ""
 
@@ -1628,6 +1633,9 @@ class GraphPanel(qw.QWidget):
           - histogram bars:       choice::plot::hist::patch::k
           - surfaces:             choice::plot::surface  
         """
+        if self.data is None:
+            return []
+
         if len(self.data.keys()) == 0:
             choice_name = None
             choice_dict = {}
@@ -1748,7 +1756,7 @@ class GraphPanel(qw.QWidget):
 
         return expected
 
-    def _ydata_for_gid(self, gid: str, traj: dict):
+    def _get_ydata_from_gid(self, gid: str, traj: dict):
         """Return y-data array for a given Line2D gid."""
         try:
             choice_name, plot_name, idx_s = gid.split("::")
@@ -1782,25 +1790,24 @@ class GraphPanel(qw.QWidget):
             return None
         return None
 
-    def _xdata_for_gid(self, gid, traj, t):
-        if t is None:
-            return None
-        
-        x_default = np.asarray(t)
-        _choice_name, _plot_name, plot_dict = self._get_spec_from_gid(gid)
+    def _get_xdata_from_gid(self, gid, traj, t):
+        overall_default = traj.get("t")
+        x_default = t
+
+        # x_default = np.asarray(t)
+        _, _, plot_dict = self._get_spec_from_gid(gid)
         if not plot_dict:
-            return x_default
+            return overall_default if x_default is None else x_default
 
         key_x = plot_dict.get("traj_key_x")
         if not key_x or key_x not in traj:
-            return x_default
+            return overall_default if x_default is None else x_default
 
         try:
-            x = np.asarray(traj[key_x])
+            x = traj[key_x]
+            return x
         except Exception:
-            return x_default
-
-        return x
+            return overall_default if x_default is None else x_default
 
     def _get_spec_from_gid(self, gid: str) -> tuple[str | None, str | None, dict | None]:
         """ Attempts to retrieve and return all the required plot info from a gid """
@@ -1828,11 +1835,22 @@ class GraphPanel(qw.QWidget):
         if "::hist::patch" in gid: return "patch"
         return "line"
 
-    def _update_line_artist(self, line, gid: str, t: np.ndarray, traj: dict, slot_index: int) -> None:
-        y = self._ydata_for_gid(gid, traj)
-        x = self._xdata_for_gid(gid, traj, t)
+    def _update_line_artist(self, line, gid: str, t: np.ndarray | None, traj: dict, slot_index: int) -> None:
+        y = self._get_ydata_from_gid(gid, traj)
+        x = self._get_xdata_from_gid(gid, traj, t)
+        if x is None:
+            logger.log(logging.ERROR, "No valid data found for x axis.")
+            self.status_bar.showMessage(f"Error! No x-axis plotting data found.", msecs= 4000)
+            return
         if y is None:
             return
+
+        # nothing should be a numpy array here, but just in case
+        # this is necessary to take slices
+        if isinstance(y, np.ndarray):
+            y = np.asarray(y)
+        if isinstance(x, np.ndarray):
+            x = np.asarray(x)
 
         y = np.asarray(y)
         n = min(len(x), len(y))
@@ -2366,14 +2384,14 @@ class GraphPanel(qw.QWidget):
 
         # if anything expected is missing, (re)draw it (potentially for first time)
         if not expected or set(current) != set(expected):
-            self.plot_slot(slot_index, dropdown_choice, options, slot_cfg)
+            self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
             return
 
         # otherwise, attempt to update the axes more conservatively without tearing everything down and redrawing it all
         # using more specialized methods
 
         # Update line data in-place 
-        t = np.asarray(self.t)
+        # t = np.asarray(self.t)
         ax = self.axes[slot_index]
 
         is_3d = hasattr(ax, "get_zlim")
@@ -2408,7 +2426,7 @@ class GraphPanel(qw.QWidget):
             kind = self._get_artist_type_from_gid(slot_index, gid)
             
             if kind == "line":
-                self._update_line_artist(artist, gid, t, self.traj, slot_index)
+                self._update_line_artist(artist, gid, self.t, self.traj, slot_index)
             
             elif kind == "collection":
                 if gid.endswith("::scatter"):
@@ -2611,6 +2629,6 @@ class GraphPanel(qw.QWidget):
             if not state:
                 continue
             dropdown_choice, options, slot_cfg = state
-            self.plot_slot(slot_index, dropdown_choice, options, slot_cfg)
+            self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
 
         self.canvas.draw_idle()

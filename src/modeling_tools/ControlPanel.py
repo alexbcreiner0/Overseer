@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 from PyQt6 import (
     QtCore as qc,
     QtWidgets as qw,
@@ -6,6 +9,7 @@ from PyQt6 import (
 import numpy as np
 from matplotlib import pyplot as plt
 from .widgets.SectionDivider import SectionDivider
+from .widgets.VScrollArea import VScrollArea
 from .widgets.EntryBlock import EntryBlock
 from .widgets.HelpButton import HelpButton
 from .widgets.LatexLabel import LatexLabel
@@ -14,18 +18,30 @@ from .widgets.MatrixEntry import MatrixEntry
 from .widgets.AxesControlWidget import AxesControlWidget
 from .widgets.SlotControlsWidget import SlotControlsWidget
 from dataclasses import asdict
-import math, importlib, inspect
-from typing import Dict
-# import scienceplots
-# plt.style.use(["grid", "notebook"])
+import importlib, inspect
 
-class VScrollArea(qw.QScrollArea):
-    def resizeEvent(self, a0):
-        super().resizeEvent(a0)
-        w = self.widget()
-        if w:
-            # Lock content width to the viewport width
-            w.setFixedWidth(self.viewport().width())
+### --- LAYOUT --- ###
+# ControlPanel <- QWidget with QVBoxLayout (outer_layout) [
+#   QTabWidget (content) [
+#       VScrollArea (sim_controls_scroll_area) [ 
+#           QWidget with VBoxLayout (sim_controls + sim_control_layout) [
+#               Plot control rows as defined in the model
+#           ]
+#       ]
+#       VScrollArea (plot_controls_scroll_area) [ 
+#           QWidget with QVBoxLayout (plot_controls + plot_control_layout) [
+#               QWidget with QVBoxLayout (preamble_controls + preamble_controls_lay) [
+#                   SectionDivider<"Overall Settings">
+#                   QHBoxLayout (spinner_row_lay) [
+#                       row and column spinners
+#                   ]
+#               ]
+#               QWidget with QVBoxLayout (plot_slot_controls + plot_slot_controls_lay) [
+#                 All of the other plot control stuff
+#               ]
+#           ]
+#       ] 
+# ]
 
 class ControlPanel(qw.QWidget):
     paramChanged = qc.pyqtSignal(str, object)
@@ -36,21 +52,148 @@ class ControlPanel(qw.QWidget):
     slotAxesCatChanged = qc.pyqtSignal(int)
     paramsReplaced = qc.pyqtSignal(object)
 
-    def __init__(self, params, dropdown_choices, dropdown_tooltips, panel_data, plotting_data, sim_model, demo, current_tab= 0, env= None):
-        # print(f"Loaded params: {asdict(params)}")
+    def __init__(
+            self, env, status_bar, params, 
+            dropdown_choices, dropdown_tooltips, 
+            panel_data, plotting_data, sim_model, 
+            demo, current_tab= 0
+    ):
         super().__init__()
-        self.params = params
         self.block_signals = True
+        self.params = params
         self.sim_model = sim_model
         self.plotting_data = plotting_data
+        self.dropdown_tooltips = dropdown_tooltips
         self.panel_data = panel_data if panel_data is not None else {}
         self.dropdown_choices = dropdown_choices
         self.demo = demo
-        # self.constructing = True
+        self.status_bar = status_bar
         self.env = env
 
-        self.content = qw.QTabWidget()
+        self.slot_dropdowns = []
+        self.slot_options = []
+        self.slot_axes_controls = []
+        self.slot_titles = {}
+        self.entry_blocks = {}
+        self.dropdowns = {}
+        self.row_wrappers = []
 
+        self.content = qw.QTabWidget()
+        outer_layout = qw.QVBoxLayout(self)
+        outer_layout.addWidget(self.content)
+        
+        sim_controls_scroll_area, plot_controls_scroll_area = self._build_scroll_areas()
+        self.content.addTab(sim_controls_scroll_area, "Simulation Controls")
+        self.content.addTab(plot_controls_scroll_area, "Plot Controls")
+
+        plot_controls = self._build_plot_controls_widget()
+        sim_controls = self._build_sim_controls_widget()
+
+        sim_controls_scroll_area.setWidget(sim_controls)
+        plot_controls_scroll_area.setWidget(plot_controls)
+
+        self.content.setCurrentIndex(current_tab)
+        self._meta_dependents = self._get_metadeps()
+
+        for i in range(len(self.slot_dropdowns)):
+            self.get_tooltip(i)
+
+        self.block_signals = False
+
+    def _build_sim_controls_widget(self):
+        sim_controls = qw.QWidget()
+        sim_controls.setSizePolicy(
+            qw.QSizePolicy.Policy.Expanding,
+            qw.QSizePolicy.Policy.Preferred   # or Expanding
+        )
+        sim_control_layout = qw.QVBoxLayout(sim_controls)
+        sim_control_layout.setContentsMargins(0, 0, 0, 0)
+        sim_control_layout.setSpacing(0)
+
+        self._build_sim_controls_from_data(self.panel_data)
+        for wrapper in self.row_wrappers:
+            sim_control_layout.addWidget(wrapper, alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
+        sim_control_layout.addStretch(1)
+
+        return sim_controls
+
+    def _build_sim_controls_from_data(self, panel_data):
+        for row in panel_data:
+            preamble_controls = qw.QWidget()
+            preamble_controls_lay = qw.QHBoxLayout(preamble_controls)
+            preamble_controls_lay.setContentsMargins(0,0,0,0)
+            preamble_controls_lay.setSpacing(0)
+            preamble_controls.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
+
+            self.row_wrappers.append(preamble_controls)
+
+            if row[0:7] == "divider":
+                if "side" in panel_data[row]:
+                    preamble_controls_lay.addWidget(SectionDivider(panel_data[row]["title"], panel_data[row]["side"]))
+                else:
+                    preamble_controls_lay.addWidget(SectionDivider(panel_data[row]["title"]))
+                continue
+
+            for entry in panel_data[row]:
+                info = panel_data[row][entry]
+                widget = self.make_widget(info, self.params)
+                pos = preamble_controls_lay.count()
+                preamble_controls_lay.addWidget(widget, stretch= 1, alignment= qc.Qt.AlignmentFlag.AlignTop)
+
+                if info.get("control_type") == "entry_block":
+                    pname = info["param_name"]
+                    self.entry_blocks[pname]["row_layout"] = preamble_controls_lay
+                    self.entry_blocks[pname]["row_index"] = pos
+                    self.entry_blocks[pname]["panel_info"] = info
+
+
+    def _build_plot_controls_widget(self):
+        plot_controls = qw.QWidget()
+        plot_controls.setSizePolicy(
+            qw.QSizePolicy.Policy.Expanding,
+            qw.QSizePolicy.Policy.Preferred
+        )
+        plot_control_layout = qw.QVBoxLayout(plot_controls)
+        plot_control_layout.setContentsMargins(0,0,0,0)
+        plot_control_layout.setSpacing(0)
+
+        preamble_controls = qw.QWidget()
+        preamble_controls_lay = qw.QVBoxLayout(preamble_controls)
+        preamble_controls_lay.setContentsMargins(8,8,8,8)
+        preamble_controls_lay.setSpacing(10)
+        preamble_controls_lay.addWidget(SectionDivider("Overall Settings"), alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
+        preamble_controls.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
+        spinner_row_lay = qw.QHBoxLayout()
+        spinner_row_lay.addWidget(qw.QLabel("Rows:"))
+        self.rows_spinner = qw.QSpinBox()
+        self.rows_spinner.setRange(1,3)
+        self.rows_spinner.setValue(1)
+        self.rows_spinner.setSizePolicy(qw.QSizePolicy.Policy.Preferred, qw.QSizePolicy.Policy.Fixed)
+        spinner_row_lay.addWidget(self.rows_spinner)
+        spinner_row_lay.addSpacing(6)
+        spinner_row_lay.addWidget(qw.QLabel("Columns:"))
+        self.cols_spinner = qw.QSpinBox()
+        self.cols_spinner.setRange(1,3)
+        self.cols_spinner.setValue(1)
+        self.cols_spinner.setSizePolicy(qw.QSizePolicy.Policy.Preferred, qw.QSizePolicy.Policy.Fixed)
+        spinner_row_lay.addWidget(self.cols_spinner)
+        preamble_controls_lay.addLayout(spinner_row_lay)
+        self.rows_spinner.valueChanged.connect(self._emit_plot_dim_change)
+        self.cols_spinner.valueChanged.connect(self._emit_plot_dim_change)
+        plot_control_layout.addWidget(preamble_controls, alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
+
+        self.plot_slot_controls = qw.QWidget()
+        self.plot_slot_controls_lay = qw.QVBoxLayout(self.plot_slot_controls)
+        self.plot_slot_controls.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
+        self.plot_slot_controls_lay.setContentsMargins(0,0,0,0)
+        self.plot_slot_controls_lay.setSpacing(0)
+
+        plot_control_layout.addWidget(self.plot_slot_controls, qc.Qt.AlignmentFlag.AlignTop)
+        plot_control_layout.addStretch(1)
+
+        return plot_controls
+
+    def _build_scroll_areas(self):
         scroll_main = VScrollArea()
         scroll_main.setWidgetResizable(True)
         scroll_main.setHorizontalScrollBarPolicy(qc.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -61,151 +204,24 @@ class ControlPanel(qw.QWidget):
         scroll_plot.setHorizontalScrollBarPolicy(qc.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_plot.setVerticalScrollBarPolicy(qc.Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
 
-        # --- Sim Controls Tab ---
-        main_controls = qw.QWidget()
-        scroll_main.setWidget(main_controls)
-        self.content.addTab(scroll_main, "Simulation Controls")
-
-        main_controls.setSizePolicy(
-            qw.QSizePolicy.Policy.Expanding,
-            qw.QSizePolicy.Policy.Preferred   # or Expanding
-        )
-
-        main_control_layout = qw.QVBoxLayout(main_controls)
-        main_control_layout.setContentsMargins(0, 0, 0, 0)
-        main_control_layout.setSpacing(0)
-
-        plot_controls = qw.QWidget()
-        self.content.addTab(scroll_plot, "Plot Controls")
-        plot_controls.setSizePolicy(
-            qw.QSizePolicy.Policy.Expanding,
-            qw.QSizePolicy.Policy.Preferred
-        )
-
-        scroll_plot.setWidget(plot_controls)
-
-        plot_control_layout = qw.QVBoxLayout(plot_controls)
-        plot_control_layout.setContentsMargins(0,0,0,0)
-        plot_control_layout.setSpacing(0)
-
-        grid_widget = qw.QWidget()
-        grid_widget.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
-        settings_row = qw.QHBoxLayout(grid_widget)
-        settings_row.setContentsMargins(8,8,8,8)
-        settings_row.setSpacing(10)
-
-        wrap = qw.QWidget()
-        wlay = qw.QVBoxLayout(wrap)
-        wlay.setContentsMargins(0,0,0,0)
-        wlay.setSpacing(0)
-        wlay.addWidget(SectionDivider("Overall Settings"), alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
-        wlay.addWidget(grid_widget)
-        wrap.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
-        # layout.addWidget(wrap, alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
-
-        grid_layout = qw.QHBoxLayout()
-
-        grid_layout.addWidget(qw.QLabel("Rows:"))
-        self.rows_spinner = qw.QSpinBox()
-        self.rows_spinner.setRange(1,3)
-        self.rows_spinner.setValue(1)
-        self.rows_spinner.setSizePolicy(qw.QSizePolicy.Policy.Preferred, qw.QSizePolicy.Policy.Fixed)
-        grid_layout.addWidget(self.rows_spinner)
-
-        grid_layout.addSpacing(6)
-        grid_layout.addWidget(qw.QLabel("Columns:"))
-        self.cols_spinner = qw.QSpinBox()
-        self.cols_spinner.setRange(1,3)
-        self.cols_spinner.setValue(1)
-        self.cols_spinner.setSizePolicy(qw.QSizePolicy.Policy.Preferred, qw.QSizePolicy.Policy.Fixed)
-        grid_layout.addWidget(self.cols_spinner)
-
-        settings_row.addLayout(grid_layout)
-
-        self.rows_spinner.valueChanged.connect(self._emit_plot_dim_change)
-        self.cols_spinner.valueChanged.connect(self._emit_plot_dim_change)
-
-        # plot_control_layout.addLayout(grid_row) # THIS EXISTS?!
-        plot_control_layout.addWidget(wrap, alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
-        plot_control_layout.setContentsMargins(0,0,0,0)
-        plot_control_layout.setSpacing(0)
-
-        self.slot_controls_container = qw.QWidget()
-        self.slot_controls_layout = qw.QVBoxLayout(self.slot_controls_container)
-        self.slot_controls_container.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
-        self.slot_controls_layout.setContentsMargins(0,0,0,0)
-        self.slot_controls_layout.setSpacing(0)
-
-        plot_control_layout.addWidget(self.slot_controls_container, qc.Qt.AlignmentFlag.AlignTop)
-        plot_control_layout.addStretch(1)
-        
-        self.slot_dropdowns = []
-        self.slot_options = []
-        self.slot_axes_controls = []
-        self.slot_titles = {}
-
-        self.content.setCurrentIndex(current_tab)
-
-        outer_layout = qw.QVBoxLayout(self)
-        outer_layout.addWidget(self.content)
-
-        self.dropdown_tooltips = dropdown_tooltips
-
-        self.entry_blocks = {}
-        self.dropdowns = {}
-        self.row_wrappers = []
-
-        for row in self.panel_data:
-            wrap = qw.QWidget()
-            wlay = qw.QHBoxLayout(wrap)
-            wlay.setContentsMargins(0,0,0,0)
-            wlay.setSpacing(0)
-            wrap.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
-
-            self.row_wrappers.append(wrap)
-
-            if row[0:7] == "divider":
-                if "side" in panel_data[row]:
-                    wlay.addWidget(SectionDivider(panel_data[row]["title"], panel_data[row]["side"]))
-                else:
-                    wlay.addWidget(SectionDivider(panel_data[row]["title"]))
-                continue
-
-            for entry in panel_data[row]:
-                info = panel_data[row][entry]
-                widget = self.make_widget(info, params)
-                pos = wlay.count()
-                wlay.addWidget(widget, stretch= 1, alignment= qc.Qt.AlignmentFlag.AlignTop)
-
-                if info.get("control_type") == "entry_block":
-                    pname = info["param_name"]
-                    self.entry_blocks[pname]["row_layout"] = wlay
-                    self.entry_blocks[pname]["row_index"] = pos
-                    self.entry_blocks[pname]["panel_info"] = info
-
-        self._meta_dependents = self._get_metadeps()
-
-        for wrapper in self.row_wrappers:
-            main_control_layout.addWidget(wrapper, alignment= qc.Qt.AlignmentFlag.AlignTop, stretch= 0)
-
-        main_control_layout.addStretch(1)
-
-        # self._rebuild_slot_dropdowns(self.rows_spinner.value(), self.cols_spinner.value())
-
-        for i in range(len(self.slot_dropdowns)):
-            self.get_tooltip(i)
-
-        self.block_signals = False
-        # self.constructing = False
+        return scroll_main, scroll_plot
 
     def _collect_metadeps_from_info(self, info, meta_deps):
+        """ 
+            Collects metadependency references within widget settings
+            and appends those parameters which do to the corresponding list
+        """
         control_type = info.get("control_type", "")
 
+        # presently, only entry blocks can have meta-dependencies
         if control_type == "entry_block" and "dim_from" in info:
             meta = info["dim_from"]
             deps = []
 
             if isinstance(meta, str):
+                if meta in ["sum", "diff", "prod", "div"]:
+                    for x in info["dim_from"][meta]:
+                        deps.append(x)
                 deps.append(meta)
             elif isinstance(meta, list):
                 for x in meta:
@@ -221,6 +237,10 @@ class ControlPanel(qw.QWidget):
                 self._collect_metadeps_from_info(subinfo, meta_deps)
 
     def _get_metadeps(self):
+        """ 
+            Creates a dictionary of metadependencies of the form 
+            'param_name': [params which reference param_name]
+        """
         meta_deps = {}
         for row_name, row in self.panel_data.items():
             if row_name.startswith("divider"):
@@ -247,8 +267,8 @@ class ControlPanel(qw.QWidget):
 
     def _rebuild_slot_dropdowns(self, rows, cols, old_limits= None, old_dropdown_indices= None, old_checked= None, old_slot_settings= None, old_saved_limits= None):
         """ Destroy and rebuild all control widgets for individual plots (or build for the first time) """
-        for i in reversed(range(self.slot_controls_layout.count())):
-            item = self.slot_controls_layout.takeAt(i)
+        for i in reversed(range(self.plot_slot_controls_lay.count())):
+            item = self.plot_slot_controls_lay.takeAt(i)
             w = item.widget()
             if w is not None:
                 w.deleteLater()
@@ -280,7 +300,7 @@ class ControlPanel(qw.QWidget):
                     if "checkbox_name" in plot_dict:
                         dropdown.add_checkbox(choice_dict["name"], plot_dict["checkbox_name"], plot_dict["toggled"])
 
-            if old_dropdown_indices is not None and len(old_dropdown_indices)-1 >= slot_index:
+            if old_dropdown_indices is not None and len(old_dropdown_indices)-1 >= slot_index and len(self.dropdown_choices) > 0:
                 dropdown_idx = old_dropdown_indices[slot_index]
                 dropdown_choice = self._get_inter_name_from_name(self.dropdown_choices[dropdown_idx])
                 choice_dict = self.plotting_data[dropdown_choice]
@@ -300,11 +320,11 @@ class ControlPanel(qw.QWidget):
             # never called?
             # if self.constructing: self._set_initial_plot_params(axes_widget)
 
-            self.slot_controls_layout.addWidget(section_divider)
-            self.slot_controls_layout.addWidget(SectionDivider("Settings", alignment= "left"))
-            self.slot_controls_layout.addWidget(axes_widget)
-            self.slot_controls_layout.addWidget(options_widget)
-            self.slot_controls_layout.addWidget(dropdown)
+            self.plot_slot_controls_lay.addWidget(section_divider)
+            self.plot_slot_controls_lay.addWidget(SectionDivider("Settings", alignment= "left"))
+            self.plot_slot_controls_lay.addWidget(axes_widget)
+            self.plot_slot_controls_lay.addWidget(options_widget)
+            self.plot_slot_controls_lay.addWidget(dropdown)
 
             self.slot_dropdowns.append(dropdown)
             self.slot_options.append(options_widget)
@@ -731,7 +751,12 @@ class ControlPanel(qw.QWidget):
             widget.valueChanged.connect(self.update_plot)
 
         elif info["type"] == "matrix":
-            dim = self._resolve_entry_dim(info, params)
+            try: 
+                dim = self._resolve_entry_dim(info, params)
+            except Exception as e:
+                logger.log(logging.ERROR, f"Failed to resolve matrix dim entry", exc_info= e)
+                self.status_bar.showMessage(f"Failed to resolve matrix dim entry", 3000)
+                dim = [1,1]
             widget = MatrixEntry(param_name, label, dim, init_val, tooltip)
             widget.textChanged.connect(self.update_plot)
             if "vsize_policy" in info:
@@ -743,12 +768,61 @@ class ControlPanel(qw.QWidget):
             
         elif info["type"] == "vector":
             if info.get("dim_from", None) is not None:
-                dep_param_name = info.get("dim_from")
-                dim1 = getattr(params, dep_param_name)
+                try:
+                    dep_param_info = info.get("dim_from")
+                    if isinstance(dep_param_info, list):
+                        if dep_param_info[0] == "sum":
+                            dim1 = 0
+                            for val in dep_param_info[1:]:
+                                if isinstance(val, str):
+                                    dim1 += getattr(params, val)
+                                else:
+                                    dim1 += int(val)
+                            if dim1 == 0:
+                                dim1 = 1
+                        elif dep_param_info[0] == "diff":
+                            dim1 = getattr(params, dep_param_info[1])
+                            for val in dep_param_info[2:]:
+                                if isinstance(val, str):
+                                    dim1 -= getattr(params, val)
+                                else:
+                                    dim1 -= int(val)
+                            if dim1 <= 0:
+                                dim1 = 1
+                    else:
+                        dim1 = getattr(params, dep_param_info)
+                except Exception as e:
+                    logger.log(logging.ERROR, f"Dependent param not found: {dep_param_info}", exc_info= e)
+                    if self.status_bar is not None:
+                        self.status_bar.showMessage(f"Dependent param not found: {dep_param_info}", 3000)
+                    dim1 = 1
             else:
                 dim1 = info["dim"]
+
+            if isinstance(dim1, tuple) or isinstance(dim1, list):
+                for c in dim1:
+                    if not isinstance(c, int):
+                        logger.log(logging.ERROR, f"Coordinate {c} is not an integer!")
+                        if self.status_bar is not None:
+                            self.status_bar.showMessage(f"Coordinate {c} is not an integer!", 3000)
+                    dim1 = 1
+            elif not isinstance(dim1, int):
+                logger.log(logging.ERROR, f"Coordinate {dim1} is not an integer!")
+                if self.status_bar is not None:
+                    self.status_bar.showMessage(f"Coordinate {dim1} is not an integer!", 3000)
+                dim1 = 1
+                       
             dim = (dim1, 1)
-            widget = MatrixEntry(param_name, label, dim, init_val.reshape(-1,1), tooltip)
+            try:
+                reshaped_init_val = init_val.reshape(-1,1)
+            except AttributeError as e:
+                logger.log(logging.ERROR, f"Coordinate {init_val} is not a proper vector!", exc_info= e)
+                if self.status_bar is not None:
+                    self.status_bar.showMessage(f"Coordinate {init_val} is not a proper vector!", 3000)
+                dim = [1,1]
+                reshaped_init_val = np.array([1])
+            print(f"{dim=}")
+            widget = MatrixEntry(param_name, label, dim, reshaped_init_val, tooltip)
             widget.textChanged.connect(self.update_plot)
             widget.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
             self.entry_blocks[param_name] = {"widget": widget, "is_matrix": True}
@@ -785,35 +859,79 @@ class ControlPanel(qw.QWidget):
 
         return widget
 
-    def _resize_vector(self, old: np.ndarray, n: int, safe_default= None) -> np.ndarray:
-        new = np.zeros((n,), dtype=float)
-        if old is not None:
-            m = min(len(old), n)
-            new[:m] = old[:m]
-        if safe_default is not None:
-            # extra_rows
-            if new.shape[0] > old.shape[0]:
-                for i in range(old.shape[0], new.shape[0]):
-                    new[i] = safe_default
+    # def _resize_vector(self, old: np.ndarray, n: int, safe_default= None) -> np.ndarray:
+    #     new = np.zeros((n,), dtype=float)
+    #     if old is not None:
+    #         m = min(len(old), n)
+    #         new[:m] = old[:m]
+    #     if safe_default is not None:
+    #         # extra_rows
+    #         if new.shape[0] > old.shape[0]:
+    #             for i in range(old.shape[0], new.shape[0]):
+    #                 new[i] = safe_default
+    #     return new
+
+    def _resize_vector(self, old, new_val: int, safe_default=None) -> np.ndarray:
+        """ Returns what the updated array should be to populate an updated vector widget with """
+        try:
+            old_arr = np.asarray(old, dtype=float).reshape(-1)
+        except Exception:
+            old_arr = np.zeros((0,), dtype=float)
+
+        new = np.zeros((new_val,), dtype=float)
+
+        m = min(old_arr.shape[0], new_val)
+        if m > 0:
+            new[:m] = old_arr[:m]
+
+        if safe_default is not None and new_val > old_arr.shape[0]:
+            new[old_arr.shape[0]:] = safe_default
+
         return new
 
-    def _resize_matrix(self, old: np.ndarray, row: int, col: int, safe_default= None) -> np.ndarray:
+    def _resize_matrix(self, old, row: int, col: int, safe_default=None) -> np.ndarray:
+        try:
+            old_arr = np.asarray(old, dtype=float)
+        except Exception:
+            old_arr = np.zeros((0, 0), dtype=float)
+
+        if old_arr.ndim != 2:
+            old_arr = np.atleast_2d(old_arr)
+
         new = np.zeros((row, col), dtype=float)
-        if old is not None:
-            r = min(old.shape[0], row)
-            c = min(old.shape[1], col)
-            new[:r, :c] = old[:r, :c]
+
+        r = min(old_arr.shape[0], row)
+        c = min(old_arr.shape[1], col)
+
+        if r > 0 and c > 0:
+            new[:r, :c] = old_arr[:r, :c]
+
         if safe_default is not None:
-            # extra rows
-            if new.shape[0] > old.shape[0]:
-                for i in range(old.shape[0], new.shape[0]):
-                    for j in range(0, new.shape[1]):
-                        new[i, j] = safe_default
-            if new.shape[1] > old.shape[1]:
-                for j in range(old.shape[1], new.shape[1]):
-                    for i in range(0, new.shape[0]):
-                        new[i, j] = safe_default
+            if row > old_arr.shape[0]:
+                new[old_arr.shape[0]:, :] = safe_default
+
+            if col > old_arr.shape[1]:
+                new[:, old_arr.shape[1]:] = safe_default
+
         return new
+
+    # def _resize_matrix(self, old: np.ndarray, row: int, col: int, safe_default= None) -> np.ndarray:
+    #     new = np.zeros((row, col), dtype=float)
+    #     if old is not None:
+    #         r = min(old.shape[0], row)
+    #         c = min(old.shape[1], col)
+    #         new[:r, :c] = old[:r, :c]
+    #     if safe_default is not None:
+    #         # extra rows
+    #         if new.shape[0] > old.shape[0]:
+    #             for i in range(old.shape[0], new.shape[0]):
+    #                 for j in range(0, new.shape[1]):
+    #                     new[i, j] = safe_default
+    #         if new.shape[1] > old.shape[1]:
+    #             for j in range(old.shape[1], new.shape[1]):
+    #                 for i in range(0, new.shape[0]):
+    #                     new[i, j] = safe_default
+    #     return new
 
     def _resolve_dim_token(self, token, params) -> int:
         """ resolve a dimension specification as either a constant or another parameter """
@@ -829,9 +947,9 @@ class ControlPanel(qw.QWidget):
 
     def _resolve_entry_dim(self, info, params) -> tuple[int, int]:
         """ 
-        resolve the dimension specification to a concrete dimension
-        either based on the current value of a parameter or based on
-        a literal number in the yaml
+            resolve the dimension specification to a concrete dimension
+            either based on the current value of a parameter or based on
+            a literal number in the yaml
         """
         typ = info["type"]
 
@@ -852,6 +970,9 @@ class ControlPanel(qw.QWidget):
         else:
             cols = src[1]
 
+        if not isinstance(rows, int) or not isinstance(cols, int):
+            raise ValueError(f"One of {rows=}, {cols=} is not an integer!")
+
         return (rows, cols)
 
         # wrong?
@@ -860,7 +981,12 @@ class ControlPanel(qw.QWidget):
 
         raise ValueError(f"Unsupported entry type: {typ}")
 
-    def _apply_dim_meta(self, meta_name: str, new_val: object) -> None:
+    def _apply_dim_meta(self, metaparam_name: str, new_val: object) -> None:
+        """ 
+            When a parameter has changed, if the name is listed in self._metadependents as a key,
+            then the appropriate changes are made to the control panel itself before the simulation is
+            re-run. This method is meant to apply those changes. 
+        """
         # Don't let the new value be less than 1 or not an integer
         try:
             new_val = int(new_val)
@@ -868,57 +994,67 @@ class ControlPanel(qw.QWidget):
             return
         new_val = max(1, new_val)
 
-        deps = self._meta_dependents.get(meta_name, [])
-        if not deps:
+        # get a list of parameters with widgets which depend on the input parameter
+        dependent_params = self._meta_dependents.get(metaparam_name, [])
+        if not dependent_params:
             return
 
         # 1) update dependent arrays on params
-        for pname in deps:
-            pinfo = self.entry_blocks[pname]["panel_info"]
-            typ = pinfo["type"]
-            old = getattr(self.params, pname, None)
-            safe_default = pinfo.get("safe_default", None)
+        for dependent in dependent_params:
+            
+            if dependent in self.entry_blocks:
+                entry_info = self.entry_blocks[dependent]["panel_info"]
+                entry_type = entry_info["type"]
+                old_val = getattr(self.params, dependent, None)
+                safe_default = entry_info.get("safe_default", None)
 
-            if typ == "vector":
-                setattr(self.params, pname, self._resize_vector(old, new_val, safe_default))
+                if entry_type == "vector":
+                    meta_info = entry_info["dim_from"]
+                    if isinstance(meta_info, list):
+                        if meta_info[0] == "sum":
+                            for value in meta_info[1:]:
+                                if isinstance(value, str):
+                                    new_val += getattr(self.params, value)
+                                else:
+                                    new_val += int(value)
 
-            if typ == "matrix":
-                dims = pinfo["dim_from"]
-                row, col = dims[0], dims[1]
+                    setattr(self.params, dependent, self._resize_vector(old_val, new_val, safe_default))
 
-                if row == meta_name:
-                    row = new_val
-                elif isinstance(row, str):
-                    row = getattr(self.params, row)
+                if entry_type == "matrix":
+                    dims = entry_info["dim_from"]
+                    row, col = dims[0], dims[1]
 
-                if col == meta_name:
-                    col = new_val
-                elif isinstance(col, str):
-                    col = getattr(self.params, col)
+                    if isinstance(row, list):
+                        if row[0] == "sum":
+                            new_new_val = new_val
+                            for value in row[1:]:
+                                if isinstance(value, str):
+                                    if value != metaparam_name:
+                                        new_new_val += getattr(self.params, value)
+                                else:
+                                    new_new_val += int(value)
+                        row = new_new_val
+                    elif row == metaparam_name:
+                        row = new_val
+                    elif isinstance(row, str):
+                        row = getattr(self.params, row)
 
-                # if row != meta_name:
-                #     if isinstance(row, str):
-                #         temp = row
-                #         row = getattr(self.params, temp)
-                #     col = new_val
-                # elif col != meta_name:
-                #     if isinstance(col, str):
-                #         temp = col
-                #         col = getattr(self.params, temp)
-                #     row = new_val
+                    if col == metaparam_name:
+                        col = new_val
+                    elif isinstance(col, str):
+                        col = getattr(self.params, col)
 
-                setattr(self.params, pname, self._resize_matrix(old, row, col, safe_default))
+                    setattr(self.params, dependent, self._resize_matrix(old_val, row, col, safe_default))
 
         # 2) rebuild + replace widgets for those deps (vectors/matrices)
         self.block_signals = True
         try:
-            for pname in deps:
-                # only replace if it’s a MatrixEntry-style widget
-                if self.entry_blocks[pname]["is_matrix"]:
-                    new_w = self._make_resized_entry_widget(pname)
-                    self._replace_entry_widget(pname, new_w)
-            # now push values to widgets (uses MatrixEntry.change_values) :contentReference[oaicite:9]{index=9}
-            self.load_new_params(self.params)
+            for dependent in dependent_params:
+                if self.entry_blocks[dependent]["is_matrix"]:
+                    new_w = self._make_resized_entry_widget(dependent)
+                    self._replace_entry_widget(dependent, new_w)
+            # now push values to widgets (uses MatrixEntry.change_values) 
+            self.load_new_params(self.params) # push values to the new widgets
         finally:
             self.block_signals = False
 
@@ -939,10 +1075,11 @@ class ControlPanel(qw.QWidget):
         info["widget"] = new_widget
 
     def _make_resized_entry_widget(self, param_name: str) -> qw.QWidget:
-        pinfo = self.entry_blocks[param_name]["panel_info"]
-        label = pinfo["label"]
-        tooltip = pinfo.get("tooltip", "")
-        typ = pinfo["type"]
+        """ Creates a newly resized entry widget based on current parameters """
+        panel_info = self.entry_blocks[param_name]["panel_info"]
+        label = panel_info["label"]
+        tooltip = panel_info.get("tooltip", "")
+        typ = panel_info["type"]
 
         init_val = getattr(self.params, param_name)
 
@@ -996,9 +1133,10 @@ class ControlPanel(qw.QWidget):
         return data
 
     def update_plot(self, name, new_val):
-        if not self.block_signals:
-            self.paramChanged.emit(name, new_val)
-
+        """ 
+            Primarily just emits that a parameter has changed to the MainWindow, but also 
+            updates itself if the parameter which changed has any metadependencies 
+        """
         try:
             setattr(self.params, name, new_val)
         except Exception:
@@ -1008,7 +1146,10 @@ class ControlPanel(qw.QWidget):
             self._apply_dim_meta(name, new_val)
             return
 
-        self.paramChanged.emit(name, new_val)
+        if not self.block_signals:
+            self.paramChanged.emit(name, new_val)
+
+        # self.paramChanged.emit(name, new_val)
 
     def get_tooltip(self, slot_index: int= 0) -> str:
         """ When user hovers their mouse on the tooltip button by a dropdown menu of plots,
@@ -1030,42 +1171,185 @@ class ControlPanel(qw.QWidget):
         return tooltip
 
     def load_new_params(self, params):
+        old_block = self.block_signals
         self.block_signals = True
-        params_dict = asdict(params) if params else {}
-        for param in params_dict:
-            if param in self.entry_blocks:
-                widget_info = self.entry_blocks[param]
-                widget = widget_info["widget"]
-                value = params_dict[param]
 
-                if widget_info["is_matrix"]:
-                    widget.blockSignals(True)
-                    widget.change_values(value)
-                    widget.blockSignals(False)
-                else:
+        try:
+            # Critical: keep ControlPanel's params reference synchronized with MainWindow.
+            self.params = params
+
+            # Critical: preset loads do not fire normal widget signals, so dependency
+            # resizing must be done explicitly here.
+            changed_dependents = self._normalize_dependent_param_values()
+            self._rebuild_dependent_widgets_for_current_params(changed_dependents)
+
+            params_dict = asdict(self.params) if self.params else {}
+
+            for param, value in params_dict.items():
+                if param in self.entry_blocks:
+                    widget_info = self.entry_blocks[param]
+                    widget = widget_info["widget"]
+
+                    if widget_info["is_matrix"]:
+                        widget.blockSignals(True)
+                        widget.change_values(value)
+                        widget.blockSignals(False)
+                    else:
+                        try:
+                            v_float = float(value)
+                            text = f"{v_float:.8g}"
+                        except (TypeError, ValueError):
+                            text = str(value)
+
+                        widget.entry.blockSignals(True)
+                        widget.entry.setText(text)
+                        widget.entry.blockSignals(False)
+
+                if param in self.dropdowns:
+                    info = self.dropdowns[param]
+                    dropdown = info["widget"]
+                    values = info["values"]
+                    new_val = params_dict[param]
+
                     try:
-                        v_float = float(value)
-                        text = f"{v_float:.8g}"   
-                    except (TypeError, ValueError):
-                        text = str(value)
+                        idx = values.index(new_val)
+                    except ValueError:
+                        continue
 
-                    widget.entry.blockSignals(True)
-                    widget.entry.setText(text)
-                    widget.entry.blockSignals(False)
+                    dropdown.blockSignals(True)
+                    dropdown.setCurrentIndex(idx)
+                    dropdown.blockSignals(False)
 
-            if param in self.dropdowns:
-                info = self.dropdowns[param]
-                dropdown = info["widget"]
-                values = info["values"]
-                new_val = params_dict[param]
+        finally:
+            self.block_signals = old_block
 
-                try:
-                    idx = values.index(new_val)
-                except ValueError:
+    # def load_new_params(self, params):
+    #     self.block_signals = True
+    #     params_dict = asdict(params) if params else {}
+    #     for param in params_dict:
+    #         if param in self.entry_blocks:
+    #             widget_info = self.entry_blocks[param]
+    #             widget = widget_info["widget"]
+    #             value = params_dict[param]
+
+    #             if widget_info["is_matrix"]:
+    #                 widget.blockSignals(True)
+    #                 widget.change_values(value)
+    #                 widget.blockSignals(False)
+    #             else:
+    #                 try:
+    #                     v_float = float(value)
+    #                     text = f"{v_float:.8g}"   
+    #                 except (TypeError, ValueError):
+    #                     text = str(value)
+
+    #                 widget.entry.blockSignals(True)
+    #                 widget.entry.setText(text)
+    #                 widget.entry.blockSignals(False)
+
+    #         if param in self.dropdowns:
+    #             info = self.dropdowns[param]
+    #             dropdown = info["widget"]
+    #             values = info["values"]
+    #             new_val = params_dict[param]
+
+    #             try:
+    #                 idx = values.index(new_val)
+    #             except ValueError:
+    #                 continue
+
+    #             dropdown.blockSignals(True)
+    #             dropdown.setCurrentIndex(idx)
+    #             dropdown.blockSignals(False)
+
+    #     self.block_signals = False
+
+    def _resolve_vector_dim(self, info, params) -> int:
+        src = info.get("dim_from", info.get("dim", 1))
+
+        if isinstance(src, str):
+            return max(1, int(getattr(params, src)))
+
+        if isinstance(src, int):
+            return max(1, int(src))
+
+        # Optional support for YAML like dim_from: [num_sectors]
+        if isinstance(src, list) and len(src) == 1 and isinstance(src[0], str):
+            return max(1, int(getattr(params, src[0])))
+
+        if isinstance(src, list) and len(src) == 1 and isinstance(src[0], int):
+            return max(1, int(src[0]))
+
+        raise ValueError(f"Bad vector dim/dim_from for {info.get('param_name')}: {src!r}")
+
+
+    def _normalize_dependent_param_values(self) -> set[str]:
+        """
+        Make sure all matrix/vector params whose dimensions depend on meta params
+        actually match the current params object.
+
+        Returns the set of param names whose widgets should be rebuilt.
+        """
+        changed = set()
+
+        for deps in getattr(self, "_meta_dependents", {}).values():
+            for pname in deps:
+                if pname not in self.entry_blocks:
                     continue
 
-                dropdown.blockSignals(True)
-                dropdown.setCurrentIndex(idx)
-                dropdown.blockSignals(False)
+                pinfo = self.entry_blocks[pname]["panel_info"]
+                typ = pinfo["type"]
+                safe_default = pinfo.get("safe_default", None)
+                old = getattr(self.params, pname, None)
 
-        self.block_signals = False
+                if typ == "vector":
+                    n = self._resolve_vector_dim(pinfo, self.params)
+
+                    try:
+                        arr = np.asarray(old, dtype=float).reshape(-1)
+                    except Exception:
+                        arr = np.zeros((0,), dtype=float)
+
+                    if arr.shape != (n,):
+                        setattr(self.params, pname, self._resize_vector(arr, n, safe_default))
+                        changed.add(pname)
+                    else:
+                        # normalize list/tuple inputs to ndarray
+                        setattr(self.params, pname, arr)
+
+                elif typ == "matrix":
+                    rows, cols = self._resolve_entry_dim(pinfo, self.params)
+
+                    try:
+                        arr = np.asarray(old, dtype=float)
+                    except Exception:
+                        arr = np.zeros((0, 0), dtype=float)
+
+                    if arr.ndim != 2:
+                        arr = np.atleast_2d(arr)
+
+                    if arr.shape != (rows, cols):
+                        setattr(self.params, pname, self._resize_matrix(arr, rows, cols, safe_default))
+                        changed.add(pname)
+                    else:
+                        # normalize list/tuple inputs to ndarray
+                        setattr(self.params, pname, arr)
+
+        return changed
+
+
+    def _rebuild_dependent_widgets_for_current_params(self, only: set[str] | None = None) -> None:
+        targets = only
+
+        if targets is None:
+            targets = set()
+            for deps in getattr(self, "_meta_dependents", {}).values():
+                targets.update(deps)
+
+        for pname in targets:
+            if pname not in self.entry_blocks:
+                continue
+
+            if self.entry_blocks[pname].get("is_matrix"):
+                new_w = self._make_resized_entry_widget(pname)
+                self._replace_entry_widget(pname, new_w)

@@ -154,5 +154,5 @@ def main():
     app.exec()
 
 if __name__ == "__main__":
-    print("hello")
+    print("howdy!")
     main()

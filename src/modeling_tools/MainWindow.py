@@ -7,7 +7,6 @@ from PyQt6 import (
 )
 import numpy as np
 import copy, os
-from datetime import datetime
 from .tools.creation_tools import flow_seqify, atomic_write
 from .tools.qt_tools import recolor_icon
 from pathlib import Path
@@ -20,7 +19,12 @@ from .ControlPanel import ControlPanel
 from .GraphPanel import GraphPanel
 from .SimWorker import SimController
 from .BridgeWorker import BridgeWorker
-from .tools.loader import load_presets, _dump_to_yaml, to_plain, params_from_mapping, format_plot_config, reload_package_folder, get_top_level_function_names, get_user_models_dir, get_user_logs_dir, open_with_default_app
+from .tools.loader import (
+    load_presets, _dump_to_yaml, to_plain, 
+    params_from_mapping, format_plot_config, 
+    reload_package_folder, get_top_level_function_names, 
+    get_user_models_dir, get_user_logs_dir, open_with_default_app
+)
 from multiprocessing import Queue, get_context
 
 # from simulation.parameters import params_from_mapping, to_plain
@@ -95,7 +99,7 @@ class MainWindow(qw.QMainWindow):
         self.ctx = get_context("spawn")
         self.sim_controller = SimController(self.ctx, parent= self)
     
-        self.params, self.current_sim_func, self.presets, panel_data, plotting_data, self.functions = self._get_data(self.current_demo)
+        self.params, self.current_sim_func, self.presets, self.panel_data, self.plotting_data, self.functions = self._get_data(self.current_demo)
         self._reset_global_settings()
 
         self._anim_timer.setInterval(self.settings.get("rendering_framerate", 30))  # ~30fpsmain
@@ -108,7 +112,7 @@ class MainWindow(qw.QMainWindow):
         if model_settings is not None:
             if "commodity_names" in model_settings:
                 com_names = model_settings["commodity_names"]
-                plotting_data = format_plot_config(plotting_data, com_names)
+                self.plotting_data = format_plot_config(self.plotting_data, com_names)
 
         # Create top bar menu
         self.presets_submenu, self.results_submenu = self._make_menu(self.presets, self.demos, self.functions)
@@ -129,7 +133,7 @@ class MainWindow(qw.QMainWindow):
         
         self.traj, self.t = None, None
 
-        self.graph_panel, self.control_panel, self.dropdown_choices = self._make_panels(plotting_data, panel_data, self.current_demo)
+        self.graph_panel, self.control_panel, self.dropdown_choices = self._make_panels(self.plotting_data, self.panel_data, self.current_demo)
         self.graph_panel._block_axis_callback = True
         self._load_saved_axis_settings()
         self.graph_panel._block_axis_callback = False
@@ -142,7 +146,7 @@ class MainWindow(qw.QMainWindow):
             if cfg is None:
                 continue
             dropdown_index, options, slot_cfg = cfg
-            self.graph_panel.plot_slot(slot_index, dropdown_index, options, slot_cfg)
+            self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
 
         self.main_splitter = qw.QSplitter(qc.Qt.Orientation.Horizontal)
         self.main_splitter.addWidget(self.control_panel)
@@ -750,7 +754,7 @@ class MainWindow(qw.QMainWindow):
         return super().eventFilter(a0, a1)
 
     def show_partial_results(self, traj, t):
-        if traj is None or t is None:
+        if traj is None:
             return
 
         self.traj, self.t = traj, t
@@ -866,9 +870,15 @@ class MainWindow(qw.QMainWindow):
         # self.update_saved_lims(xlim, ylim)
 
         control_panel = ControlPanel(
-            self.params, dropdown_choices, 
-            dropdown_tooltips, panel_data, 
-            plotting_data, self.sim_model, demo, env= self.env,
+            self.env,
+            self.status_bar,
+            self.params,
+            dropdown_choices, 
+            dropdown_tooltips,
+            panel_data, 
+            plotting_data,
+            self.sim_model,
+            demo
         )
         control_panel.paramChanged.connect(self.start_sim)
         control_panel.layoutChanged.connect(self.on_layout_changed)
@@ -900,7 +910,7 @@ class MainWindow(qw.QMainWindow):
             if cfg is None:
                 continue
             dropdown_index, options, slot_cfg = cfg
-            self.graph_panel.plot_slot(slot_index, dropdown_index, options, slot_cfg)
+            self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
 
         self.control_panel.plotting_data = formatted
 
@@ -962,7 +972,7 @@ class MainWindow(qw.QMainWindow):
 
         load_idx_defaults = self.settings.get("use_cat_limits", False)
         load_idx_defaults = False if not isinstance(load_idx_defaults, bool) else load_idx_defaults 
-        self.graph_panel.plot_slot(slot_index, dropdown_index, options, legend_cfg, source= source, load_idx_defaults= load_idx_defaults)
+        self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg, source= source, load_idx_defaults= load_idx_defaults)
         # self.graph_panel._on_axis_limits_changed(slot_index)
 
     def on_slot_options_changed(self, slot_index: int):
@@ -975,7 +985,7 @@ class MainWindow(qw.QMainWindow):
             return
 
         dropdown_index, options, slot_cfg = cfg
-        self.graph_panel.plot_slot(slot_index, dropdown_index, options, slot_cfg)
+        self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
 
     def on_layout_changed(self, rows, cols):
         """ Propagate plot dimension change to the graph panel """
@@ -991,7 +1001,7 @@ class MainWindow(qw.QMainWindow):
                 if cfg is None:
                     continue
                 dropdown_index, options, slot_cfg = cfg
-                self.graph_panel.plot_slot(slot_index, dropdown_index, options, slot_cfg, rescale_legend= True)
+                self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg, rescale_legend= True)
 
         # qc.QTimer.singleShot(0, self.tight_layout)
 
@@ -1502,7 +1512,7 @@ class MainWindow(qw.QMainWindow):
         self.sim_controller.start()
 
         # TODO: should never have listened to the chatbot telling me to take this off of it's own thread, return to a separate QThread
-        self.bridge_worker = BridgeWorker(self.sim_results_queue, self._run_id, parent= self)
+        self.bridge_worker = BridgeWorker(self.sim_results_queue, self._run_id, self.plotting_data, parent= self)
         self.bridge_worker.progress.connect(self._on_worker_progress)
         # self.bridge_worker.done.connect(self._on_sim_thread_finished)
         self.bridge_worker.done.connect(self._on_sim_done)
@@ -1541,13 +1551,18 @@ class MainWindow(qw.QMainWindow):
             self.start_sim()
 
     def _on_sim_error(self, msg):
-        run_id, _tag, ex_repr, tb, module_path, func_name = msg
-        extra = {
-            "run_id": run_id,
-            "module_path": module_path,
-            "func_name": func_name,
-            "_remote_exc_info": tb,
-        }
+        print(msg)
+        if isinstance(msg, str):
+            ex_repr = msg
+            extra = {}
+        else:
+            run_id, _tag, ex_repr, tb, module_path, func_name = msg
+            extra = {
+                "run_id": run_id,
+                "module_path": module_path,
+                "func_name": func_name,
+                "_remote_exc_info": tb,
+            }
         logger.log(logging.ERROR, f"Simulation failed: {ex_repr}", extra= extra)
         self._rerun_pending = False
         self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
@@ -1578,7 +1593,7 @@ class MainWindow(qw.QMainWindow):
             if cfg is None:
                 continue
             dropdown_index, options, legend_cfg = cfg
-            self.graph_panel.plot_slot(slot_index, dropdown_index, options, legend_cfg)
+            self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg)
 
     def _request_stop_for_rerun(self, force= False):
         try:
@@ -1670,6 +1685,9 @@ class MainWindow(qw.QMainWindow):
                 plotting_data,
                 self.functions,
             ) = self._get_data(demo)
+
+            if plotting_data is None:
+                plotting_data = {}
 
             self._reload_config()
             self._reset_global_settings()
@@ -2062,7 +2080,7 @@ class MainWindow(qw.QMainWindow):
             if cfg is None:
                 continue
             dropdown_index, options, slot_cfg = cfg
-            self.graph_panel.plot_slot(slot_index, dropdown_index, options, slot_cfg)
+            self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
 
         try:
             self.graph_panel.canvas.draw_idle()
@@ -2174,6 +2192,8 @@ class MainWindow(qw.QMainWindow):
 
         # Build new panel and wire signals exactly like _make_panels()
         new_cp = ControlPanel(
+            self.env,
+            self.status_bar,
             self.params,
             dropdown_choices,
             dropdown_tooltips,
@@ -2182,7 +2202,6 @@ class MainWindow(qw.QMainWindow):
             self.sim_model,
             self.current_demo,
             old_current_tab,
-            env= self.env
         )
         new_cp.paramChanged.connect(self.start_sim)
         new_cp.layoutChanged.connect(self.on_layout_changed)
@@ -2260,8 +2279,10 @@ class MainWindow(qw.QMainWindow):
         if save_axis:
             self.presets[shortname]["axis_settings"] = self._get_current_axis_settings()
 
+        presets_dict = {"presets": self.presets}
+
         # _dump_to_yaml(self.env, self.presets, self.sim_model)
-        atomic_write(self.env.models_dir / self.sim_model / "data" / "params.yml", self.presets)
+        atomic_write(self.env.models_dir / self.sim_model / "data" / "params.yml", presets_dict)
         
         preset_options_submenu = self.presets_submenu.addMenu(name)
         preset_options_submenu.setProperty("preset_id", shortname)
@@ -2278,7 +2299,7 @@ class MainWindow(qw.QMainWindow):
         rename_action.triggered.connect(lambda _checked= False, name= shortname: self.rename_preset(name))
         desc_action.triggered.connect(lambda _checked= False, name= shortname: self._view_preset_desc(name))
 
-        self.presets = presets
+        # self.presets = presets
 
     def delete_preset(self, preset):
         del self.presets[preset]
