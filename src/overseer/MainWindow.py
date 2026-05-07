@@ -54,7 +54,6 @@ def refresh_models_path(old_models_dir: Path, new_models_dir: Path) -> None:
         if name == "models" or name.startswith("models."):
             del sys.modules[name]
 
-
 class MainWindow(qw.QMainWindow):
 
     def __init__(self, env):
