@@ -1,0 +1,6 @@
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+
+def get_trajectories(params: Params):
+    pass

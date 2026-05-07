@@ -5,16 +5,16 @@
 <dict>
 
     <key>CFBundleName</key>
-    <string>Modeling Tools</string>
+    <string>Overseer</string>
 
     <key>CFBundleDisplayName</key>
-    <string>Modeling Tools</string>
+    <string>Overseer</string>
 
     <key>CFBundleIdentifier</key>
-    <string>edu.modeling-tools</string>
+    <string>edu.overseer</string>
 
     <key>CFBundleExecutable</key>
-    <string>Modeling Tools</string>
+    <string>Overseer</string>
 
     <key>CFBundlePackageType</key>
     <string>APPL</string>

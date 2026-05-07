@@ -2,14 +2,14 @@
 # Run this to compile a new .app file, then immediately bundle it as a 
 # dmg. If something isn't working, run the python setup.py py2app step
 # independently and then run (from the release/macos folder):
-#    dist/Modeling\ Tools.app/Contents/MacOS/Modeling\ Tools to see 
+#    dist/Overseer.app/Contents/MacOS/Overseer to see 
 #    standard output and do the necessary debugging. 
 #    the .dmg alone can be uploaded for mac os users to install the app
 #    delete the dist and dmgroot directories 
 set -euo pipefail
 
-APP_NAME="Modeling Tools"
-DMG_NAME="ModelingTools"
+APP_NAME="Overseer"
+DMG_NAME="Overseer"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 rm -rf $ROOT_DIR/release/macos/dmg_pipeline/build $ROOT_DIR/release/macos/dmg_pipeline/dist $ROOT_DIR/release/macos/dmg_pipeline/dmgroot

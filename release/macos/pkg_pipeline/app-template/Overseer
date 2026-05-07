@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+APP_SUPPORT="/Library/Application Support/Overseer"
+VENV_PY="$APP_SUPPORT/.venv/bin/python"
+
+if [ ! -x "$VENV_PY" ]; then
+    osascript -e 'display alert "Overseer is not installed correctly." message "Missing Python environment." as critical'
+    exit 1
+fi
+
+exec "$VENV_PY" -m overseer

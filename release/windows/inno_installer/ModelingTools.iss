@@ -1,14 +1,14 @@
 [Setup]
-AppName=Modeling Tools
+AppName=Overseer
 AppVersion=1.0.0
-DefaultDirName={localappdata}\Modeling-Tools
-DefaultGroupName=Modeling Tools
-AppPublisherURL=https://github.com/alexbcreiner0/Modeling-Tools
-AppSupportURL=https://github.com/alexbcreiner0/Modeling-Tools
-AppUpdatesURL=https://github.com/alexbcreiner0/Modeling-Tools
-UninstallDisplayIcon={app}\src\modeling_tools\assets\icon.ico
+DefaultDirName={localappdata}\Overseer
+DefaultGroupName=Overseer
+AppPublisherURL=https://github.com/alexbcreiner0/Overseer
+AppSupportURL=https://github.com/alexbcreiner0/Overseer
+AppUpdatesURL=https://github.com/alexbcreiner0/Overseer
+UninstallDisplayIcon={app}\src\overseer\assets\icon.ico
 OutputDir=.
-OutputBaseFilename=ModelingTools-Setup
+OutputBaseFilename=Overseer-Setup
 CreateUninstallRegKey=yes
 
 [Files]
@@ -24,8 +24,8 @@ Source: "..\..\..\pyproject.toml"; DestDir: "{app}"
 Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\install.ps1"""; Flags: waituntilterminated
 
 [Icons]
-Name: "{group}\Modeling Tools"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\src\modeling_tools\assets\icon.ico"
-Name: "{commondesktop}\Modeling Tools"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\src\modeling_tools\assets\icon.ico"
+Name: "{group}\Overseer"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\src\overseer\assets\icon.ico"
+Name: "{commondesktop}\Overseer"; Filename: "{app}\.venv\Scripts\pythonw.exe"; Parameters: """{app}\launcher.pyw"""; WorkingDir: "{app}"; IconFilename: "{app}\src\overseer\assets\icon.ico"
 
 [UninstallRun]
 Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\uninstall.ps1"""; Flags: waituntilterminated

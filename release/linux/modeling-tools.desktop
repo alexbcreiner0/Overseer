@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=Modeling Tools
+Name=Overseer
 Comment=Model visualization and exploration toolkit
 Exec=@EXEC_PATH@
-Icon=modeling-tools
+Icon=overseer
 Terminal=false
 Categories=Science;Education;
 StartupNotify=true

@@ -14,10 +14,10 @@ pyinstaller `
   --clean `
   --noconfirm `
   --additional-hooks-dir=. `
-  --collect-data modeling_tools `
-  --icon ../../../src/modeling_tools/assets/icon.ico `
+  --collect-data overseer `
+  --icon ../../../src/overseer/assets/icon.ico `
   --collect-data scienceplots `
-  --hidden-import modeling_tools.tools.log_formatter `
+  --hidden-import overseer.tools.log_formatter `
   --paths ..\..\..\src `
   --windowed `
   .\main.py

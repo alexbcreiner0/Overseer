@@ -1,5 +1,0 @@
-from .parameters import Params
-import numpy as np
-
-def get_trajectories(params: Params):
-    pass

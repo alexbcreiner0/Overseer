@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_NAME="modeling-tools"
+APP_NAME="overseer"
 RELEASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$RELEASE_DIR/../.." && pwd)"
 
@@ -36,7 +36,7 @@ echo "Copying Linux release files..."
 cp "$RELEASE_DIR/install.sh" "$PAYLOAD_DIR/"
 cp "$RELEASE_DIR/launcher.sh" "$PAYLOAD_DIR/"
 cp "$RELEASE_DIR/uninstall.sh" "$PAYLOAD_DIR/"
-cp "$RELEASE_DIR/modeling-tools.desktop" "$PAYLOAD_DIR/"
+cp "$RELEASE_DIR/overseer.desktop" "$PAYLOAD_DIR/"
 
 chmod +x "$PAYLOAD_DIR/install.sh"
 chmod +x "$PAYLOAD_DIR/launcher.sh"

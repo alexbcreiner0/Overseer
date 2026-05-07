@@ -2,7 +2,7 @@
 # make sure script crashes when it should to avoid doing damage
 set -euo pipefail 
 
-APP_NAME="Modeling-Tools"
+APP_NAME="Overseer"
 INSTALL_ROOT="$HOME/.local/share/$APP_NAME"
 BIN_DIR="$INSTALL_ROOT/bin"
 DESKTOP_DIR="$HOME/.local/share/applications"
@@ -48,9 +48,9 @@ for required in \
     "$PAYLOAD_ROOT/pyproject.toml" \
     "$PAYLOAD_ROOT/README.md" \
     "$PAYLOAD_ROOT/launcher.sh" \
-    "$PAYLOAD_ROOT/modeling-tools.desktop" \
-    "$PAYLOAD_ROOT/src/modeling_tools/assets/icon.png" \
-    "$PAYLOAD_ROOT/src/modeling_tools/defaults"
+    "$PAYLOAD_ROOT/overseer.desktop" \
+    "$PAYLOAD_ROOT/src/overseer/assets/icon.png" \
+    "$PAYLOAD_ROOT/src/overseer/defaults"
 do
     if [[ ! -e "$required" ]]; then
         echo "Error: expected release file not found:"
@@ -90,15 +90,15 @@ install -m 755 "$PAYLOAD_ROOT/launcher.sh" "$BIN_DIR/launcher.sh"
 # pipe it to where the rest of the .desktop files are
 echo "Installing desktop file..."
 sed "s|@EXEC_PATH@|$BIN_DIR/launcher.sh|g" \
-    "$PAYLOAD_ROOT/modeling-tools.desktop" \
-    > "$DESKTOP_DIR/modeling-tools.desktop"
+    "$PAYLOAD_ROOT/overseer.desktop" \
+    > "$DESKTOP_DIR/overseer.desktop"
 
-chmod 644 "$DESKTOP_DIR/modeling-tools.desktop"
+chmod 644 "$DESKTOP_DIR/overseer.desktop"
 
-if [[ -f "$PAYLOAD_ROOT/src/modeling_tools/assets/icon.png" ]]; then
+if [[ -f "$PAYLOAD_ROOT/src/overseer/assets/icon.png" ]]; then
     install -m 644 \
-      "$PAYLOAD_ROOT/src/modeling_tools/assets/icon.png" \
-      "$ICON_DIR/modeling-tools.png"
+      "$PAYLOAD_ROOT/src/overseer/assets/icon.png" \
+      "$ICON_DIR/overseer.png"
 fi
 
 update-desktop-database "$DESKTOP_DIR" >/dev/null 2>&1 || true
