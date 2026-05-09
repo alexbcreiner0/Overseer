@@ -118,7 +118,7 @@ class EditConfigDialog(qw.QDialog):
         self.page_params.availableParamsChanged.connect(self.page_controls.set_available_params)
         self.page_params.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_presets.model_combo.currentTextChanged.connect(self._on_model_changed)
-        self.page_models.newModelCreated.connect(self.page_demos.on_new_model_created)
+        self.page_models.newModelCreated.connect(self.page_demos.refresh_models)
         self.page_models.model_list.currentTextChanged.connect(self._on_model_changed)
         self.page_models.modelsChanged.connect(self._refresh_model_combos)
 
@@ -189,32 +189,20 @@ class EditConfigDialog(qw.QDialog):
             self._on_model_changed(model)
 
         tab = self.idx_to_page[self.stack.currentIndex()]
-        name = self.idx_to_name[self.stack.currentIndex()]
-        
-        if self.stack.currentIndex() == 0:
-            settings = self.page_global.get_settings_for_config()
-            self.page_demos.on_apply_clicked(settings)
-        else:
-            tab.on_apply_clicked()
+        tab.on_apply_clicked()
 
+        # I don't remember what this is for?
         self.settings = self.page_global.get_settings_for_config()
+
         self.configApplied.emit()
 
     def _on_save_clicked(self) -> None:
-        # You implement actual writing
-        # self.save_data(self.data)
         self._on_apply_clicked()
         self.accept()
 
     def _refresh_models(self):
         models = list_subdirs(self.env.models_dir)
         return models
-
-    # def _install_shortcuts(self) -> None:
-    #     # Ctrl+1..4 to switch pages quickly
-    #     for i in range(4):
-    #         sc = qw.QShortcut(qc.QKeySequence(f"Ctrl+{i+1}"), self)
-    #         sc.activated.connect(lambda i=i: self.nav.setCurrentRow(i))
 
     def _on_model_changed(self, model_name: str):
         if self._syncing_model:

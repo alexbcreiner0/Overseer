@@ -1,0 +1,256 @@
+demos:
+  wright_s_cross_dual_disequilibrium_model_three_commodities:
+    name: Wright's Cross-Dual Disequilibrium Model (Three Commodities)
+    desc: Starting parameters are based on the example in Wright's PhD thesis. See
+      the GitHub wiki pages for detailed information.
+    details:
+      simulation_model: wright-cross-dual-3-commodity
+      simulation_function: simulate2
+      default_preset: default_preset
+      axis_settings:
+        limits:
+          a1: [[-1.09712, 98.8391], [-1.65313, 15.2356]]
+        dimension: [1, 1]
+        dropdown_indices: [0, 3, 4, 7]
+        checked_plots:
+          a1: [Unit Prices, Unit Values]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: false
+            ylabel: false
+        saved_limits:
+          a1: [[-0.641058, 98.6897], [-0.701702, 14.4947]]
+    default: true
+  morishima_s_material_constrained_reinvestment_model:
+    name: Morishima's Material Constrained Reinvestment Model
+    desc: See GitHub wiki pages for detailed information.
+    details:
+      simulation_model: morishima_disproportionality_reinvestment
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      axis_settings:
+        limits:
+          a1: [[0.403487, 7.31171], [2.67222, 465.913]]
+          a2: [[0.825615, 9.26361], [-0.464211, 1.83926]]
+        dimension: [1, 2]
+        dropdown_indices: [0, 1]
+        checked_plots:
+          a1: [Value Outputs, Balanced Growth Paths]
+          a2: [Value Rate of Profit, Sectoral Profit Rates (Value), Money Rate of
+              Profit]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+      simulation_speed: 0.1
+  boltzmann_wealth_distribution_agent_based_model:
+    name: Boltzmann Wealth Distribution Agent-Based Model
+    desc: TBA
+    details:
+      simulation_model: boltzmann-wealth-distribution
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[0.0, 10.0], [0.0, 100.0]]
+      simulation_speed: 0.044
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[-0.458536, 7.33996], [0.0839456, 78.0963]]
+          a2: [[1.30881, 328.206], [-0.00651863, 0.961886]]
+        dropdown_indices: [0, 1]
+        checked_plots:
+          a1: [Wealth Distribution]
+          a2: [Gini Coefficient, Total Money in Circulation]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+  heat_equation:
+    name: Heat Equation
+    desc: ''
+    details:
+      simulation_model: heat_equation
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[0.0, 120.0], [0.0, 80.0]]
+      axis_settings:
+        dimension: [1, 1]
+        limits:
+          a1: [[-11.213, 125.265], [-9.03314, 86.3827]]
+        dropdown_indices: [0]
+        checked_plots:
+          a1: [thing]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+  fun_math_stuff:
+    name: Fun Math Stuff
+    desc: ''
+    details:
+      simulation_model: fun_math_stuff
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[-10.0, 10.0], [-10.0, 10.0]]
+      simulation_speed: 0.01
+      axis_settings:
+        dimension: [1, 1]
+        limits:
+          a1: [[-10.2714, 10.301], [-12.7773, 12.4131]]
+        dropdown_indices: [0]
+        checked_plots:
+          a1: [Weierstrass Function]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+  wright_s_agent_based_social_architecture_model:
+    name: Wright's Agent-Based Social Architecture Model
+    desc: ''
+    details:
+      simulation_model: wright_agent_based_social_architecture
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[0.0, 1000.0], [0.0, 0.03]]
+      axis_settings:
+        dimension: [2, 2]
+        limits:
+          a1: [[-88.9659, 917.14], [1.96124e-05, 0.0282907]]
+          a2: [[1.3891, 153.93], [-52.1151, 1074.69]]
+          a3: [[-808.175, 17125.0], [-0.000321317, 0.00348904]]
+          a4: [[2.33935, 154.88], [-61.4743, 1065.33]]
+        dropdown_indices: [0, 1, 3, 5]
+        checked_plots:
+          a1: [Number of Capitalists, Number of Workers, Number of Capitalists (Fitted),
+            Number of Workers (Fitted)]
+          a2: [Capitalists, Workers, Unemployed]
+          a3: [Worker Annual Income, Worker Annual Income (Fitted), Capitalist Annual
+              Income, Capitalist Annual Income (Fitted)]
+          a4: [Firm Sizes, Firm Sizes]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a3:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a4:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+  cockshott_s_law_of_value_agent_based_model:
+    name: Cockshott's Law of Value Agent-Based Model
+    desc: ''
+    details:
+      simulation_model: law_of_value_simple_commodity_production
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[0.0, 1200.0], [-15.4323, 201.782]]
+          a2: [[0.0, 1000.0], [0.0, 500.0]]
+        dropdown_indices: [0, 2]
+        checked_plots:
+          a1: [Average Prices, Average Labor Values]
+          a2: [Sector Employments, Efficient Distribution of Labor]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+  epstein_civil_violence_model:
+    name: Epstein Civil Violence Model
+    desc: ''
+    details:
+      simulation_model: epstein_civil_violence
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      simulation_speed: 0.1
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[-0.718722, 39.7813], [-0.574978, 39.925]]
+          a2: [[-1.40865, 1.3952], [-1.02062, 1.08226]]
+        dropdown_indices: [0, 1]
+        checked_plots:
+          a1: [Grid]
+          a2: [Citizen States]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+

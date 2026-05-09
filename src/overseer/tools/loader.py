@@ -365,6 +365,22 @@ def load_parameters_class_from_file(parameters_py: str | Path):
 
     return Parameters
 
+def get_user_data_dir(settings: dict, env) -> Path:
+    raw_text = settings.get("user_data_dir")
+    if raw_text is None:
+        return env.user_data_dir
+
+    try:
+        raw_text = settings.get("user_data_dir")
+        candidate = Path(raw_text).expanduser().resolve(strict= False)
+    except Exception:
+        return env.user_data_dir
+
+    if candidate.exists() and candidate.is_dir():
+        return candidate
+
+    return env.user_data_dir
+
 def get_user_models_dir(settings: dict, env) -> Path:
     raw_text = settings.get("user_models_dir")
     if raw_text is None:

@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger(__name__)
 from os import name
 from pathlib import Path
-import re
+import re, inspect
 import yaml
 from dataclasses import fields, MISSING
 from typing import Any, Callable, Optional
@@ -15,7 +15,6 @@ from overseer.tools.creation_tools import create_new_model_dir
 
 class CheckFailure(Exception):
     """Raised for user-facing check failures with readable messages."""
-
 
 def _required_param_names(ParamsCls: type) -> set[str]:
     req = set()
@@ -187,6 +186,8 @@ def _check_sim_contract(func_name: str, func: Callable, params: Any) -> list[str
       - t is 1D array-like
       - e is None or BaseException
     """
+    lines = []
+
     try:
         out = func(params)
     except TypeError as e:
@@ -194,22 +195,40 @@ def _check_sim_contract(func_name: str, func: Callable, params: Any) -> list[str
     except Exception as e:
         raise CheckFailure(f"{func_name} raised an exception: {e}")
 
-    if not isinstance(out, tuple) or len(out) != 3:
-        raise CheckFailure(f"{func_name} must return a 3-tuple (traj, t, e). Got: {type(out).__name__}.")
+    if inspect.isgenerator(out):
+        result = next(out)
+    else:
+        result = out
 
-    traj, t, e = out
-
-    if not isinstance(traj, dict):
-        raise CheckFailure(f"{func_name}: traj must be a dict, got {type(traj).__name__}.")
-
-    t_arr = np.asarray(t)
-    if t_arr.ndim != 1:
-        raise CheckFailure(f"{func_name}: t must be 1D, got shape {t_arr.shape}.")
-
-    if e is not None and not isinstance(e, BaseException):
-        raise CheckFailure(f"{func_name}: e must be None or an Exception, got {type(e).__name__}.")
-
-    return [f"{func_name} returned (traj, t, e) with valid basic types."]
+    if isinstance(result, tuple):
+        if not (0 < len(result) <= 2):
+            raise CheckFailure(f"{func_name} must return or yield either a 2-tuple (traj, t) or a single dictionary traj. Got: {type(out).__name__}.")
+        # is of form (traj, t)
+        if len(result) == 1:
+            raise CheckFailure(f"{func_name} is a tuple but only has a single element. (How did you even manage this???)")
+        traj, t = result
+        if not isinstance(traj, dict):
+            raise CheckFailure(f"First output of {func_name} must be a dictionary.")
+        else:
+            test_item = (next(iter(traj)), traj[next(iter(traj))])
+            if not isinstance(test_item[0], str):
+                raise CheckFailure("Keys of the trajectories dictionary must be strings.")
+        return [f"{func_name} returned or yielded (traj, t) with valid basic types."]
+    else:
+        # result not a tuple, so should be a dict
+        if not isinstance(result, dict):
+            raise CheckFailure(f"If {func_name} returns/yields a single value, that value must be a dictionary.")
+        else:
+            if len(result) == 0 or result.get("t") is None:
+                raise CheckFailure("Output dictionary has no entries, it should at least have a 't' item.")
+            elif result.get("t") is None:
+                raise CheckFailure("If not including a second t output, it should be included in the dictionary as a key/value pair.")
+            else:
+                test_item = (next(iter(result)), result[next(iter(result))])
+                if not isinstance(test_item[0], str):
+                    raise CheckFailure("Keys of the trajectories dictionary must be strings.")
+                # add value tests later
+        return [f"{func_name} returned or yielded an output dictionary with valid basic types."]
 
 
 def run_model_diagnostics(env, model_name: str) -> list[str]:
@@ -268,8 +287,8 @@ def run_model_diagnostics(env, model_name: str) -> list[str]:
     # ---- Simulation function checks (ALL functions, tested against ALL presets) ----
     lines.append("Simulation function checks")
 
-    if not ready:
-        lines.append(f" ⚠️ Model marked not ready (MODEL_READY=False)")
+    # if not ready:
+    #     lines.append(f" ⚠️ Model marked not ready (MODEL_READY=False)")
 
     for func_name, func in sim_funcs:
         tried_preset = False

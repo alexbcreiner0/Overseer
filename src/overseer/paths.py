@@ -9,6 +9,8 @@ import yaml
 ENV_CONFIG = "OVERSEER_CONFIG"
 
 def resolve_config(cli_config: str | None, default_config_file: Path) -> Path:
+    print(f"{cli_config=}")
+    print(f"{os.environ.get(ENV_CONFIG)=}")
     raw = cli_config or os.environ.get(ENV_CONFIG)
     if not raw:
         return default_config_file
@@ -30,7 +32,6 @@ def anonymous_submission_mode_active(app_dir: Path) -> bool:
         settings = yaml.safe_load(f).get("global_settings", {})
 
     return settings.get("anonymous_submission_mode", False)
-
 
 APP_NAME = "Overseer"
 APP_AUTHOR = False
@@ -57,6 +58,7 @@ else:
     CONFIG_FILE = CONFIG_DIR / "config.yml"
 
 MODELS_DIR = USER_APP_DIR / "models"
+DEMOS_FILE = USER_APP_DIR / "demos.yml"
 DATA_DIR = Path(user_data_dir(APP_NAME, APP_AUTHOR))
 KEYBINDINGS_FILE = CONFIG_DIR / "keybindings.yml"
 LOG_DIR = USER_APP_DIR / "logs" if not release_mode else DATA_DIR / "logs"
@@ -78,6 +80,7 @@ def bundle_root() -> Path:
         return Path(sys._MEIPASS)  # type: ignore[attr-defined]
     return Path(__file__).resolve().parent
 
+# deprecated
 def rpath(*parts: str) -> Path:
     """ very simple helper function to create paths throughout the app """
     return bundle_root().joinpath(*parts)

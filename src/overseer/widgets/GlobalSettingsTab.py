@@ -5,8 +5,10 @@ from pathlib import Path
 import sys
 
 from .common import FormSection
+from overseer.tools.creation_tools import flow_seqify, atomic_write
 
 class GlobalSettingsTab(qw.QWidget):
+
 
     def __init__(self, env, parent):
 
@@ -22,8 +24,7 @@ class GlobalSettingsTab(qw.QWidget):
             save_name = global_settings.get("default_save_name", "figure")
             run_on_startup = global_settings.get("run_on_startup", True)
             autosave_axis_settings = global_settings.get("autosave_axis_settings", False)
-            user_model_dir = global_settings.get("user_models_dir", str(env.models_dir))
-            user_logs_dir = global_settings.get("user_logs_dir", str(env.log_dir))
+            user_data_dir = global_settings.get("user_data_dir", str(env.user_data_dir))
             use_saved_cat_limits = global_settings.get("use_cat_limits", True)
             figure_mode = global_settings.get("figure_mode", "tight")
             preferred_editor = global_settings.get("preferred_editor", "Auto")
@@ -35,23 +36,12 @@ class GlobalSettingsTab(qw.QWidget):
                 default_term = ""
             preferred_terminal = global_settings.get("preferred_terminal", default_term)
 
-        # self.edit_default_save_dir = qw.QLineEdit(save_dir)
-        # self.btn_browse_save_dir = qw.QToolButton()
-        # self.btn_browse_save_dir.setText("…")
-
         self.edit_default_save_dir = FilePicker()
-        self.edit_models_dir = FilePicker()
-        self.edit_logs_dir = FilePicker()
+        self.user_data_dir_entry = FilePicker()
         self.edit_default_save_dir.setText(image_save_dir)
-        self.edit_models_dir.setText(user_model_dir)
-        self.edit_logs_dir.setText(user_logs_dir)
+        self.user_data_dir_entry.setText(user_data_dir)
 
         self.window = self.window()
-
-        # save_dir_row = qw.QHBoxLayout()
-        # save_dir_row.setContentsMargins(0, 0, 0, 0)
-        # save_dir_row.addWidget(self.edit_default_save_dir, 1)
-        # save_dir_row.addWidget(self.btn_browse_save_dir, 0)
 
         self.save_name = qw.QLineEdit(save_name)
         self.run_on_startup = qw.QCheckBox("Auto-run simulation on startup")
@@ -102,8 +92,9 @@ class GlobalSettingsTab(qw.QWidget):
         self.checkbox_row_lay.addWidget(self.use_cat_limits)
 
         sec.form.addRow("Default image save directory:", self.edit_default_save_dir)
-        sec.form.addRow("User models directory:", self.edit_models_dir)
-        sec.form.addRow("Logging directory:", self.edit_logs_dir)
+        sec.form.addRow("User data directory", self.user_data_dir_entry, help_text= "This is where Overseer will write logs to, where it will look for and store models you make, and information on demos you define.")
+        # sec.form.addRow("User models directory:", self.edit_models_dir)
+        # sec.form.addRow("Logging directory:", self.edit_logs_dir)
         help_text = "A template string for your save name to default to. Examples: \n \
                     'my_pic' will result in the save name defaulting to my_pic.png. \n \
                     'my_pic {a} {b}' will attempt to replace {a} and {b} with the values of the parameter named a and b in your model. \n \
@@ -119,6 +110,46 @@ class GlobalSettingsTab(qw.QWidget):
                         If it doesn't find anything, buttons attempting to use it will be unresponsive.")
         sec.form.addRow('', self.checkbox_row)
         sec.form.addRow("MatPlotLib figure mode:", figure_mode_radio_widget)
+
+        self.settings = {
+            "default_save_name": {
+                "default_value": "figure",
+                "widget": self.save_name
+            },
+            "default_save_dir": {
+                "default_value": str(Path.home()),
+                "widget": self.edit_default_save_dir
+            },
+            "user_data_dir": {
+                "default_value": None,
+                "widget": self.user_data_dir_entry,
+            },
+            "run_on_startup": {
+                "default_value": True,
+                "widget": self.run_on_startup
+            },
+            "autosave_axis_settings": {
+                "default_value": False,
+                "widget": self.autosave_axis_settings
+            },
+            "use_cat_limits": {
+                "default_value": True,
+                "widget": self.use_cat_limits
+            },
+            "figure_mode": {
+                "default_value": "tight",
+                "widget": self.radio_group,
+                "value_map": {1: "tight", "else": "constrained"}
+            },
+            "preferred_terminal": {
+                "default_value": None,
+                "widget": self.preferred_terminal
+            },
+            "preferred_editor": {
+                "default_value": None,
+                "widget": self.preferred_editor
+            }
+        }
 
         # TODO: make apply/save actually work this way
         # hint = qw.QLabel(
@@ -147,6 +178,39 @@ class GlobalSettingsTab(qw.QWidget):
             self.edit_default_save_dir.setText(path)
             self.window.status.show("Note: To actually apply the changes, you must first click Apply.", 2000)
 
+    def on_apply_clicked(self) -> None:
+        new_data = self.get_working_data_for_save()
+        if new_data is None:
+            return
+        self._normalize_for_dump(new_data)
+        path = self.env.config_file
+        atomic_write(path, new_data)
+
+    def get_working_data_for_save(self):
+        working_data = {"global_settings": {}}
+        settings = working_data["global_settings"]
+
+        for setting_name, setting_dict in self.settings.items():
+            widget = setting_dict["widget"]
+            if isinstance(widget, (FilePicker, qw.QLineEdit)):
+                value = widget.text()
+            elif isinstance(widget, qw.QCheckBox):
+                value = widget.isChecked()
+            elif isinstance(widget, qw.QComboBox):
+                value = widget.currentText()
+            elif isinstance(widget, qw.QButtonGroup):
+                value_map = setting_dict["value_map"]
+                fallback = value_map["else"]
+                value = value_map.get(widget.checkedId(), fallback)
+            else:
+                print(f"Error! I don't know how to get values from {widget}")
+                return
+
+            if value != setting_dict["default_value"]:
+                settings[setting_name] = value
+
+        return working_data
+
     def get_settings_for_config(self):
         settings = {
             "save_name": self.save_name.text(),
@@ -157,11 +221,16 @@ class GlobalSettingsTab(qw.QWidget):
             "preferred_terminal": self.preferred_terminal.currentText(),
             "preferred_editor": self.preferred_editor.currentText()
         }
-        if self.edit_models_dir.text() != self.env.models_dir and self.edit_models_dir.text():
-            settings["user_models_dir"] = self.edit_models_dir.text()
-        if self.edit_logs_dir.text() != self.env.log_dir and self.edit_logs_dir.text():
-            settings["user_logs_dir"] = self.edit_logs_dir.text()
+        if self.user_data_dir_entry.text() != self.env.user_data_dir and self.user_data_dir_entry.text():
+            settings["user_data_dir"] = self.user_data_dir_entry.text()
         if self.edit_default_save_dir.text() != str(Path.home()) and self.edit_default_save_dir.text():
             settings["default_save_dir"] = self.edit_default_save_dir.text()
 
         return settings
+
+    def _normalize_for_dump(self, data: dict) -> dict:
+        """ Does basically nothing right now, but this is where you would apply any special formatting to the settings dict """
+        flow_seqify(data)
+
+        return data
+

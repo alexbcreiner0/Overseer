@@ -13,6 +13,8 @@ from .paths import (
     CACHE_DIR,
     LOG_DIR,
     MODELS_DIR,
+    USER_APP_DIR,
+    DEMOS_FILE,
     CONFIG_FILE,
     KEYBINDINGS_FILE,
     APP_DIR,
@@ -26,9 +28,11 @@ class BootstrapResult:
     config_dir: Path
     data_dir: Path
     cache_dir: Path
+    user_data_dir: Path
     log_dir: Path
     models_dir: Path
     config_file: Path
+    demos_file: Path
     app_dir: Path
 
 def copy_if_missing(src: Path, dest: Path) -> None:
@@ -69,11 +73,15 @@ def bootstrap_user_environment(config_override: str | None = None) -> BootstrapR
         active_config_file = CONFIG_FILE
 
     default_config = defaults_path("config.example.yml")
+    default_demos = defaults_path("demos.example.yml")
     default_keybinds = defaults_path("keybindings.yml")
     default_models = defaults_path("models")
 
     if active_config_file == CONFIG_FILE  and not CONFIG_FILE.exists():
         copy_if_missing(default_config, CONFIG_FILE)
+
+    if not DEMOS_FILE.exists():
+        copy_if_missing(default_demos, DEMOS_FILE)
 
     if not KEYBINDINGS_FILE.exists():
         copy_if_missing(default_keybinds, KEYBINDINGS_FILE)
@@ -85,8 +93,10 @@ def bootstrap_user_environment(config_override: str | None = None) -> BootstrapR
         config_dir=CONFIG_DIR,
         data_dir=DATA_DIR,
         cache_dir=CACHE_DIR,
+        user_data_dir=USER_APP_DIR,
         log_dir=LOG_DIR,
         models_dir=MODELS_DIR,
+        demos_file=DEMOS_FILE,
         config_file=active_config_file,
         app_dir=APP_DIR,
     )

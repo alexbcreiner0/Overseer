@@ -23,7 +23,7 @@ class DemoSettingsTab(qw.QWidget):
         self.env = env
         self._loading_editor = False
 
-        with open(self.env.config_file, "r") as f:
+        with open(self.env.demos_file, "r") as f:
             self.original_data = yaml.safe_load(f)
 
         self.working_data = copy.deepcopy(self.original_data)
@@ -140,7 +140,7 @@ class DemoSettingsTab(qw.QWidget):
         # Wiring for this page
         self.demo_filter.textChanged.connect(self._filter_demo_list)
 
-        self.btn_refresh_models.clicked.connect(self._refresh_models)
+        self.btn_refresh_models.clicked.connect(self.refresh_models)
         # self.btn_save_as_new.clicked.connect(self._on_save_as_new_clicked)
         # self.btn_save_demo.clicked.connect(self._save_demo_changes)
 
@@ -154,28 +154,15 @@ class DemoSettingsTab(qw.QWidget):
             self.combo_model,
             self.combo_function,
             self.combo_preset,
-            # self.chk_starting_lims,
-            # self.edit_xlim_lo,
-            # self.edit_xlim_hi,
-            # self.edit_ylim_lo,
-            # self.edit_ylim_hi
         ]
 
         self._refresh_demos()
-        self._refresh_models()
+        self.refresh_models()
         self._wire_autosave_signals()
         if self.demo_list.count() > 0:
             self._on_demo_selected(0)
 
-    def on_new_model_created(self):
-        with open(self.env.config_file, "r") as f:
-            data = yaml.safe_load(f)
-        
-        for key in data["model_specific_settings"]:
-            if key not in self.working_data["model_specific_settings"]:
-                self.working_data["model_specific_settings"][key] = None
-
-    def _refresh_models(self):
+    def refresh_models(self):
         self.combo_model.clear()
         models = self.window._refresh_models()
         for model in models:
@@ -512,32 +499,10 @@ class DemoSettingsTab(qw.QWidget):
                 return k
         return None
 
-    def on_apply_clicked(self, settings= {}):
-
-        # TODO: redo all like the preferred_terminal one(s)
-        if "default_save_dir" in settings:
-            self.working_data["global_settings"]["default_save_dir"] = settings.get("default_save_dir", str(Path.home()))
-        if "save_name" in settings:
-            self.working_data["global_settings"]["default_save_name"] = settings.get("save_name", "figure")
-        if "run_on_startup" in settings:
-            self.working_data["global_settings"]["run_on_startup"] = settings.get("run_on_startup", True)
-        if "autosave_axis_settings" in settings:
-            self.working_data["global_settings"]["autosave_axis_settings"] = settings.get("autosave_axis_settings", False)
-        if "user_models_dir" in settings:
-            self.working_data["global_settings"]["user_models_dir"] = settings.get("user_models_dir", str(self.env.models_dir))
-        if "user_logs_dir" in settings:
-            self.working_data["global_settings"]["user_logs_dir"] = settings.get("user_logs_dir", str(self.env.log_dir))
-        if "use_cat_limits" in settings:
-            self.working_data["global_settings"]["use_cat_limits"] = settings.get("use_cat_limits", True)
-        if "figure_mode" in settings:
-            self.working_data["global_settings"]["figure_mode"] = settings.get("figure_mode", "tight")
-        if settings.get("preferred_terminal") is not None:
-            self.working_data["global_settings"]["preferred_terminal"] = settings.get("preferred_terminal")
-        if settings.get("preferred_editor") is not None:
-            self.working_data["global_settings"]["preferred_editor"] = settings.get("preferred_editor")
+    def on_apply_clicked(self):
 
         self._normalize_for_dump(self.working_data)
-        path = self.env.config_file
+        path = self.env.demos_file
         atomic_write(path, self.working_data)
         self.original_data = copy.deepcopy(self.working_data)
         self.working_data = copy.deepcopy(self.original_data)
@@ -545,26 +510,8 @@ class DemoSettingsTab(qw.QWidget):
         self._refresh_demos()
 
     def _normalize_for_dump(self, data: dict) -> dict:
-        """ Basically just flow_seqify's the data and then makes sure a dimension is specified for axis settings """
+        """ Does basically nothing right now, but this is where you would apply any special formatting to the settings dict """
         flow_seqify(data)
-        demos = data.get("demos", {})
-        for _k, demo in demos.items():
-            if not isinstance(demo, dict):
-                continue
-            details = demo.get("details")
-            if not isinstance(details, dict):
-                continue
-
-            axis_settings = details.get("axis_settings", {})
-            if axis_settings == {}:
-                return data
-
-            dim = axis_settings.get("dimension")
-            if dim is not None:
-                dim = flow_seqify(dim)
-                axis_settings["dimension"] = dim
-            else:
-                axis_settings["dimension"] = flow_seqify([1,1])
 
         return data
 

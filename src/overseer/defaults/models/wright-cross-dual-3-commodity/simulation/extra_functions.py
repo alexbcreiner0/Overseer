@@ -11,6 +11,7 @@ except Exception:
 from dataclasses import fields, is_dataclass, asdict
 from typing import get_origin, get_args
 import random
+from pathlib import Path
 
 def params_from_mapping(map: dict):
     params_fields = fields(Params)
@@ -280,7 +281,8 @@ def random_parameters(params, env, epsilon=1e-1):
     params = params_from_mapping(params_dict)
 
     commodities = []
-    with open(env.data_dir / "assets" / "commodities.txt", "r") as f:
+    root = Path(__file__).parent.parent
+    with open( root / "data" / "commodities.txt", "r") as f:
         for line in f:
             commodities.append(line.strip())
     sector_names = random.sample(commodities, dim)
