@@ -7,6 +7,16 @@ from pathlib import Path
 import yaml
 from .HelpFormLayout import HelpFormLayout
 
+def list_subdirs(path, actual_paths= False):
+    if actual_paths:
+        return [p for p in Path(path).iterdir() if p.is_dir()]
+    else:
+        return [
+            p.name
+            for p in Path(path).iterdir()
+            if p.is_dir()
+        ]
+
 class FormSection(qw.QGroupBox):
     """A tidy groupbox with a built-in form layout."""
     def __init__(self, title: str):
@@ -39,4 +49,14 @@ def replace_key_preserve_order(d: dict, old_key: str, new_key: str, new_val) -> 
     d.clear()
     d.update(new_d)
 
+def refresh_models(env):
+    models = []
+    potential_models = list_subdirs(env.models_dir, actual_paths= True)
+    
+    for pot_model in potential_models:
+        init_path = pot_model / "__init__.py"
+        if init_path.exists():
+            models.append(pot_model.name)
+
+    return models
 

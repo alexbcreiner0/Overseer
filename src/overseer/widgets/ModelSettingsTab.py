@@ -12,6 +12,7 @@ import numpy as np
 from PyQt6 import QtCore as qc, QtWidgets as qw
 from overseer.tools.loader import list_subdirs, open_in_known_editor
 from overseer.tools.creation_tools import create_new_model_dir
+from .common import refresh_models
 
 class CheckFailure(Exception):
     """Raised for user-facing check failures with readable messages."""
@@ -465,7 +466,7 @@ class ModelSettingsTab(qw.QWidget):
     def refresh_models(self, *, select_first: bool = False) -> None:
         """Reload the list of models from disk."""
         prev = self._current_model
-        models = list_subdirs(self.env.models_dir)
+        models = refresh_models(self.env)
         self.model_list.clear()
         self._diag_cache.clear()
         self.model_list.addItems(models)

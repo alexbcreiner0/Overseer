@@ -12,6 +12,7 @@ from PyQt6 import QtCore as qc, QtGui as qg, QtWidgets as qw
 
 from overseer.tools.loader import load_parameters_class_from_file, try_instantiate_with_defaults
 from overseer.tools.creation_tools import flow_seqify, atomic_write
+from overseer.widgets.common import refresh_models
 
 def list_subdirs(path: str | os.PathLike) -> List[str]:
     p = Path(path)
@@ -270,15 +271,13 @@ class PresetSettingsTab(qw.QWidget):
         self.edit_desc.textChanged.connect(self._on_editor_changed)
 
     # ------------------------- model switching -------------------------
+
     def _refresh_models(self) -> None:
-        models = list_subdirs(self.env.models_dir)
+        models = refresh_models(self.env)
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
         self.model_combo.addItems(models)
         self.model_combo.blockSignals(False)
-        if models:
-            self.model_combo.setCurrentIndex(0)
-            self._on_model_changed(models[0])
 
     def _on_model_changed(self, model: str) -> None:
         if not model:

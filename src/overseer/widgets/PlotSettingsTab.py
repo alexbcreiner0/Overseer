@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 import os, copy
 import yaml
-from .common import make_shortname, replace_key_preserve_order
+from .common import make_shortname, replace_key_preserve_order, refresh_models
 from overseer.tools.creation_tools import flow_seqify, atomic_write
 import logging
 from .RowStackWidgets import *
@@ -1367,7 +1367,7 @@ class PlotSettingsTab(qw.QWidget):
         new_data["colorbar"] = self.surface_display_cbar.isChecked()
 
     def _refresh_models(self) -> None:
-        models = list_subdirs(self.env.models_dir)
+        models = refresh_models(self.env)
         self.model_combo.clear()
         self.model_combo.addItems(models)
 

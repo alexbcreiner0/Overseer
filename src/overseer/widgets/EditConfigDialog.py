@@ -9,6 +9,7 @@ from .ControlSettingsTab import ControlSettingsTab
 from .ParamSettingsTab import ParamSettingsTab
 from .PresetSettingsTab import PresetSettingsTab
 from .ModelSettingsTab import ModelSettingsTab
+from .common import refresh_models
 from overseer.paths import MODELS_DIR, CONFIG_FILE
 
 from PyQt6 import (
@@ -17,12 +18,15 @@ from PyQt6 import (
     QtGui as qg
 )
 
-def list_subdirs(path):
-    return [
-        p.name
-        for p in Path(path).iterdir()
-        if p.is_dir()
-    ]
+def list_subdirs(path, actual_paths= False):
+    if actual_paths:
+        return [p for p in Path(path).iterdir() if p.is_dir()]
+    else:
+        return [
+            p.name
+            for p in Path(path).iterdir()
+            if p.is_dir()
+        ]
 
 class StatusBar(qw.QStatusBar):
     """QStatusBar that auto-clears messages after a timeout by default."""
@@ -55,13 +59,13 @@ class EditConfigDialog(qw.QDialog):
 
         self.nav = qw.QListWidget()
         self.nav.setSpacing(2)
-        self.nav.addItem("Global settings")
-        self.nav.addItem("Models")
-        self.nav.addItem("Parameters")
-        self.nav.addItem("Presets")
-        self.nav.addItem("Controls")
-        self.nav.addItem("Plots")
-        self.nav.addItem("Demos")
+        self.nav.addItem("Application Settings")
+        self.nav.addItem("Model Settings")
+        self.nav.addItem("Parameter Settings")
+        self.nav.addItem("Preset Settings")
+        self.nav.addItem("Control Settings")
+        self.nav.addItem("Plot Settings")
+        self.nav.addItem("Demo Settings")
 
         self.status = StatusBar()
         self.status.setSizeGripEnabled(False)
@@ -118,7 +122,7 @@ class EditConfigDialog(qw.QDialog):
         self.page_params.availableParamsChanged.connect(self.page_controls.set_available_params)
         self.page_params.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_presets.model_combo.currentTextChanged.connect(self._on_model_changed)
-        self.page_models.newModelCreated.connect(self.page_demos.refresh_models)
+        self.page_models.newModelCreated.connect(self.page_demos._refresh_models)
         self.page_models.model_list.currentTextChanged.connect(self._on_model_changed)
         self.page_models.modelsChanged.connect(self._refresh_model_combos)
 
@@ -200,9 +204,16 @@ class EditConfigDialog(qw.QDialog):
         self._on_apply_clicked()
         self.accept()
 
-    def _refresh_models(self):
-        models = list_subdirs(self.env.models_dir)
-        return models
+    # def _refresh_models(self):
+    #     models = []
+    #     potential_models = list_subdirs(self.env.models_dir, actual_paths= True)
+        
+    #     for pot_model in potential_models:
+    #         init_path = pot_model / "__init__.py"
+    #         if init_path.exists():
+    #             models.append(pot_model.name)
+
+    #     return models
 
     def _on_model_changed(self, model_name: str):
         if self._syncing_model:
@@ -233,7 +244,7 @@ class EditConfigDialog(qw.QDialog):
 
         # If current model disappeared, fall back to first available.
         try:
-            models = self._refresh_models()
+            models = refresh_models(self.env)
             if models:
                 cur = None
                 if getattr(self.page_plots, "model_combo", None) is not None:

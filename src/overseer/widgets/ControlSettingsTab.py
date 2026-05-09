@@ -12,6 +12,7 @@ from .HelpFormLayout import HelpFormLayout
 
 from overseer.tools.loader import load_presets, params_from_mapping, load_parameters_class_from_file, try_instantiate_with_defaults
 from overseer.tools.creation_tools import flow_seqify, FlowSeq, atomic_write
+from .common import refresh_models
 import logging
 
 logger = logging.getLogger(__name__)
@@ -659,15 +660,11 @@ class ControlSettingsTab(qw.QWidget):
     # -------------------------
 
     def _refresh_models(self) -> None:
-        models = list_subdirs(self.env.models_dir)
+        models = refresh_models(self.env)
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
         self.model_combo.addItems(models)
         self.model_combo.blockSignals(False)
-
-        if models:
-            self.model_combo.setCurrentIndex(0)
-            self._on_model_changed(models[0])
 
     def _on_model_changed(self, model: str) -> None:
         if not model:

@@ -6,6 +6,7 @@ venv/
 .venv/
 
 dev/
+docs/.obsidian
 
 logs/*
 !logs/.gitkeep

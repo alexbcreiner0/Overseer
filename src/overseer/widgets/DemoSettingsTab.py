@@ -11,7 +11,7 @@ from PyQt6 import (
 )
 
 from overseer.tools.loader import load_presets
-from .common import FormSection, make_shortname, replace_key_preserve_order
+from .common import FormSection, make_shortname, replace_key_preserve_order, refresh_models
 from overseer.tools.creation_tools import flow_seqify, atomic_write
 
 class DemoSettingsTab(qw.QWidget):
@@ -140,7 +140,7 @@ class DemoSettingsTab(qw.QWidget):
         # Wiring for this page
         self.demo_filter.textChanged.connect(self._filter_demo_list)
 
-        self.btn_refresh_models.clicked.connect(self.refresh_models)
+        self.btn_refresh_models.clicked.connect(self._refresh_models)
         # self.btn_save_as_new.clicked.connect(self._on_save_as_new_clicked)
         # self.btn_save_demo.clicked.connect(self._save_demo_changes)
 
@@ -157,14 +157,14 @@ class DemoSettingsTab(qw.QWidget):
         ]
 
         self._refresh_demos()
-        self.refresh_models()
+        self._refresh_models()
         self._wire_autosave_signals()
         if self.demo_list.count() > 0:
             self._on_demo_selected(0)
 
-    def refresh_models(self):
+    def _refresh_models(self):
         self.combo_model.clear()
-        models = self.window._refresh_models()
+        models = refresh_models(self.env)
         for model in models:
             self.combo_model.addItem(model)
         self._refresh_presets()

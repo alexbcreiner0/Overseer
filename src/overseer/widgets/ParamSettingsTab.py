@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type
 import logging
 from overseer.tools.creation_tools import atomic_write
+from .common import refresh_models
 
 import numpy as np
 from numpy import ndarray
@@ -255,15 +256,11 @@ class ParamSettingsTab(qw.QWidget):
         self.availableParamsChanged.emit(self._current_model, names)
 
     def _refresh_models(self) -> None:
-        models = list_subdirs(self.env.models_dir)
+        models = refresh_models(self.env)
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
         self.model_combo.addItems(models)
         self.model_combo.blockSignals(False)
-
-        if models:
-            self.model_combo.setCurrentIndex(0)
-            self._on_model_changed(models[0])
 
     def _on_model_changed(self, model: str) -> None:
         if not model:
@@ -273,7 +270,6 @@ class ParamSettingsTab(qw.QWidget):
         self._refresh_table()
         self.editor_stack.setCurrentIndex(0)
         self._emit_available_params()
-
 
     def _on_table_item_changed(self, item: qw.QTableWidgetItem) -> None:
 
