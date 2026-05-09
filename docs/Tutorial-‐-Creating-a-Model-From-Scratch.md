@@ -109,9 +109,7 @@ After this, click Apply, and then move to Control Settings.
 ## Step 6: Create Controls
 There is a lot to say about the control panel settings, but not a lot that *has* to be said or even understood fully to get a nice control panel up and running. This is because we have a built-in wizard for initializing your controls, assuming you've already declared some parameters. 
 
-<video src="pictures/make-controls.mp4" controls autoplay muted loop playsinline>
-  Your browser does not support the video tag.
-</video>
+![](pictures/make-controls.gif)
 
 # Basic File Structure
 New models are creates inside of the models folder. The basic structure must look exactly like this:
