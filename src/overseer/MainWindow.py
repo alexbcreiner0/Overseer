@@ -1195,6 +1195,10 @@ class MainWindow(qw.QMainWindow):
         sim_menu.addAction(rerun_button)
         rerun_button.triggered.connect(self.start_sim)
 
+        reload_button = qg.QAction("Reload simulation", self)
+        sim_menu.addAction(reload_button)
+        reload_button.triggered.connect(self.reload_current_demo)
+
         force_kill_action = qg.QAction("Force Stop Simulation", self)
         sim_menu.addAction(force_kill_action)
         force_kill_action.triggered.connect(self._kill_sim)

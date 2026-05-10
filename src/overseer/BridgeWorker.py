@@ -37,7 +37,33 @@ class BridgeWorker(qc.QObject):
     def _update_progress(self, traj, t= None):
 
         if t is not None:
-            self.t = t
+            if isinstance(t, Append):
+                if self.t == None:
+                    self.t = [t.value]
+                else:
+                    self.t.append(t.value)
+            elif isinstance(t, Extend):
+                if isinstance(t.value, np.ndarray):
+                    t = list(t.value)
+                else:
+                    if not isinstance(t.value, list):
+                        self.error.emit("Error: Trying to extend a list with a non-list-like t output.")
+                        return
+
+                if self.t == None:
+                    self.t = t.value
+                else:
+                    self.t.extend(t.value)
+            elif isinstance(t, Replace):
+                self.t = t.value
+            else:
+                if isinstance(t, np.ndarray):
+                    t = list(t)
+                else:
+                    if not isinstance(t, list):
+                        self.error.emit("Error: t is not recognized as a list-like object.")
+                        return
+                self.t = t
 
         for key, payload in traj.items():
             if isinstance(payload, Append):
@@ -94,8 +120,8 @@ class BridgeWorker(qc.QObject):
             output = msg[1:]
             if len(output) == 2:
                 traj, t = output
-                if not isinstance(traj, dict) or not isinstance(t, (list, np.ndarray)):
-                    self.error.emit("Two outputs detected, but either first is not a dictionary or second is not a list/numpy array.")
+                if not isinstance(traj, dict):
+                    self.error.emit("Two outputs detected, but first is not a dictionary.")
                     return
                 else:
                     self._update_progress(traj, t)

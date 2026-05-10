@@ -6,7 +6,7 @@ To get started, navigate in the top menu bar to Settings -> Model Settings. Here
 
 From here, you can create a new model by simply typing a name into the Model / Directory Name entry field and clicking the "Create Directory" button. We'll create one called Example Model.
 
-![](pictures/make-model.png)
+![](pictures/make-model.gif)
 
 Once you've done that, you should immediately see an item for your model appear in the list. The name won't be exactly the same as what you typed, but will be similar. 
 
@@ -74,11 +74,11 @@ Back in Overseer, let's next move to the Plot Settings tab. Here, you tell Overs
 
 Plots are organized into **categories**. Think of a category as a collection of related plots that you might (or might not) want to look at at the same time. Create a new category by clicking the +Category button. There are a lot of optional settings here but we'll only bother to fill in the name field, and call this category Everything. 
 
-![](pictures/make-category.png)
+![](pictures/make-category.gif)
 
 After this, with the Everything category selected, we can click the +Plot button to create a new plot inside of this category. The picture below shows the relevant fields filled in for plotting our Sine function:
 
-![](pictures/make-sine.png)
+![](pictures/make-plots.gif)
 
 The most important field here is Trajectory Key*. This should be the key of the dictionary output from `get_trajectories` corresponding to the sine outputs. Again, since we either have returned a `t` array explicitly or have one in the output dictionary, we can leave the field underneath blank. Finally, the label + color field specifies what the curve should be listed as in the legend, and the color of the curve. 
 
@@ -93,9 +93,7 @@ To create a new demo, click the +Demo button. There isn't a whole lot to specify
 
 This is enough to see our functions. Go ahead and click Save to apply and close the settings. After this, you should be able to find your demo listed in the Demos dropdown of the top menu bar. Click load. 
 
-![](pictures/load-demo.png)
-
-REDO AND MAKE THE PLOTS APPEAR
+![](pictures/load-demo.gif)
 
 We have some plots on the screen. Wonderful! But our Simulation Controls to the left are empty. Let's do something about that. 
 
@@ -113,9 +111,123 @@ There is a lot to say about the control panel settings, but not a lot that *has*
 
 ![](pictures/make-controls.gif)
 
-REDO AND MAKE THE DEMO ACTIVE SO THAT THE CONTROLS APPEAR
+There are multiple types of control widgets, but most of the time the type of the parameter gives away the widget that you'll want to use. Here, Overseer infers that because $a$ and $b$ are float parameters, that you want a slider-entry widget for them. Make sure that you also adjust the "Range min" and "Range max" parameters for the two controls. Let's change the "Range max" parameter to 5.0 in both cases. 
 
-There are multiple types of control widgets, but most of the time the type of the parameter gives away the widget that you'll want to use. Here, Overseer infers that because 
+## Step 7: Use Parameters In Your Simulation
+Now that we've declared our parameters and created some controls for them, how do we make use of them? This is where the `params` input to the `get_trajectories` function comes into play. If we stop to take a look now at `parameters.py`, located in the same folder as the `simulation.py` file, we will see the following:
+
+```python
+from dataclasses import dataclass, field
+from numpy import array, ndarray
+
+@dataclass
+class Params:
+    a: float = 1
+    b: float = 1
+```
+
+We can see that when we declared $a$ and $b$ in Overseer, it went ahead and created for us a [dataclass](https://docs.python.org/3/library/dataclasses.html) with those parameters as properties.  When Overseer runs your simulation, it creates an instance of your this dataclass and passes it to the function. Thus we can simply write `params.a` and `params.b` to reference $a$ and $b$ respectively:
+
+```python
+from typing import Any
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+
+def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+    a, b = params.a, params.b
+
+    t = np.linspace(-5,5,300)
+    traj = {
+	    "sine": a*np.sin(b*t),
+	    "cosine": a*np.cos(b*t)
+    }
+    
+    return traj, t
+```
+
+If we save this and return to Overseer, we can reload and rerun the model by either selecting Simulation -> Reload simulation or pressing F7. Now, whenever we adjust either variable in the control panel, the simulation will be run anew, resulting in different results.
+
+![](pictures/controls-demo.gif)
+
+## Step 8: Report Incremental Progress
+For real scientific applications, simulations can take a large amount of time to run. It is therefore important for our models to be able to periodically report progress incrementally. This can be done by replacing our `return` keywords with the lesser known `yield`, and turning our function into a [generator](https://wiki.python.org/moin/Generators). 
+
+To put it briefly, a generator is like a function that can be iterated over. Each iteration, the function picks up where it left off until it encounters another yield. The simplest possible example looks like this:
+
+```python
+def yield_example():
+	yield "dog"
+	yield "cat"
+	yield "mouse"
+	
+gen = yield_example()
+for out in gen:
+	print(out)
+```
+
+If we run this code, the loop will repeatedly call yield_example() until there is nothing left to be yielded. The first iteration will run the function until it encounters `"dog"`. Then the next call, it will pick up where it left off, and yield `"cat"`. In contrast, if we used return instead of yield and just called the function three times, it would print `"dog"` three times.
+
+Let's alter our simulation like this to make use of `yield`:
+
+```python
+from typing import Any
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+
+def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+    a, b = params.a, params.b
+
+    eps = 0.03
+    t = np.array([-5])
+
+    for _ in range(300):
+        t = np.append(t, t[-1]+eps)
+        traj = {
+            "sine": a*np.sin(b*t),
+            "cosine": b*np.cos(b*t)
+        }
+
+        yield traj, t
+```
+
+Now we have a `t` array which gradually expands to what it was originally, and are periodically yielding more and more of the Sine and Cosine functions. If we save and reload the model again, things might look the no different from before. This is just because our simulation completes too fast for us to see anything. For the sake of demonstration, we can slow things down by adjusting the Sim speed in the top right corner. Set it to 0.01 and...
+
+![](pictures/animation-demo.gif)
+
+## Addendum: Efficient Usage
+The code we just wrote isn't very efficient. This is for two reasons:
+1. `np.append` creates a brand new copy of the array every time it is called, which we are doing every iteration of the loop.
+2. In order to keep the GUI interface smooth and get around Pythons [Global Interpter Lock (GIL)](https://realpython.com/python-gil/),  Overseer runs your simulation runs in a separate Python process using Python's built-in multiprocessing module. Thus Overseer cannot simply reference the `traj` dictionary directly. The data in `traj` must be [pickled](https://docs.python.org/3/library/pickle.html) and transferred between processes in a serialized format.
+Both of these result in a simulation time complexity which grows **quadratically** with the size of the output data. In order to avoid this efficiency hit, we need to make sure to only send over the newest data each time. Here is the fix:
+
+```python
+from typing import Any
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+
+def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+    a, b = params.a, params.b
+
+    eps = 0.03
+    t = -5.0
+
+    for _ in range(300):
+        t += eps
+        traj = {
+            "sine": Append(a*np.sin(b*t)),
+            "cosine": Append(b*np.cos(b*t))
+        }
+
+        yield traj, Append(t)
+```
+
+What has changed? `t` is no longer a list or a Numpy array. It is just a regular float now, as are the outputs of `a*np.sin(b*t)` and `a*np.cos(b*t)`. However, we aren't yielding these numbers directly. Instead we are wrapping them in a dataclass called `Append`. These three dataclasses, `Append`, `Extend` and `Replace`, tell Overseer how to go about assembling the full `traj` dict itself from disparate pieces of data which are sent over to it. Recognizing the `Append` wrapper, Overseer will append the latest data points as they appear into a list, after which point the data set as a whole can be referenced directly. No serialized redundant data transfer required. 
+
+Furthermore, since Overseer maintains the data as a list, and *not* a Numpy array, the appending is also no longer problematic, since Python lists are really [dynamic arrays](https://en.wikipedia.org/wiki/Dynamic_array), which can be appended to cheaply. Despite being written in Python, Overseer is optimized to not drag you down at all, *provided* you use it to it's full potential. See the dedicated section on `Append`, `Extend` and `Replace` for more details.
+
 # Basic File Structure
 New models are creates inside of the models folder. The basic structure must look exactly like this:
 
