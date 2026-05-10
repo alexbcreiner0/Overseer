@@ -95,6 +95,8 @@ This is enough to see our functions. Go ahead and click Save to apply and close 
 
 ![](pictures/load-demo.png)
 
+REDO AND MAKE THE PLOTS APPEAR
+
 We have some plots on the screen. Wonderful! But our Simulation Controls to the left are empty. Let's do something about that. 
 
 You might have to do some adjusting to see the plots the way they are pictured. This can be done in a variety of ways, see [the controls section](Controls), but my preferred is to *right click* the screen and drag to change the horizontal and vertical magnification. Once you've found a setup you like, you can click View -> Save current axis settings to attach this view as the default when your demo loads, so that you don't have to futz around with the camera so much next time. 
@@ -111,6 +113,9 @@ There is a lot to say about the control panel settings, but not a lot that *has*
 
 ![](pictures/make-controls.gif)
 
+REDO AND MAKE THE DEMO ACTIVE SO THAT THE CONTROLS APPEAR
+
+There are multiple types of control widgets, but most of the time the type of the parameter gives away the widget that you'll want to use. Here, Overseer infers that because 
 # Basic File Structure
 New models are creates inside of the models folder. The basic structure must look exactly like this:
 
