@@ -340,7 +340,7 @@ def list_subdirs(path):
         if p.is_dir()
     ]
 
-def load_parameters_class_from_file(parameters_py: str | Path):
+def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
     """
     Load the Parameters dataclass from a model's parameters.py without relying on it
     being importable as a package.
@@ -413,20 +413,19 @@ def get_user_logs_dir(settings: dict, env) -> Path:
 
     return env.log_dir
 
-def try_instantiate_with_defaults(Parameters: Type[Any]) -> Tuple[Optional[Any], list[str]]:
+def try_instantiate_with_defaults(Params: Type[Any]) -> Tuple[Optional[Any], list[str]]:
     """
-    Attempt Parameters() using defaults/default_factory.
-    Returns (instance or None, list of missing-required field names).
+    Attempt to instantiate an instance of the dataclas using defaults/default_factory.
     """
     missing = []
-    for f in fields(Parameters):
-        if f.default is MISSING and f.default_factory is MISSING:
-            missing.append(f.name)
+    for field in fields(Params):
+        if field.default is MISSING and field.default_factory is MISSING:
+            missing.append(field.name)
 
     if missing:
         return None, missing
 
-    return Parameters(), []
+    return Params(), []
 
 def load_presets(env, path):
     with open(env.models_dir / path / "data" / "params.yml", 'r') as f:

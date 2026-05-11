@@ -6,16 +6,18 @@ import tempfile
 from pathlib import Path
 import yaml
 from .HelpFormLayout import HelpFormLayout
+from typing import Any, Tuple
+import dataclasses
 
 def list_subdirs(path, actual_paths= False):
     if actual_paths:
         return [p for p in Path(path).iterdir() if p.is_dir()]
     else:
-        return [
+        return sorted([
             p.name
             for p in Path(path).iterdir()
             if p.is_dir()
-        ]
+        ])
 
 class FormSection(qw.QGroupBox):
     """A tidy groupbox with a built-in form layout."""
@@ -59,4 +61,21 @@ def refresh_models(env):
             models.append(pot_model.name)
 
     return models
+
+def get_default_value(param_field) -> Tuple[bool, Any]:
+    """
+    Returns (has_default, default_value | None) 
+    """
+    # dataclasses.MISSING is not imported here; compare by repr-safe attr presence
+    if getattr(param_field, "default", dataclasses.MISSING) is not dataclasses.MISSING:
+        return True, param_field.default
+
+    factory = getattr(param_field, "default_factory", dataclasses.MISSING)
+    if factory is not dataclasses.MISSING:
+        try:
+            return True, factory()
+        except Exception:
+            return True, None
+
+    return False, None
 

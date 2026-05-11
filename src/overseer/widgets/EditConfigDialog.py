@@ -18,16 +18,6 @@ from PyQt6 import (
     QtGui as qg
 )
 
-def list_subdirs(path, actual_paths= False):
-    if actual_paths:
-        return [p for p in Path(path).iterdir() if p.is_dir()]
-    else:
-        return [
-            p.name
-            for p in Path(path).iterdir()
-            if p.is_dir()
-        ]
-
 class StatusBar(qw.QStatusBar):
     """QStatusBar that auto-clears messages after a timeout by default."""
     def show(self, msg: str, timeout_ms: int = 5000) -> None:
@@ -120,6 +110,7 @@ class EditConfigDialog(qw.QDialog):
         self.page_plots.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_controls.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_params.availableParamsChanged.connect(self.page_controls.set_available_params)
+        self.page_params.paramSettingsChanged.connect(self.page_presets.refresh_rows)
         self.page_params.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_presets.model_combo.currentTextChanged.connect(self._on_model_changed)
         self.page_models.newModelCreated.connect(self.page_demos._refresh_models)

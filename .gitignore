@@ -7,6 +7,7 @@ venv/
 
 dev/
 docs/.obsidian
+docs/.trash
 
 logs/*
 !logs/.gitkeep

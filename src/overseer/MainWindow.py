@@ -1344,10 +1344,30 @@ class MainWindow(qw.QMainWindow):
         self._clear_presets_menu()
         self._create_presets_submenus(self.presets, self.presets_submenu)
 
+    def _test_for_problem_keys(self):
+        problem_keys = []
+        if self.traj is None:
+            return problem_keys
+
+        for key, val in self.traj.items():
+            try:
+                np.asarray(val)
+            except ValueError as e:
+                problem_keys.append(key)
+
+        return problem_keys
+
     def _save_results(self):
         if self.traj is None:
             self.status_bar.showMessage("You have no data to save! Run a simulation first.", 3000)
             return
+
+        problem_keys = self._test_for_problem_keys()
+        problem_dict = None
+        if problem_keys != []:
+            problem_dict = {key: self.traj[key] for key in problem_keys}
+            for key in problem_keys:
+                del self.traj[key]
 
         model_name = self.current_demo["details"]["simulation_model"]
         results_path = self.env.models_dir / model_name / "saved_results"
@@ -1368,17 +1388,25 @@ class MainWindow(qw.QMainWindow):
             self.traj["t"] = self.t
             added_t = True
 
+        for key in self.traj:
+            print(f"{key=}: {type(self.traj[key])=}")
+
         try:
             np.savez_compressed(file_path_npz, **self.traj)
         finally:
             if added_t:
                 del self.traj["t"]
+            if problem_dict is not None:
+                for key in problem_dict:
+                    self.traj[key] = problem_dict[key]
 
         other_settings = {
             "name": name,
             "desc": desc,
-            "params": to_plain(self.params)
+            "params": to_plain(self.params),
         }
+        if problem_dict is not None:
+            other_settings["problem_dict"] = problem_dict
         if save_axis:
             other_settings["axis_settings"] = self._get_current_axis_settings()
         atomic_write(file_path_yml, other_settings)
@@ -1394,6 +1422,7 @@ class MainWindow(qw.QMainWindow):
         model_name = self.demos[self.current_demo_name]["details"]["simulation_model"]
         settings_path = self.env.models_dir / model_name / "saved_results" / f"{filename.stem}.yml"
 
+        settings_dict = None
         if settings_path.exists():
             with open(settings_path, "r") as f:
                 settings_dict = yaml.safe_load(f) or {}
@@ -1414,6 +1443,11 @@ class MainWindow(qw.QMainWindow):
         with np.load(filename, allow_pickle= False) as data:
             t = data["t"]
             traj = {k: data[k] for k in data.files if k != "t"}
+
+        if settings_dict is not None and settings_dict.get("problem_keys") is not None:
+            extra_data = settings_dict["problem_keys"]
+            for key, data in extra_data.items():
+                extra_data[key] = data
 
         self.show_results(traj, t, None)
 

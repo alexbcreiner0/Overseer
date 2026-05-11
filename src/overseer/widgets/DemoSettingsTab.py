@@ -163,12 +163,20 @@ class DemoSettingsTab(qw.QWidget):
             self._on_demo_selected(0)
 
     def _refresh_models(self):
+        old_combo = self.combo_model.currentText()
+        old_function = self.combo_function.currentText()
+        old_preset = self.combo_preset.currentText()
+
         self.combo_model.clear()
         models = refresh_models(self.env)
         for model in models:
             self.combo_model.addItem(model)
-        self._refresh_presets()
-        self._refresh_functions()
+        self.combo_model.setCurrentText(old_combo)
+
+        self._refresh_presets(old_preset)
+        self._refresh_functions(old_function)
+
+        self.window.status.show("Refreshed models.", 3000)
 
     def _refresh_demos(self, selected_key: str | None = None):
         if selected_key is None:
@@ -216,7 +224,6 @@ class DemoSettingsTab(qw.QWidget):
 
         # delete from working copy only
         self.working_data["demos"].pop(key, None)
-        self.window.status.show("Demo removed (working copy). Click Apply to write to disk.")
         self._refresh_demos()
 
     def _on_changes(self):
@@ -226,7 +233,7 @@ class DemoSettingsTab(qw.QWidget):
     def _update_internal_name(self, text):
         self.lbl_internal_name.setText(make_shortname(text))
 
-    def _refresh_functions(self):
+    def _refresh_functions(self, old_function= None):
         self.combo_function.clear()
         current_model = self.combo_model.currentText()
         if not current_model: return
@@ -241,7 +248,10 @@ class DemoSettingsTab(qw.QWidget):
         for function in functions_list:
             self.combo_function.addItem(function)
 
-    def _refresh_presets(self):
+        if old_function is not None:
+            self.combo_function.setCurrentText(old_function)
+
+    def _refresh_presets(self, old_preset= None):
         self.combo_preset.clear()
         current_model = self.combo_model.currentText()
         if not current_model: return
@@ -251,6 +261,9 @@ class DemoSettingsTab(qw.QWidget):
             presets = []
         for preset in presets:
             self.combo_preset.addItem(preset)
+
+        if old_preset is not None:
+            self.combo_preset.setCurrentText(old_preset)
 
     def _wrap_layout(self, layout: qw.QLayout) -> qw.QWidget:
         w = qw.QWidget()

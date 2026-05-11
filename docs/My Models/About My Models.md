@@ -1,0 +1,4 @@
+The models on display here are a combination of models I've built to explore out of curiosity, models I've built to test the limits of this application and determine what needs to be added, and, above all, **models I've built for my serious academic research**. 
+
+\<COPY THIS INTO README\>
+In some cases, there isn't a solid line between any of these categories. Overseer is designed to create interactive models that you can show to other people, with a lot of room intentionally put in for the sake of instruction and guidance to a first time user. This is all to say that while I have not put an equal amount of thought or effort into every model here, the ones that I have, I've put a lot of thought and effort into, and I believe have a lot of learning value into just messing around with and exploring. Communication is the primary reason I created this application.

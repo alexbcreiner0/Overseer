@@ -1,69 +1,23 @@
 from __future__ import annotations
 
+import logging
+logger = logging.getLogger(__name__)
+
 import copy
 import importlib.util
 import keyword
-import os
+import os, re, ast
 from dataclasses import MISSING, dataclass, fields, is_dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type
-import logging
 from overseer.tools.creation_tools import atomic_write
-from .common import refresh_models
+from overseer.tools.loader import load_parameters_class_from_file
+from .common import refresh_models, get_default_value
 
 import numpy as np
 from numpy import ndarray
 
 from PyQt6 import QtCore as qc, QtGui as qg, QtWidgets as qw
-
-logger = logging.getLogger(__name__)
-
-def list_subdirs(path: str | os.PathLike) -> List[str]:
-    p = Path(path)
-    if not p.exists():
-        return []
-    return sorted([x.name for x in p.iterdir() if x.is_dir()])
-
-
-def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
-    """
-    Load the Parameters dataclass from a model's parameters.py by filepath.
-    Note: this executes the module, so parameters.py should avoid side-effects.
-    """
-    parameters_py = Path(parameters_py)
-    if not parameters_py.exists():
-        raise FileNotFoundError(parameters_py)
-
-    spec = importlib.util.spec_from_file_location(f"model_parameters_{parameters_py.stem}", parameters_py)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Could not load module spec for {parameters_py}")
-
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-
-    if not hasattr(mod, "Params"):
-        raise AttributeError(f"{parameters_py} does not define a Params class")
-
-    Parameters = getattr(mod, "Params")
-    if not is_dataclass(Parameters):
-        raise TypeError("Params exists but is not a dataclass")
-
-    return Parameters
-
-
-def safe_default_value(dc_field) -> Tuple[bool, Any]:
-    """
-    Return (has_default, value). Handles default_factory.
-    If default_factory raises, returns (False, None).
-    """
-    if dc_field.default is not MISSING:
-        return True, dc_field.default
-    if dc_field.default_factory is not MISSING:  # type: ignore
-        try:
-            return True, dc_field.default_factory()  # type: ignore
-        except Exception:
-            return False, None
-    return False, None
 
 @dataclass
 class ParamSpec:
@@ -87,6 +41,7 @@ class ParamSettingsTab(qw.QWidget):
     """
 
     availableParamsChanged = qc.pyqtSignal(str, list)
+    paramSettingsChanged = qc.pyqtSignal()
 
     def __init__(self, env, model= None, parent=None):
         super().__init__(parent)
@@ -232,6 +187,8 @@ class ParamSettingsTab(qw.QWidget):
 
         self.edit_name = qw.QLineEdit()
         self.edit_name.textChanged.connect(self._name_changed)
+
+        # self.edit_name.textChanged.connect(self._name_changed)
 
         self.combo_type = qw.QComboBox()
         self.combo_type.addItems(["Int", "Float", "String", "Boolean", "Array/Matrix"])
@@ -379,6 +336,7 @@ class ParamSettingsTab(qw.QWidget):
         return "float"
 
     def _load_specs_from_parameters_py(self, model: str) -> List[ParamSpec]:
+        print(f"Loading specs from parameters.py")
         path = self.env.models_dir / model / "simulation" / "parameters.py"
         try:
             Parameters = load_parameters_class_from_file(path)
@@ -390,7 +348,7 @@ class ParamSettingsTab(qw.QWidget):
 
         specs: List[ParamSpec] = []
         for f in fields(Parameters):
-            has_default, default_val = safe_default_value(f)
+            has_default, default_val = get_default_value (f)
             data_type = self._infer_data_type(f.type, default_val, has_default)
 
             value = default_val if has_default else None
@@ -441,7 +399,7 @@ class ParamSettingsTab(qw.QWidget):
         rows = {i.row() for i in self.table.selectedItems()}
         return next(iter(rows)) if rows else None
 
-    def _selected_spec_from_table(self) -> Optional[ParamSpec]:
+    def _select_spec_from_table(self) -> Optional[ParamSpec]:
         if not self._current_model:
             return None
         row = self._selected_row()
@@ -455,10 +413,10 @@ class ParamSettingsTab(qw.QWidget):
     def _selected_spec(self) -> Optional[ParamSpec]:
         if self._current_spec is not None:
             return self._current_spec
-        return self._selected_spec_from_table()
+        return self._select_spec_from_table()
 
     def _on_selection_changed(self) -> None:
-        spec = self._selected_spec_from_table()
+        spec = self._select_spec_from_table()
         self._current_spec = spec
         if spec is None:
             self.editor_stack.setCurrentIndex(0)
@@ -474,9 +432,116 @@ class ParamSettingsTab(qw.QWidget):
         self.edit_name.setText(spec.name)
         combo_type_setting = self.data_dict_reverse[spec.data_type]
         self.combo_type.setCurrentText(combo_type_setting)
-        self.edit_default_val.setText("" if spec.value is None else str(spec.value))
+        if spec.value is None:
+            text = ""
+        elif spec.data_type == "ndarray":
+            try:
+                text = self._get_str_from_nparray(str(spec.value))
+            except Exception as e:
+                logger.log(logging.ERROR, f"Error parsing parameter {spec.value}: {e}", exc_info= e)
+                self.window.status.show(f"Error parsing parameter {spec.value}", 4000)
+                text = str(spec.value)
+        else:
+            text = str(spec.value)
+        self.edit_default_val.setText(text)
 
         self._block_editor(False)
+
+    def _get_str_from_nparray(self, bad_str):
+        s = bad_str.strip()
+
+        if not s:
+            return "[]"
+
+        if not (s.startswith("[") and s.endswith("]")):
+            return bad_str
+
+        try:
+            parsed = ast.literal_eval(s)
+            if isinstance(parsed, (list, tuple)):
+                return bad_str
+        except (SyntaxError, ValueError):
+            pass
+
+        inner = s[1:-1].strip()
+
+        if not inner:
+            return "[]"
+
+        if inner.startswith("["):
+            row_strings = re.findall(r"\[([^\[\]]*)\]", inner)
+
+            if not row_strings:
+                return bad_str
+
+            rows = []
+            for row in row_strings:
+                row = row.strip()
+
+                if not row:
+                    rows.append("[]")
+                    continue
+
+                nums = row.split()
+                rows.append("[" + ", ".join(nums) + "]")
+
+            return "[" + ", ".join(rows) + "]"
+
+        nums = inner.split()
+        return "[" + ", ".join(nums) + "]"
+
+    def _get_str_from_nparray2(self, bad_str):
+        no_braks = bad_str[1:len(bad_str)-1].strip()
+        is_matrix = (no_braks[0] == "[")
+
+        if not is_matrix:
+            inner_ls_str = "["
+            if len(no_braks) < 2:
+                return inner_ls_str + "]"
+            raw_nums = no_braks.split()
+            nums = [num.strip() for num in raw_nums]
+
+            for j, num in enumerate(nums):
+                inner_ls_str += num
+                if j == len(nums)-1:
+                    continue
+                inner_ls_str += ", "
+
+            inner_ls_str += "]"
+            return inner_ls_str
+        else:
+            lists = no_braks.split("\n")
+            outer_ls_str = "["
+            for i, ls_str in enumerate(lists):
+                inner_ls_str = "["
+                ls_no_braks = ls_str[1:len(ls_str)-1]
+                if len(ls_no_braks) < 2:
+                    continue
+                nums = ls_no_braks.split()
+
+                for j, num in enumerate(nums):
+                    inner_ls_str += num
+                    if j == len(nums)-1:
+                        continue
+                    inner_ls_str += ", "
+
+                inner_ls_str += "]"
+                outer_ls_str += inner_ls_str
+                if i == len(lists)-1:
+                    continue
+                outer_ls_str += ", "
+            outer_ls_str += "]"
+
+            return outer_ls_str
+
+    def _set_table_text(self, row: int, col: int, text: str) -> None:
+        item = self.table.item(row, col)
+        if item is None:
+            return
+
+        self.table.blockSignals(True)
+        item.setText(text)
+        self.table.blockSignals(False)
 
     def _block_editor(self, block: bool) -> None:
         self.edit_name.blockSignals(block)
@@ -487,22 +552,37 @@ class ParamSettingsTab(qw.QWidget):
         spec = self._selected_spec()
         if spec is None:
             return
-        new = self.edit_name.text().strip()
-        if not self._valid_identifier(new):
-            self.window.status.show("Invalid name (must be a valid Python identifier, not a keyword).", 4000)
-            self._load_spec_into_editor(spec)
-            return
+
         if not self._current_model:
             return
-        # uniqueness
+
+        new = self.edit_name.text().strip()
+
+        if not self._valid_identifier(new):
+            return
+
+        if not self._valid_identifier(new):
+            self.window.status.show(
+                "Invalid name. Use a valid Python identifier that is not a keyword.",
+                4000,
+            )
+            return
+
         specs = self._working_data[self._current_model]
         if any(s is not spec and s.name == new for s in specs):
             self.window.status.show("A parameter with that name already exists.", 4000)
-            self._load_spec_into_editor(spec)
+            return
+
+        if spec.name == new:
             return
 
         spec.name = new
-        self._refresh_table()
+
+        row = self._selected_row()
+        if row is not None:
+            self._set_table_text(row, 0, new)
+
+        self._emit_available_params()
 
     def _type_changed(self, data_type: str) -> None:
         spec = self._selected_spec()
@@ -514,23 +594,52 @@ class ParamSettingsTab(qw.QWidget):
     def _default_val_changed(self) -> None:
         spec = self._selected_spec()
         if spec is None:
-
-            print("Returned early?")
             return
 
-        txt = self.edit_default_val.text().strip()
-        if txt == "":
+        raw_txt = self.edit_default_val.text().strip()
+        if raw_txt == "":
             spec.value = None
-        else:
-            spec.value = txt
+            self._update_default_order_warning()
+            return
 
-        row = self._selected_row()
-        if row is not None:
-            default_txt = "" if spec.value is None else str(spec.value)
-            item = self.table.item(row, 2)
-            if item:
-                item.setText(default_txt)
-        self._update_default_order_warning()
+        valid = True
+        match spec.data_type:
+            case "int":
+                try:
+                    int(raw_txt)
+                    txt = raw_txt
+                except ValueError:
+                    valid = False
+            case "float":
+                try:
+                    float(raw_txt)
+                    txt = raw_txt
+                except ValueError:
+                    valid = False
+            case "str":
+                txt = raw_txt
+            case "bool":
+                try:
+                    bool(raw_txt)
+                    txt = raw_txt
+                except ValueError:
+                    valid = False
+            case "ndarray":
+                try:
+                    txt = self._get_str_from_nparray(raw_txt)
+                except Exception as e:
+                    valid = False
+
+        if valid:
+            spec.value = txt
+            self._update_default_order_warning()
+
+        # row = self._selected_row()
+        # if row is not None:
+        #     default_txt = "" if spec.value is None else str(spec.value)
+        #     item = self.table.item(row, 2)
+        #     if item:
+        #         item.setText(default_txt)
         # self._refresh_table()
 
     def _add_parameter(self) -> None:
@@ -578,6 +687,8 @@ class ParamSettingsTab(qw.QWidget):
             for model, _ in self._original_data.items():
                 specs = self._working_data[model]
                 self._original_data[model] = copy.deepcopy(specs)
+        finally:
+            self.paramSettingsChanged.emit()
 
     # def on_apply_clicked(self) -> None:
     #     if not self._current_model:

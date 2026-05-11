@@ -1,28 +1,27 @@
 from __future__ import annotations
 
+import logging
+logger = logging.getLogger(__name__)
+
 import dataclasses
 from dataclasses import fields
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import logging
 import copy
 import os
 import yaml
+import numpy as np
 from PyQt6 import QtCore as qc, QtGui as qg, QtWidgets as qw
 
 from overseer.tools.loader import load_parameters_class_from_file, try_instantiate_with_defaults
 from overseer.tools.creation_tools import flow_seqify, atomic_write
-from overseer.widgets.common import refresh_models
-
-def list_subdirs(path: str | os.PathLike) -> List[str]:
-    p = Path(path)
-    if not p.exists():
-        return []
-    return sorted([x.name for x in p.iterdir() if x.is_dir()])
+from overseer.widgets.common import refresh_models, get_default_value
 
 def _yaml_inline(value: Any) -> str:
+    """ return a string representation of a parameter value """
     if value is None:
         return ""
+
     # numpy arrays stringify without commas; convert first
     try:
         import numpy as np
@@ -42,41 +41,16 @@ def _yaml_inline(value: Any) -> str:
 
     return str(value)
 
-
 _MISSING = object()
 
-logger = logging.getLogger(__name__)
-
-def safe_default_value(dc_field) -> Tuple[bool, Any]:
+class PresetParamRow(qw.QWidget):
     """
-    Returns (has_default, value).
-    - has_default True means: either a literal default or a default_factory.
-    - value is the default value when possible; if default_factory exists we call it.
-    """
-    # dataclasses.MISSING is not imported here; compare by repr-safe attr presence
-    if getattr(dc_field, "default", dataclasses.MISSING) is not dataclasses.MISSING:
-        return True, dc_field.default
-
-    # Factory default
-    factory = getattr(dc_field, "default_factory", dataclasses.MISSING)
-    if factory is not dataclasses.MISSING:
-        try:
-            return True, factory()
-        except Exception:
-            # still counts as default, but we can't materialize it
-            return True, None
-
-    return False, None
-
-# ---- UI row widget for one param in a preset ----
-class _PresetParamRow(qw.QWidget):
-    """
-    Row UI for a single parameter.
+    Widget representing a single row of a single preset.
     - required: override checkbox locked on
     - optional: override checkbox controls whether param is included in preset
     - value editor: line for scalars, yaml text for arrays/structures
     """
-    changed = qc.pyqtSignal()
+    valueChanged = qc.pyqtSignal()
     removeRequested = qc.pyqtSignal(str)
 
     def __init__(self, name: str, required: bool, default_exists: bool, parent: Optional[qw.QWidget] = None):
@@ -89,90 +63,65 @@ class _PresetParamRow(qw.QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)
 
-        self.lbl = qw.QLabel(name + ("*" if required else ""))
-        self.lbl.setMinimumWidth(160)
+        self.param_label = qw.QLabel(name + ("*" if required else ""))
+        self.param_label.setMinimumWidth(160)
 
-        # heuristic editor choice: start with scalar editor, but allow multiline yaml
-        self.edit_scalar = qw.QLineEdit()
+        self.value_edit = qw.QLineEdit()
 
-        lay.addWidget(self.lbl, 0)
-        lay.addWidget(self.edit_scalar, 1)
+        lay.addWidget(self.param_label, 0)
+        lay.addWidget(self.value_edit, 1)
 
+        self.value_edit.textChanged.connect(self.valueChanged.emit)
 
-        self.edit_scalar.textChanged.connect(self.changed.emit)
+        self.remove_button = qw.QToolButton()
+        self.remove_button.setText("✕")  # or "x"
+        self.remove_button.setAutoRaise(True)
+        self.remove_button.setCursor(qg.QCursor(qc.Qt.CursorShape.PointingHandCursor))
+        self.remove_button.setToolTip("Remove from preset")
 
-        self.btn_remove = qw.QToolButton()
-        self.btn_remove.setText("✕")  # or "x"
-        self.btn_remove.setAutoRaise(True)
-        self.btn_remove.setCursor(qg.QCursor(qc.Qt.CursorShape.PointingHandCursor))
-        self.btn_remove.setToolTip("Remove from preset")
-
-        # Only optional params can be removed
-        # self.btn_remove.setEnabled(not self.required)
-        # self.btn_remove.setVisible(not self.required)
-
-        self.btn_remove.clicked.connect(lambda: self.removeRequested.emit(self.param_name))
-        lay.addWidget(self.btn_remove, 0)
-
-
-        # self._set_enabled_state()
-
-    # def _on_any_changed(self) -> None:
-    #     # self._set_enabled_state()
-    #     self.changed.emit()
+        self.remove_button.clicked.connect(lambda: self.removeRequested.emit(self.param_name))
+        lay.addWidget(self.remove_button, 0)
 
     def set_value(self, value: Any) -> None:
-        # Choose representation based on current editor
-        self.edit_scalar.blockSignals(True)
-        self.edit_scalar.setText(_yaml_inline(value))
-        self.edit_scalar.blockSignals(False)
+        self.value_edit.blockSignals(True)
+        self.value_edit.setText(_yaml_inline(value))
+        self.value_edit.blockSignals(False)
 
     def get_included(self) -> bool:
-        raw = self.edit_scalar.text().strip()
+        raw = self.value_edit.text().strip()
         if self.required:
             return True
         return raw != ""
 
     def get_value(self) -> Tuple[bool, Any, Optional[str]]:
-        raw = self.edit_scalar.text().strip()
+        raw = self.value_edit.text().strip()
 
         if not self.get_included():
             return True, None, None
         if raw == "":
             return False, None, "Empty value"
 
-        # Parse scalars/lists/dicts as YAML so numbers become int/float, true/false become bool, etc.
         try:
             val = yaml.safe_load(raw)
         except Exception as e:
             return False, None, f"Invalid YAML: {e}"
 
-        # yaml.safe_load("") would be None, but we already guarded raw == ""
         return True, val, None
 
 class PresetSettingsTab(qw.QWidget):
-    """
-    Edits models/<model>/data/params.yml -> top-level 'presets' mapping.
-
-    Rules:
-      1) A preset must specify values for params that have NO default in parameters.py
-      2) Params with defaults are optional in presets; if not specified, defaults apply.
-    """
-
     def __init__(self, env, model= None, parent: Optional[qw.QWidget] = None):
         super().__init__(parent)
-        self.window = self.window()  # expects window.status.show(...)
+        self.window = self.window()  
         self._current_model: Optional[str] = None
 
         self.env = env
 
-        # caches
-        self._working_data: Dict[str, Dict[str, Any]] = {}    # model -> entire yaml dict
-        self._original_data: Dict[str, Dict[str, Any]] = {}   # model -> deep copy for revert
-        self._param_meta: Dict[str, Dict[str, Any]] = {} # model -> {names, required, optional, defaults}
+        self._working_data: Dict[str, Dict[str, Any]] = {}    # model_name -> entire yaml dict
+        self._original_data: Dict[str, Dict[str, Any]] = {}
+        self._params_metadata: Dict[str, Dict[str, Any]] = {} # model -> {names, required, optional, defaults}
 
         self._current_preset_key: Optional[str] = None
-        self._row_widgets: Dict[str, _PresetParamRow] = {}
+        self._row_widgets: Dict[str, PresetParamRow] = {}
 
         self._build_ui()
         self._refresh_models()
@@ -185,12 +134,10 @@ class PresetSettingsTab(qw.QWidget):
                 pass
             self._current_model = model
 
-    # -------- public hook (matches your other tabs) --------
     def set_model(self, model_name: str):
         idx = self.model_combo.findText(model_name)
         self.model_combo.setCurrentIndex(idx)
 
-    # ------------------------- UI -------------------------
     def _build_ui(self) -> None:
         root = qw.QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
@@ -204,10 +151,10 @@ class PresetSettingsTab(qw.QWidget):
         top.addWidget(qw.QLabel("Model:"))
         top.addWidget(self.model_combo, 1)
 
+
         body = qw.QHBoxLayout()
         root.addLayout(body, 1)
 
-        # left: preset list
         left_box = qw.QGroupBox("Presets")
         left_lay = qw.QVBoxLayout(left_box)
         self.preset_list = qw.QListWidget()
@@ -215,12 +162,15 @@ class PresetSettingsTab(qw.QWidget):
         left_lay.addWidget(self.preset_list, 1)
 
         btnrow = qw.QHBoxLayout()
-        self.btn_add = qw.QPushButton("+ Preset")
-        self.btn_del = qw.QPushButton("Remove")
-        self.btn_add.clicked.connect(self._add_preset)
-        self.btn_del.clicked.connect(self._remove_preset)
-        btnrow.addWidget(self.btn_add)
-        btnrow.addWidget(self.btn_del)
+        self.add_button = qw.QPushButton("+ Preset")
+        self.delete_button = qw.QPushButton("Remove")
+        self.refresh_button = qw.QPushButton("Refresh params")
+        self.add_button.clicked.connect(self._add_preset)
+        self.delete_button.clicked.connect(self._remove_preset)
+        self.refresh_button.clicked.connect(self.refresh_rows)
+        btnrow.addWidget(self.add_button)
+        btnrow.addWidget(self.delete_button)
+        btnrow.addWidget(self.refresh_button)
         btnrow.addStretch(1)
         left_lay.addLayout(btnrow)
 
@@ -270,8 +220,6 @@ class PresetSettingsTab(qw.QWidget):
         self.edit_name.textChanged.connect(self._on_editor_changed)
         self.edit_desc.textChanged.connect(self._on_editor_changed)
 
-    # ------------------------- model switching -------------------------
-
     def _refresh_models(self) -> None:
         models = refresh_models(self.env)
         self.model_combo.blockSignals(True)
@@ -286,14 +234,13 @@ class PresetSettingsTab(qw.QWidget):
         self._ensure_loaded(model)
         self._refresh_preset_list()
 
-    # ------------------------- loading -------------------------
     def _ensure_loaded(self, model: str) -> None:
         if model not in self._working_data:
             data = self._load_params_yml(model)
             self._working_data[model] = data
             self._original_data[model] = copy.deepcopy(data)
-        if model not in self._param_meta:
-            self._param_meta[model] = self._load_param_meta_from_parameters_py(model)
+        if model not in self._params_metadata:
+            self._params_metadata[model] = self._load_param_meta_from_parameters_py(model)
 
     def _load_params_yml(self, model: str) -> Dict[str, Any]:
         path = self.env.models_dir / model / "data" / "params.yml"
@@ -310,7 +257,7 @@ class PresetSettingsTab(qw.QWidget):
 
     def _load_param_meta_from_parameters_py(self, model: str) -> Dict[str, Any]:
         """
-        Returns:
+        Populates the self._params_metadata dictionary, which ends up looking like this:
           {
             "names": [...],
             "required": set(...),
@@ -320,11 +267,11 @@ class PresetSettingsTab(qw.QWidget):
         """
         path = self.env.models_dir / model / "simulation" / "parameters.py"
         try:
-            Parameters = load_parameters_class_from_file(path)
+            Params = load_parameters_class_from_file(path)
         except FileNotFoundError:
             return {"names": [], "required": set(), "optional": set(), "defaults": {}}
         except Exception as e:
-            self.window.status.show(f"Error importing parameters.py: {e}", 8000)
+            self.window.status.show(f"Error importing parameters.py: {e}", 4000)
             return {"names": [], "required": set(), "optional": set(), "defaults": {}}
 
         required = set()
@@ -332,60 +279,48 @@ class PresetSettingsTab(qw.QWidget):
         defaults: Dict[str, Any] = {}
         names: List[str] = []
 
-        for f in fields(Parameters):
-            names.append(f.name)
-            has_def, defval = safe_default_value(f)
-            if has_def:
-                optional.add(f.name)
-                defaults[f.name] = defval
+        for field in fields(Params):
+            names.append(field.name)
+            has_default, default_value = get_default_value(field)
+            if has_default:
+                optional.add(field.name)
+                defaults[field.name] = default_value
             else:
-                required.add(f.name)
+                required.add(field.name)
 
-        # As a convenience: try to instantiate defaults to better detect arrays via try_instantiate_with_defaults
-        # (only improves defaults; required stays required)
+        # if you can create an instance of the dataclass, use that for better accuracy
         try:
-            inst = try_instantiate_with_defaults(Parameters)
-            if inst is not None:
-                for n in names:
-                    if n in optional:
+            instance = try_instantiate_with_defaults(Params)
+            if instance is not None:
+                for param_name in names:
+                    if param_name in optional:
                         try:
-                            defaults[n] = getattr(inst, n)
+                            defaults[param_name] = getattr(instance, param_name)
                         except Exception:
                             pass
         except Exception:
             pass
 
-        # --- detect array/matrix defaults for nicer YAML dump ---
         flowseq_params = set()
         matrix_params = set()
 
-        try:
-            import numpy as np
-        except Exception:
-            np = None
-
-        for n, v in defaults.items():
-            # numpy array default
-            if np is not None and isinstance(v, np.ndarray):
-                flowseq_params.add(n)
-                if getattr(v, "ndim", 1) >= 2:
-                    matrix_params.add(n)
+        for param_name, default_value in defaults.items():
+            if isinstance(default_value, np.ndarray):
+                flowseq_params.add(param_name)
+                if getattr(default_value, "ndim", 1) >= 2:
+                    matrix_params.add(param_name)
                 continue
 
-            # python list default (matrix if list-of-lists)
-            if isinstance(v, (list, tuple)):
-                flowseq_params.add(n)
-                if v and all(isinstance(r, (list, tuple)) for r in v):
-                    matrix_params.add(n)
+            if isinstance(default_value, (list, tuple)):
+                flowseq_params.add(param_name)
+                if default_value and all(isinstance(r, (list, tuple)) for r in default_value):
+                    matrix_params.add(param_name)
 
         meta = {"names": names, "required": required, "optional": optional, "defaults": defaults}
         meta["flowseq_params"] = flowseq_params
         meta["matrix_params"] = matrix_params
         return meta
 
-        return {"names": names, "required": required, "optional": optional, "defaults": defaults}
-
-    # ------------------------- preset list + selection -------------------------
     def _refresh_preset_list(self) -> None:
         self.preset_list.blockSignals(True)
         self.preset_list.clear()
@@ -427,11 +362,11 @@ class PresetSettingsTab(qw.QWidget):
         self.edit_name.blockSignals(False)
         self.edit_desc.blockSignals(False)
         self._rebuild_param_rows({})
-        self.btn_del.setEnabled(False)
+        self.delete_button.setEnabled(False)
 
     def _load_preset_into_editor(self, preset_key: str) -> None:
         self._current_preset_key = preset_key
-        self.btn_del.setEnabled(True)
+        self.delete_button.setEnabled(True)
 
         preset = (self._working_data[self._current_model].get("presets", {}) or {}).get(preset_key, {}) or {}
         name = str(preset.get("name", ""))
@@ -451,7 +386,6 @@ class PresetSettingsTab(qw.QWidget):
         self._rebuild_param_rows(params)
 
     def _rebuild_param_rows(self, preset_params: Dict[str, Any]) -> None:
-
         while self.param_form.count() > 0:
             item = self.param_form.takeAt(0)
             w = item.widget()
@@ -460,39 +394,48 @@ class PresetSettingsTab(qw.QWidget):
 
         self._row_widgets.clear()
 
-        meta = self._param_meta.get(self._current_model or "", {"names": [], "required": set(), "defaults": {}})
+        meta = self._params_metadata.get(self._current_model or "", {"names": [], "required": set(), "defaults": {}})
         names: List[str] = meta["names"]
         required: set = meta["required"]
         defaults: Dict[str, Any] = meta["defaults"]
 
-        for pname in names:
-            is_req = pname in required
-            has_default = pname in defaults
+        for param_name in names:
+            is_required = param_name in required
+            has_default = param_name in defaults
 
-            roww = _PresetParamRow(pname, required=is_req, default_exists=has_default)
-            self._row_widgets[pname] = roww
+            param_row = PresetParamRow(param_name, required=is_required, default_exists=has_default)
+            self._row_widgets[param_name] = param_row
 
-            if pname in preset_params:
-                roww.set_value(preset_params[pname])
+            if param_name in preset_params:
+                param_row.set_value(preset_params[param_name])
             else:
                 # show default in UI if it exists; optional will only be included if user types something
-                roww.set_value(defaults.get(pname, ""))
+                param_row.set_value(defaults.get(param_name, ""))
 
-            roww.changed.connect(self._on_editor_changed)
-            roww.removeRequested.connect(self._remove_param_row)
-            self.param_form.addWidget(roww)
+            param_row.valueChanged.connect(self._on_editor_changed)
+            param_row.removeRequested.connect(self._remove_param_row)
+            self.param_form.addWidget(param_row)
 
         self.param_form.addStretch(1)
 
-    def _remove_param_row(self, pname: str) -> None:
-        # required params are not removable (button should already be hidden)
-        roww = self._row_widgets.get(pname)
-        if not roww:
+    def refresh_rows(self):
+        model = self.model_combo.currentText()
+        if not model:
             return
 
-        # Make it "not included" by clearing text
-        roww.set_value("")     # ensures get_included() becomes False for optional :contentReference[oaicite:3]{index=3}
-        roww.setVisible(False) # removes it from the visible list
+        self._params_metadata[model] = self._load_param_meta_from_parameters_py(model)
+        current_preset = (self._working_data[self._current_model].get("presets", {}) or {}).get(self._current_preset_key, {}) or {}
+        current_params = current_preset.get("params", {}) or {}
+        self._rebuild_param_rows(current_params)
+
+    def _remove_param_row(self, param_name: str) -> None:
+        """ 'removes' a parameter specification by just clearing the row and hiding it. """
+        param_row = self._row_widgets.get(param_name)
+        if param_row is None:
+            return
+
+        param_row.set_value("")     
+        param_row.setVisible(False) 
 
         # Persist change into working yaml
         self._on_editor_changed()
@@ -517,10 +460,10 @@ class PresetSettingsTab(qw.QWidget):
             ok, val, err = roww.get_value()
             if not ok:
                 roww.setToolTip(err or "Invalid")
-                roww.lbl.setStyleSheet("color: #b00020;")
+                roww.param_label.setStyleSheet("color: #b00020;")
                 continue
             roww.setToolTip("")
-            roww.lbl.setStyleSheet("")
+            roww.param_label.setStyleSheet("")
             if roww.get_included():
                 params_out[pname] = val
         payload["params"] = params_out
@@ -546,7 +489,6 @@ class PresetSettingsTab(qw.QWidget):
                 self.preset_list.setCurrentRow(i)
                 return
 
-    # ------------------------- add/remove -------------------------
     def _add_preset(self) -> None:
         if not self._current_model:
             return
@@ -575,7 +517,7 @@ class PresetSettingsTab(qw.QWidget):
         flow_seqify(self._working_data)
         try:
             for model in self._working_data:
-                meta = self._param_meta.get(model, {"required": set()})
+                meta = self._params_metadata.get(model, {"required": set()})
                 required = meta["required"]
 
                 presets = self._working_data[model].get("presets", {}) or {}
