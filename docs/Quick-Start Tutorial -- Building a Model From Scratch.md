@@ -6,7 +6,7 @@ To get started, navigate in the top menu bar to Settings -> Model Settings. Here
 
 From here, you can create a new model by simply typing a name into the Model / Directory Name entry field and clicking the "Create Directory" button. We'll create one called Example Model.
 
-![](make-model.gif)
+![](assets/make-model.gif)
 
 Once you've done that, you should immediately see an item for your model appear in the list. The name won't be exactly the same as what you typed, but will be similar. 
 
@@ -74,11 +74,11 @@ Back in Overseer, let's next move to the Plot Settings tab. Here, you tell Overs
 
 Plots are organized into **categories**. Think of a category as a collection of related plots that you might (or might not) want to look at at the same time. Create a new category by clicking the +Category button. There are a lot of optional settings here but we'll only bother to fill in the name field, and call this category Everything. 
 
-![](make-category.gif)
+![](assets/make-category.gif)
 
 After this, with the Everything category selected, we can click the +Plot button to create a new plot inside of this category. The picture below shows the relevant fields filled in for plotting our Sine function:
 
-![](make-plots.gif)
+![](assets/make-plots.gif)
 
 The most important field here is Trajectory Key*. This should be the key of the dictionary output from `get_trajectories` corresponding to the sine outputs. Again, since we either have returned a `t` array explicitly or have one in the output dictionary, we can leave the field underneath blank. Finally, the label + color field specifies what the curve should be listed as in the legend, and the color of the curve. 
 
@@ -89,11 +89,11 @@ A **demo**, short for demonstration, is any particular thing which you are looki
 
 To create a new demo, click the +Demo button. There isn't a whole lot to specify here. We give our demo a display name and a description, then specify the model to connect it to, the particular function to target, and a default preset (which we don't need to worry about right now because we don't have any parameters). 
 
-![](make-demo.png)
+![](assets/make-demo.png)
 
 This is enough to see our functions. Go ahead and click Save to apply and close the settings. After this, you should be able to find your demo listed in the Demos dropdown of the top menu bar. Click load. 
 
-![](load-demo.gif)
+![](assets/load-demo.gif)
 
 We have some plots on the screen. Wonderful! But our Simulation Controls to the left are empty. Let's do something about that. 
 
@@ -102,14 +102,14 @@ You might have to do some adjusting to see the plots the way they are pictured. 
 ## Step 5: Declare Parameters
 Go to Settings -> Parameter Settings next. A **parameter** is any piece of data which controls something about the model. It can be an int, a float, a string, a Boolean, or even a Numpy array. Let's create two parameters to control the frequency and amplitude of our sine and cosine waves. We'll call them $a$ and $b$, declare them as floats, and have them both default to $1$. 
 
-![](make-params.png)
+![](assets/make-params.png)
 
 After this, click Apply, and then move to Control Settings. 
 
 ## Step 6: Create Controls
 There is a lot to say about the control panel settings, but not a lot that *has* to be said or even understood fully to get a nice control panel up and running. This is because we have a built-in wizard for initializing your controls, assuming you've already declared some parameters. 
 
-![](make-controls.gif)
+![](assets/make-controls.gif)
 
 There are multiple types of control widgets, but most of the time the type of the parameter gives away the widget that you'll want to use. Here, Overseer infers that because $a$ and $b$ are float parameters, that you want a slider-entry widget for them. Make sure that you also adjust the "Range min" and "Range max" parameters for the two controls. Let's change the "Range max" parameter to 5.0 in both cases. 
 
@@ -148,7 +148,7 @@ def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
 
 If we save this and return to Overseer, we can reload and rerun the model by either selecting Simulation -> Reload simulation or pressing F7. Now, whenever we adjust either variable in the control panel, the simulation will be run anew, resulting in different results.
 
-![](controls-demo.gif)
+![](assets/controls-demo.gif)
 
 ## Step 8: Report Incremental Progress
 For real scientific applications, simulations can take a large amount of time to run. It is therefore important for our models to be able to periodically report progress incrementally. This can be done by replacing our `return` keywords with the lesser known `yield`, and turning our function into a [generator](https://wiki.python.org/moin/Generators). 
@@ -194,7 +194,7 @@ def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
 
 Now we have a `t` array which gradually expands to what it was originally, and are periodically yielding more and more of the Sine and Cosine functions. If we save and reload the model again, things might look the no different from before. This is just because our simulation completes too fast for us to see anything. For the sake of demonstration, we can slow things down by adjusting the Sim speed in the top right corner. Set it to 0.01 and...
 
-![](animation-demo.gif)
+![](assets/animation-demo.gif)
 
 ## Interlude: Efficient Usage
 The code we just wrote isn't very efficient. This is for two reasons:

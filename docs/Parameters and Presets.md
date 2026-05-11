@@ -2,7 +2,7 @@
 A model **parameter** is any piece of data which the model relies on to define its operation. These can be any type of variable, and Overseer must have a designated value for all of them in order to run your model. 
 
 Parameters can be defined in the Parameter Settings menu:
-![[param-settings.png.png]]
+![[param-settings.png]]
 
 When specifying default values, you should type the value exactly how you would define it if you were writing Python code. So an 2x2 Numpy matrix should be defined as \[\[a,b\],\[c,d\]\], and so on. 
 
