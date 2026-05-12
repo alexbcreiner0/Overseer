@@ -29,4 +29,16 @@ Overseer supports a wide variety of plot types. Though it will never support eve
 - Vector fields
 - Discrete graphs
 - Surfaces in 3D
+## Curves
 
+## Surfaces
+
+## Histograms
+
+## Scatter Plots
+
+## Heatmaps and Discrete Grids
+
+## Pie Charts
+
+## Discrete Graphs

@@ -1154,15 +1154,32 @@ class MainWindow(qw.QMainWindow):
         except ValueError:
             return
 
-        closest = 0
-        for i, t in enumerate(self.t):
-            if math.fabs(t - time) < math.fabs(t - self.t[closest]):
-                closest = i
+        if self.traj is None:
+            return
 
-        for name in vars(self.params):
-            if name in self.traj:
-                new_val = self.traj[name][closest]
-                setattr(self.params, name, new_val)
+        if self.t is not None:
+            t = self.t
+        elif self.traj.get("t") is not None:
+            t = self.traj["t"]
+        else:
+            self.status_bar.showMessage("No designated 't' key was given.")
+            return
+
+        try:
+            closest = 0
+            for i, t in enumerate(t):
+                if math.fabs(t - time) < math.fabs(t - t[closest]):
+                    closest = i
+
+            for name in vars(self.params):
+                if name in self.traj:
+                    new_val = self.traj[name][closest]
+                    setattr(self.params, name, new_val)
+
+        except Exception as e:
+            self.status_bar.showMessage(f"Error when grabbing as initial: {e}", 4000)
+            logger.log(logging.ERROR, f"Error when grabbing as initial: {e}", exc_info= e)
+            return
 
         # self.update_plot()
         self.control_panel.load_new_params(self.params)

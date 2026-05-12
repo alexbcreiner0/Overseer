@@ -62,7 +62,7 @@ If you have saved any results, there will be a third folder, called `saved_resul
 
 Starting with the simulation folder:
 
-`simulation.py` is where Overseer looks for functions to use as entrypoints to start your simulation. Multiply simulation functions are allowed, and the specific one to use can be specified in the Demo Settings. However, it is recommended that you create separate Python files for any functions or classes which your simulation makes use of. These additional files can be created here in the simulation folder with no issues. For more details on what exactly is expected of the `simulation.py` function, look [here]()
+`simulation.py` is where Overseer looks for functions to use as entrypoints to start your simulation. Multiple simulation functions are allowed, and the specific one to use can be specified in the Demo Settings. However, it is recommended that you create separate Python files for any functions or classes which your simulation makes use of. These additional files can be created here in the simulation folder with no issues. For more details on what exactly is expected of the `simulation.py` function, look [here](Writing%20Simulations.md)
 
 `parameters.py` defines a dataclass which contains all relevant starting parameters for your model. Any specific information you want the model to have during its simulation should be stored as a parameter within this dataclass. 
 
