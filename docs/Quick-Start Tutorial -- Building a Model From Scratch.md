@@ -97,7 +97,7 @@ This is enough to see our functions. Go ahead and click Save to apply and close 
 
 We have some plots on the screen. Wonderful! But our Simulation Controls to the left are empty. Let's do something about that. 
 
-You might have to do some adjusting to see the plots the way they are pictured. This can be done in a variety of ways, see [the controls section](Interface%20and%20Controls.md), but my preferred is to *right click* the screen and drag to change the horizontal and vertical magnification. Once you've found a setup you like, you can click View -> Save current axis settings to attach this view as the default when your demo loads, so that you don't have to futz around with the camera so much next time. 
+You might have to do some adjusting to see the plots the way they are pictured. This can be done in a variety of ways, see [the controls section](Controls%20and%20Keybindings.md), but my preferred is to *right click* the screen and drag to change the horizontal and vertical magnification. Once you've found a setup you like, you can click View -> Save current axis settings to attach this view as the default when your demo loads, so that you don't have to futz around with the camera so much next time. 
 
 ## Step 5: Declare Parameters
 Go to Settings -> Parameter Settings next. A **parameter** is any piece of data which controls something about the model. It can be an int, a float, a string, a Boolean, or even a Numpy array. Let's create two parameters to control the frequency and amplitude of our sine and cosine waves. We'll call them $a$ and $b$, declare them as floats, and have them both default to $1$. 
@@ -241,4 +241,6 @@ When your model gets complicated with lots of different parameters and controls,
 Saving and loading presets is exactly the same process as saving results. Just navigate to Parameters -> Save parameter settings, give it a name and maybe a description, and click save.
 
 # Wrap Up
+From here, the idea should be clear - Overseer augments your existing developer environment by giving you a way to incrementally and dialectically build your models. You can make small changes, then switch over to Overseer and tap F7 to immediately see what those small changes result in. 
+
 You're now familiar with all of the core components of Overseer:  models, demos, parameters, presets, controls, categories and plots. See the specific pages for any of these topics for more in depth documentation on how they all work. 

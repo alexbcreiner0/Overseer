@@ -1,9 +1,4 @@
-# Interacting with plots
-- While in panning mode (the default): 
-     - Left click and drag to move around on a plot, or right click and drag to zoom in/out (this is a much better method than scrolling with your mouse wheel). 
-
 # Keyboard Shortcuts
-
 ### General Controls
 - F1 opens the global settings tab.
 - F2 opens the control panel settings tab.
@@ -39,7 +34,7 @@ Since you could have a whole variable grid of different plots visible at a given
 - Ctrl+1/2/3/4/5/6/7/8/9 toggles the 1st/2nd/3rd/.../9th checkable plot of the slot target on or off. Numbering is done left to right, top to bottom. So for example, the middle plot on the second row of your category controls can be toggled with Ctrl+5.
 - Ctrl+UpArrow/DownArrow toggles the plot category of the slot target up or down.
 - Ctrl+L,Ctrl+T toggles the legend of the slot target on or off.
-- Ctrl+]/[ increments or decrements the legend size of the slot target.
+- Ctrl+]/\[ increments or decrements the legend size of the slot target.
 - Ctrl+L,Ctrl+R cycles the location of the slot target's legend.
 - Ctrl+L,Ctrl+T toggles the slot target's title.
 - Ctrl+L,Ctrl+X toggles the slot target's X-axis title.

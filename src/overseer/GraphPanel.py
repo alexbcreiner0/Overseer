@@ -613,12 +613,17 @@ class GraphPanel(qw.QWidget):
                 # n = len(plot_dict.get("labels", [0]))
                 t_base = np.asarray(traj.get("t")) if t is None else np.asarray(t)
                 alt_t_name = plot_dict.get("traj_key_x", None)
+                z_name = plot_dict.get("traj_key_z")
+                if z_name:
+                    z = np.asarray(traj.get(z_name))
+                else:
+                    z = None
                 if alt_t_name is not None and alt_t_name in traj:
                     t_base = np.asarray(traj[alt_t_name])
 
                 if y.ndim == 1:
                     tt, yy = self._safe_align_xy(t_base, y)
-                    self._plot_line_scalar(ax, slot_index, choice_name, plot_name, plot_dict, tt, yy)
+                    self._plot_line_scalar(ax, slot_index, choice_name, plot_name, plot_dict, tt, yy, z)
                 else:
                     tt = t_base
                     Y = y
@@ -628,7 +633,7 @@ class GraphPanel(qw.QWidget):
                         m = min(Y.shape[0], len(tt))
                         tt = tt[:m]
                         Y = Y[:m, :]
-                    self._plot_line_vector(ax, slot_index, choice_name, plot_name, plot_dict, tt, Y)
+                    self._plot_line_vector(ax, slot_index, choice_name, plot_name, plot_dict, tt, Y, z)
 
             except KeyError as e:
                 self.status_bar.showMessage(f"Error, no key found: {e}", 4000)
@@ -1167,27 +1172,40 @@ class GraphPanel(qw.QWidget):
                 if lab and str(lab).strip():
                     bucket[gid] = str(lab)
 
-    def _plot_line_scalar(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, t: np.ndarray, y: np.ndarray):
+    def _plot_line_scalar(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, t: np.ndarray, y: np.ndarray, z: np.ndarray | None = None):
         default_label = (plot_dict.get("labels", [""]) or [""])[0]
         gid = f"{choice_name}::{plot_name}::0"
 
         over = self.legend_label_overrides.get((slot_index, choice_name), {})
         label = over.get(gid, default_label)
 
-        ln = ax.plot(
-            t, y,
-            color=plot_dict["colors"][0],
-            linestyle=plot_dict.get("linestyle", "solid"),
-            label=label,
-            marker= plot_dict.get("marker", None),
-            markerfacecolor= plot_dict.get("markerfacecolor", None),
-            markeredgecolor= plot_dict.get("markeredgecolor", None),
-            linewidth= plot_dict.get("linewidth", 1.5),
-            markersize= plot_dict.get("markersize", 6.0)
-        )[0]
+        if z is not None and hasattr(ax, "get_zlim"):
+            ln = ax.plot(
+                t, y, z,
+                color=plot_dict["colors"][0],
+                linestyle=plot_dict.get("linestyle", "solid"),
+                label=label,
+                marker= plot_dict.get("marker", None),
+                markerfacecolor= plot_dict.get("markerfacecolor", None),
+                markeredgecolor= plot_dict.get("markeredgecolor", None),
+                linewidth= plot_dict.get("linewidth", 1.5),
+                markersize= plot_dict.get("markersize", 6.0)
+            )[0]
+        else:
+            ln = ax.plot(
+                t, y,
+                color=plot_dict["colors"][0],
+                linestyle=plot_dict.get("linestyle", "solid"),
+                label=label,
+                marker= plot_dict.get("marker", None),
+                markerfacecolor= plot_dict.get("markerfacecolor", None),
+                markeredgecolor= plot_dict.get("markeredgecolor", None),
+                linewidth= plot_dict.get("linewidth", 1.5),
+                markersize= plot_dict.get("markersize", 6.0)
+            )[0]
         ln.set_gid(gid)
 
-    def _plot_line_vector(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, t: np.ndarray, Y: np.ndarray):
+    def _plot_line_vector(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, t: np.ndarray, Y: np.ndarray, z: np.ndarray | None = None):
         # n = len(plot_dict.get("labels", [0]))
         n = int(Y.shape[1])
         labels = self._auto_vector_labels(plot_name, plot_dict, n)
@@ -1200,12 +1218,20 @@ class GraphPanel(qw.QWidget):
             gid = f"{choice_name}::{plot_name}::{i}"
             label = over.get(gid, default_label)
 
-            ln = ax.plot(
-                t, Y[:, i],
-                color=colors[i],
-                linestyle=plot_dict.get("linestyle", "solid"),
-                label=label,
-            )[0]
+            if z is not None and hasattr(ax, "get_zlim"):
+                ln = ax.plot(
+                    t, Y[:, i], z,
+                    color=colors[i],
+                    linestyle=plot_dict.get("linestyle", "solid"),
+                    label=label,
+                )[0]
+            else:
+                ln = ax.plot(
+                    t, Y[:, i],
+                    color=colors[i],
+                    linestyle=plot_dict.get("linestyle", "solid"),
+                    label=label,
+                )[0]
             ln.set_gid(gid)
 
     def _auto_vector_labels(self, plot_name: str, plot_dict: dict, n: int) -> list[str]:
@@ -1755,6 +1781,46 @@ class GraphPanel(qw.QWidget):
 
         return expected
 
+    def _line_series_from_gid(self, gid: str, traj: dict, key_name: str):
+        """
+        Helper for x/y/z lookup.
+
+        For scalar data, returns the whole 1D array.
+        For vector data, returns column i, where i comes from the gid:
+            choice::plot::i
+        """
+        try:
+            choice_name, plot_name, idx_s = gid.split("::")
+            i = int(idx_s)
+        except Exception:
+            return None
+
+        if choice_name not in self.data:
+            return None
+
+        plot_dict = self.data[choice_name].get("plots", {}).get(plot_name)
+        if not plot_dict:
+            return None
+
+        key = plot_dict.get(key_name)
+        if not key or key not in traj:
+            return None
+
+        try:
+            arr = np.asarray(traj[key])
+        except Exception:
+            return None
+
+        if arr.ndim == 1:
+            return arr
+
+        if arr.ndim >= 2:
+            if i < arr.shape[1]:
+                return arr[:, i]
+            return None
+
+        return None
+
     def _get_ydata_from_gid(self, gid: str, traj: dict):
         """Return y-data array for a given Line2D gid."""
         try:
@@ -1836,7 +1902,9 @@ class GraphPanel(qw.QWidget):
 
     def _update_line_artist(self, line, gid: str, t: np.ndarray | None, traj: dict, slot_index: int) -> None:
         y = self._get_ydata_from_gid(gid, traj)
+        z = self._line_series_from_gid(gid, traj, "traj_key_z")
         x = self._get_xdata_from_gid(gid, traj, t)
+
         if x is None:
             logger.log(logging.ERROR, "No valid data found for x axis.")
             self.status_bar.showMessage(f"Error! No x-axis plotting data found.", msecs= 4000)
@@ -1844,12 +1912,16 @@ class GraphPanel(qw.QWidget):
         if y is None:
             return
 
-        # nothing should be a numpy array here, but just in case
-        # this is necessary to take slices
-        if isinstance(y, np.ndarray):
-            y = np.asarray(y)
-        if isinstance(x, np.ndarray):
-            x = np.asarray(x)
+        ax = self.axes[slot_index]
+
+        if z is not None and hasattr(ax, "get_zlim"):
+            z = np.asarray(z)
+            n = min(len(x), len(y), len(z))
+
+            line.set_data_3d(x[:n], y[:n], z[:n])
+        else:
+            n = min(len(x), len(y))
+            line.set_data(x[:n], y[:n])
 
         y = np.asarray(y)
         n = min(len(x), len(y))

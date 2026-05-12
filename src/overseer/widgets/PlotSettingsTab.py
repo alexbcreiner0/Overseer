@@ -18,20 +18,6 @@ from PyQt6 import (
 
 logger = logging.getLogger(__name__)
 
-def list_subdirs(path):
-    return [
-            p.name
-            for p in Path(path).iterdir()
-            if p.is_dir()
-        ]
-
-def _safe_load_yaml(path: str) -> dict:
-    if not os.path.exists(path):
-        return {}
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data or {}
-
 class PlotSettingsTab(qw.QWidget):
     ROLE = qc.Qt.ItemDataRole.UserRole  # store payload tuples here
 
@@ -690,6 +676,7 @@ class PlotSettingsTab(qw.QWidget):
 
         self.curve_traj_key = qw.QLineEdit()
         self.curve_traj_key_x = qw.QLineEdit()
+        self.curve_traj_key_z = qw.QLineEdit()
 
         self.curve_linestyle = qw.QComboBox()
         self.curve_linestyle.addItem("Solid", "solid")
@@ -723,8 +710,9 @@ class PlotSettingsTab(qw.QWidget):
         )
         # autosave wiring is done in _wire_autosave_signals
 
-        layout.addRow("Trajectory Key*:", self.curve_traj_key, help_text= "The key for the stuff you're plotting")
+        layout.addRow("Trajectory Key*:", self.curve_traj_key, help_text= "The key for the stuff you're plotting. (This is the y-axis, technically.)")
         layout.addRow("Trajectory Key for x-Axis:", self.curve_traj_key_x, help_text= "By default, will use your 't' array for the x-axis, but you can deviate from that using this field.")
+        layout.addRow("Trajectory Key for z-Axis:", self.curve_traj_key_z, help_text= "If your curve is in 3D.")
         layout.addRow("Line Style:", self.curve_linestyle)
         layout.addRow("Line Width:", self.curve_linewidth)
         layout.addRow("Marker Type/Color/Edgecolor:", self.curve_marker_and_color)
@@ -736,8 +724,7 @@ class PlotSettingsTab(qw.QWidget):
         self.field_widgets += [
             self.curve_traj_key, self.curve_traj_key_x, self.curve_linestyle, self.curve_marker_and_color.label_edit,
             self.curve_marker_and_color.color_edit, self.curve_marker_and_color.color_edit2, self.curve_linewidth,
-
-            self.curve_markersize, self.curve_series_editor, self.curve_label_template
+            self.curve_markersize, self.curve_series_editor, self.curve_label_template, self.curve_traj_key_z
         ]
 
         return w
@@ -745,6 +732,7 @@ class PlotSettingsTab(qw.QWidget):
     def _load_curve_info(self, plot):
         self.curve_traj_key.setText(plot.get("traj_key", "") or "")
         self.curve_traj_key_x.setText(plot.get("traj_key_x", "") or "")
+        self.curve_traj_key_z.setText(plot.get("traj_key_z", "") or "")
         val = (plot.get("linestyle") or "solid").strip().lower()
         idx = self.curve_linestyle.findData(val)
         if idx >= 0:
@@ -792,6 +780,8 @@ class PlotSettingsTab(qw.QWidget):
         new_data["traj_key"] = self.curve_traj_key.text()
         if self.curve_traj_key_x.text().strip():
             new_data["traj_key_x"] = self.curve_traj_key_x.text()
+        if self.curve_traj_key_z.text().strip():
+            new_data["traj_key_z"] = self.curve_traj_key_z.text()
         if self.name_edit.text(): new_data["toggled"] = self.toggled_check.isChecked()
 
     def _build_heatmap_panel(self) -> qw.QWidget:

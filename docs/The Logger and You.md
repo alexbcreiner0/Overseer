@@ -1,0 +1,1 @@
+Overseer is meant to augment your existing IDE with a visualization layer, allowing for you 
