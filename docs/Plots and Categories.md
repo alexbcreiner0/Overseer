@@ -196,7 +196,7 @@ def vector_field_demo(params: Params):
 ```
 
 Results in:
-![](2d-vector-field.gif)
+![](assets/2d-vector-field.gif)
 ## Histograms
 
 ## Scatter Plots
