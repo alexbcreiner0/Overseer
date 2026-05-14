@@ -24,7 +24,7 @@ You could easily make this yourself instead of using the GUI, but be mindful of 
 
 In order to determine what the actual values of these parameters are supposed to be during initialization, Overseer relies on a specified **preset**. Presets are stored in yaml format, in the `data/params.yml` file of your model folder. They can be managed in the Preset Settings menu:
 
-![[assets/preset-menu.png.png]]
+![[assets/preset-menu.png]]
 
 However, this is mostly only useful for tweaking.  In practice, you will create new presets by arriving at them naturally through experimentation with your controls, and then saving them in the top menu bar by selecting Parameters -> Save parameter settings. The real use for the Preset Settings menu is useful for making small changes to *existing* presets. 
 

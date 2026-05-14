@@ -69,11 +69,22 @@ class MainWindow(qw.QMainWindow):
 
         self.setWindowTitle("Overseer")
 
+        old_log_dir = self.env.log_dir
+
         data_dir = get_user_data_dir(self.settings, self.env)
         setattr(self.env, "user_data_dir", data_dir)
         setattr(self.env, "models_dir", self.env.user_data_dir / "models")
         setattr(self.env, "log_dir", self.env.user_data_dir / "logs")
         setattr(self.env, "demos_file", self.env.user_data_dir / "demos.yml")
+
+        if old_log_dir != self.env.log_dir:
+            from .__main__ import reconfigure_logging
+            reconfigure_logging(self.env, self.env.log_dir)
+            logger = logging.getLogger(__name__)
+            logger.info("Log directory changed at runtime", extra={
+                "old_log_dir": str(old_log_dir),
+                "new_log_dir": str(self.env.log_dir),
+            })
 
         with open(env.demos_file, "r") as f:
             self.demos = yaml.safe_load(f).get("demos", {})
@@ -100,7 +111,8 @@ class MainWindow(qw.QMainWindow):
         self.sim_model = self.current_demo.get("details", {}).get("simulation_model", {})
 
         self.ctx = get_context("spawn")
-        self.sim_controller = SimController(self.ctx, parent= self)
+        # self.sim_controller = SimController(self.ctx, parent= self)
+        self.sim_controller = None
     
         (
             self.params,
@@ -232,7 +244,7 @@ class MainWindow(qw.QMainWindow):
             },
             "kill_sim": {
                 "shortcut": keybindings.get("kill_sim", "Ctrl+J"),
-                "slot": self._kill_sim
+                "slot": self._stop_sim_pragmatically
             },
             "toggle_panning": {
                 "shortcut": keybindings.get("toggle_panning", "Ctrl+P"),
@@ -280,7 +292,7 @@ class MainWindow(qw.QMainWindow):
             },
             "reload_current_demo": {
                 "shortcut": keybindings.get("reload_current_demo", "F7"),
-                "slot": self.reload_current_demo
+                "slot": lambda: self.reload_current_demo(restart_after= True)
             },
             "refresh_control_panel_and_plots": {
                 "shortcut": keybindings.get("refresh_control_panel_and_plots", "F8"),
@@ -445,6 +457,8 @@ class MainWindow(qw.QMainWindow):
                 lambda name=name, seq=key_seq: print(f"AMBIGUOUS: {name} -> {seq}")
             )
 
+            short_dict["actual_shortcut"] = shortcut
+
         if not first_boot:
             self.status_bar.showMessage("Keybindings reloaded", msecs=3000)
 
@@ -561,13 +575,17 @@ class MainWindow(qw.QMainWindow):
         rows, cols, limits, saved_limits, dropdown_indices, slot_settings, checked = self._get_slot_settings(demo_config)
         self.control_panel._alter_slot_layout(rows, cols, limits, saved_limits, dropdown_indices, checked, slot_settings)
         self._apply_saved_projections(dropdown_indices)
+        print(f"applying {limits=}")
         self._set_graph_lims(limits)
 
     def _apply_saved_projections(self, dropdown_indices):
+        print(f"applying saved projections")
         for slot_index, idx in enumerate(dropdown_indices):
+            print("in the loop")
             choice_name = self.graph_panel._choice_name_from_index(idx)
             projection = self.graph_panel.data.get(choice_name, {}).get("projection", "2d")
             want_3d = True if projection == "3d" else False
+            print(f"{want_3d=}")
             self.graph_panel._ensure_slot_projection(slot_index, want_3d)
 
     def _get_slot_settings(self, demo_config):
@@ -650,79 +668,86 @@ class MainWindow(qw.QMainWindow):
         if hasattr(self, "graph_panel"):
             self.graph_panel.settings = self.settings
 
-    def _kill_sim(self):
-        if self._sim_state == "RUNNING":
+    def _stop_sim(self, *, force: bool= False, rerun: bool= False, never_escalate: bool= True):
+        if self._sim_state not in {"RUNNING", "STOPPING"}:
+            return
+
+        if not rerun:
+            self._rerun_pending = False
+
+        self._sim_state = "STOPPING"
+
+        stopped = self._halt_sim_stack(
+            force= force,
+            clear_pending= True,
+            clear_queue= True,
+            never_escalate= never_escalate
+        )
+
+        if not stopped:
             self._sim_state = "STOPPING"
-            if self.sim_controller is not None:
-                self._escalate_stop_if_needed()
+            return False
 
-            self.status_bar.showMessage("Sim was murdered in its sleep.", 2000)
-            self._halt_sim_stack(force= True)
+        self._sim_state = "IDLE"
 
-    def _halt_sim_stack(self, *, force: bool= False, clear_pending: bool= True, clear_queue: bool = False) -> None:
+        if rerun:
+            self._start_sim_now()
+
+        return True
+
+    def _stop_sim_gracefully(self, rerun= False):
+        self.status_bar.showMessage("Requesting stop...", msecs=3000)
+        stopped = self._stop_sim(force= False, rerun= rerun, never_escalate= True)
+
+    def _stop_sim_pragmatically(self, rerun= False):
+        self.status_bar.showMessage("Requesting stop...", msecs=3000)
+        stopped = self._stop_sim(force= False, rerun= rerun, never_escalate= False)
+        if stopped:
+            self.status_bar.showMessage("Sim halted successfully.", msecs=3000)
+        else:
+            self.status_bar.showMessage("WARNING: Failed stop sim. You should consider restarting and look for orphaned processes")
+
+    def _kill_sim(self, rerun= False):
+        self.status_bar.showMessage("Force stopping...", msecs=3000)
+        stopped = self._stop_sim(force= True, rerun= rerun, never_escalate= False)
+        if stopped:
+            self.status_bar.showMessage("Sim halted successfully.", msecs=3000)
+        else:
+            self.status_bar.showMessage("WARNING: Failed stop sim. You should consider restarting and look for orphaned processes")
+
+    def _halt_sim_stack(self, *, force: bool= False, clear_pending: bool= True, clear_queue: bool = False, never_escalate= False) -> None:
         """ Safe multipurpose method for halting/killing all of the relevant moving parts of an ongoing sim """
-
         # ensure no further animation happens
         try:
             self._anim_timer.stop()
         except Exception:
             pass
 
-        if clear_pending:
-            self._pending_traj = None
-            self._pending_t = None
+        self._clear_sim_cache(clear_pending= clear_pending, clear_queue= clear_queue)
 
-        bw = getattr(self, "bridge_worker", None)
-        # bt = getattr(self, "bridge_thread", None)
-
-        if bw is not None:
-            try:
-                bw.stop()
-            except RuntimeError:
-                pass
-            try:
-                bw.deleteLater()
-            except Exception:
-                pass
-
-        self.bridge_worker = None
-
-        # if bt is not None:
-        #     if bt.isRunning():
-        #         bt.quit()
-        #         bt.wait(1000)
-        #     self.bridge_thread = None
-
-        if clear_queue:
-            q = getattr(self, "sim_results_queue", None)
-            if q is not None:
-                import queue as py_queue
-                while True:
-                    try:
-                        q.get_nowait()
-                    except py_queue.Empty:
-                        break
-                    except Exception:
-                        break
-
+        stopped = False
         if self.sim_controller is not None:
             try:
+                graceful_stop = True if not force else False
                 self.sim_controller.request_stop(force=force)
                 self.sim_controller.join(timeout= 2.0)
-                if force and self.sim_controller.is_alive():
+                if self.sim_controller.is_alive() and not never_escalate:
+                    graceful_stop = False
+                    self.status_bar.showMessage("Sim is unresponsive. Escalating...", msecs=3000)
                     self.sim_controller.request_stop(force= True)
                     self.sim_controller.join(timeout= 2.0)
-            except Exception:
-                pass
+                stopped = not self.sim_controller.is_alive()
+            except Exception as e:
+                self.status_bar.showMessage(f"Error while stopping simulation: {e}", exc_info= e)
+                stopped = False
+            else:
+                if graceful_stop:
+                    self.status_bar.showMessage("Sim halted gracefully.", msecs= 3000)
             finally:
-                self.sim_controller = None
+                if stopped:
+                    self.sim_controller = None
 
-    # def _install_focus_clear_filter(self) -> None:
-    #     # Put it on the window and also on the central widget / scroll areas if needed
-    #     self.installEventFilter(self)
-    #     cw = self.centralWidget()
-    #     if cw:
-    #         cw.installEventFilter(self)
+        return stopped
 
     def eventFilter(self, a0, a1):
         if a0 is None or a1 is None:
@@ -871,7 +896,8 @@ class MainWindow(qw.QMainWindow):
 
     def _set_graph_lims(self, limits):
         for i, lims in enumerate(limits):
-            self.on_slot_axes_changed(i)
+            print(f"{lims=}, calling on_slot_axes_changed with {i=}")
+            self.on_slot_axes_changed(i, lims)
 
     def _make_panels(self, plotting_data, panel_data, demo):
         if plotting_data is not None:
@@ -971,8 +997,10 @@ class MainWindow(qw.QMainWindow):
 
         self.status_bar.showMessage("Default plot category limits saved.", msecs= 4000)
 
-    def on_slot_axes_changed(self, slot_index: int):
-        lims = self.control_panel.get_slot_axes_limits(slot_index)
+    def on_slot_axes_changed(self, slot_index: int, lims= None):
+        print(f"inside on_sslot_axes_changed with {slot_index=}")
+        if lims is None:
+            lims = self.control_panel.get_slot_axes_limits(slot_index)
         if lims is None: return
 
         if len(lims) == 3:
@@ -981,9 +1009,9 @@ class MainWindow(qw.QMainWindow):
             xlim, ylim = lims
             zlim = None
         self.graph_panel.edit_slot_axes(slot_index, xlim, ylim, zlim)
+        self.control_panel.set_slot_axes_limits(slot_index, xlim, ylim, zlim)
 
     def on_slot_plot_choice_changed(self, slot_index: int, source: str = "checkbox"):
-        # print(f"[DEBUG] Slot {slot_index} dropdown changed to index {_dropdown_index}")
         if not hasattr(self, "traj") or self.traj is None: return
 
         cfg = self.control_panel.get_slot_config(slot_index)
@@ -991,7 +1019,9 @@ class MainWindow(qw.QMainWindow):
 
         dropdown_index, options, legend_cfg = cfg
 
-        load_idx_defaults = self.settings.get("use_cat_limits", False)
+        load_idx_defaults = self.settings.get("use_cat_limits", True)
+        print(f"{load_idx_defaults=}")
+        print(f"{source=}")
         load_idx_defaults = False if not isinstance(load_idx_defaults, bool) else load_idx_defaults 
         self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg, source= source, load_idx_defaults= load_idx_defaults)
         # self.graph_panel._on_axis_limits_changed(slot_index)
@@ -1064,8 +1094,8 @@ class MainWindow(qw.QMainWindow):
         request_pause.triggered.connect(self.toggle_pause)
         nav_toolbar.addAction(request_pause)
 
-        request_threadkill = qg.QAction(bug_icon, "Force kill sim", self)
-        request_threadkill.triggered.connect(self.request_threadkill)
+        request_threadkill = qg.QAction(bug_icon, "Stop sim", self)
+        request_threadkill.triggered.connect(self._stop_sim_pragmatically)
         nav_toolbar.addAction(request_threadkill)
 
         self.grab_entry = qw.QLineEdit()
@@ -1185,11 +1215,6 @@ class MainWindow(qw.QMainWindow):
         self.control_panel.load_new_params(self.params)
         self.start_sim()
 
-    def request_threadkill(self):
-        if self.sim_controller is not None and self.sim_controller.is_alive():
-            self.sim_controller.request_stop()
-            self.status_bar.showMessage("Stop requested...", msecs=2000)
-
     def _make_menu(self, presets, demos):
 
         menu = self.menuBar()
@@ -1208,17 +1233,29 @@ class MainWindow(qw.QMainWindow):
         self._create_presets_submenus(presets, params_menu)
         self._create_results_submenus(results_menu)
     
-        rerun_button = qg.QAction("Rerun Simulation", self)
+        rerun_button = qg.QAction("Restart simulation", self)
         sim_menu.addAction(rerun_button)
         rerun_button.triggered.connect(self.start_sim)
 
-        reload_button = qg.QAction("Reload simulation", self)
-        sim_menu.addAction(reload_button)
-        reload_button.triggered.connect(self.reload_current_demo)
+        refresh_button = qg.QAction("Refresh simulation files", self)
+        sim_menu.addAction(refresh_button)
+        refresh_button.triggered.connect(self.reload_current_demo)
 
-        force_kill_action = qg.QAction("Force Stop Simulation", self)
-        sim_menu.addAction(force_kill_action)
-        force_kill_action.triggered.connect(self._kill_sim)
+        reload_button = qg.QAction("Refresh and restart simulation", self)
+        sim_menu.addAction(reload_button)
+        reload_button.triggered.connect(lambda _checked= False: self.reload_current_demo(restart_after= True))
+
+        stop_gracefully_button = qg.QAction("Stop sim (gracefully)", self)
+        sim_menu.addAction(stop_gracefully_button)
+        stop_gracefully_button.triggered.connect(self._stop_sim_gracefully)
+
+        stop_pragmatically_button = qg.QAction("Stop sim (pragmatically)", self)
+        sim_menu.addAction(stop_pragmatically_button)
+        stop_pragmatically_button.triggered.connect(self._stop_sim_pragmatically)
+
+        stop_forcefully_button = qg.QAction("Stop sim (violently)", self)
+        sim_menu.addAction(stop_forcefully_button)
+        stop_forcefully_button.triggered.connect(self._kill_sim)
 
         global_settings_action = qg.QAction("Application Settings", self)
         settings_menu.addAction(global_settings_action)
@@ -1433,8 +1470,7 @@ class MainWindow(qw.QMainWindow):
 
     def _load_prior_results(self, filename):
         if self._sim_state == "RUNNING":
-            self._halt_sim_stack()
-            self._sim_state = "IDLE"
+            self._stop_sim_pragmatically()
 
         model_name = self.demos[self.current_demo_name]["details"]["simulation_model"]
         settings_path = self.env.models_dir / model_name / "saved_results" / f"{filename.stem}.yml"
@@ -1534,47 +1570,129 @@ class MainWindow(qw.QMainWindow):
 
         self._refresh_results_menu()
 
+    def _request_stop(self, *, rerun: bool = False):
+        if self._sim_state not in {"RUNNING", "STOPPING"}:
+            return
+
+        self._rerun_pending = rerun
+        self._sim_state = "STOPPING"
+
+        try:
+            self._anim_timer.stop()
+        except Exception:
+            pass
+
+        self._clear_sim_cache(stop_bridge= False)
+
+        if self.sim_controller is not None:
+            try:
+                self.sim_controller.request_stop(force=False)
+            except Exception:
+                pass
+
+        self.status_bar.showMessage(
+            "Stop requested... will rerun." if rerun else "Stop requested...",
+            3000,
+        )
+
+        qc.QTimer.singleShot(1500, self._escalate_stop_if_needed)
+
     def start_sim(self, name= None, new_val= None):
+        """ Entrypoint into starting a sim. Called both initially and when restarts are requested """
         requested_update = None
         if name not in (None, False):
             requested_update = (name, new_val)
 
-        if self._sim_state in {"RUNNING", "STOPPING"}:
+        if self._sim_state == "STOPPING":
+            self._queue_rerun(requested_update)
+            return
+
+        if self._sim_state == "RUNNING":
+            # initiate a stopping process if a sim was running 
+            #  (that stopping process will handle initializing the new run)
             self._queue_rerun(requested_update)
 
             if self._sim_state == "RUNNING":
-                self._sim_state = "STOPPING"
-                try:
-                    if self.sim_controller is not None:
-                        self.sim_controller.request_stop(force= False)
-                except Exception:
-                        pass
-
-                qc.QTimer.singleShot(1500, self._escalate_stop_if_needed)
-                self.status_bar.showMessage("Stop requested... will rerun.", 1500)
+                self._request_stop(rerun= True)
             else:
                 self.status_bar.showMessage("Stopping... rerun queued.", 1500)
             return
 
+        # else, just go ahead and start
         self._start_sim_now(requested_update)
+
+    def _clear_sim_cache(self, clear_pending: bool= True, clear_queue: bool= False, stop_bridge= True):
+        if clear_pending:
+            self._pending_traj = None
+            self._pending_t = None
+
+        if stop_bridge:
+            bw = getattr(self, "bridge_worker", None)
+
+            if bw is not None:
+                try:
+                    bw.stop()
+                except RuntimeError:
+                    pass
+                try:
+                    bw.deleteLater()
+                except Exception:
+                    pass
+
+            self.bridge_worker = None
+
+        if clear_queue:
+            self._dispose_sim_queue()
+
+    def _dispose_sim_queue(self):
+        q = getattr(self, "sim_results_queue", None)
+        if q is None:
+            return
+
+        try:
+            q.close()
+        except Exception:
+            pass
+
+        try:
+            q.cancel_join_thread()
+        except Exception:
+            pass
+
+        self.sim_results_queue = None
 
     def _escalate_stop_if_needed(self):
         if self._sim_state != "STOPPING":
             return
-
 
         ctrl = self.sim_controller
         if ctrl is None:
             return
 
         if ctrl.is_alive():
-            self.status_bar.showMessage("Force stopping simulation...", 1500)
-            self._halt_sim_stack(force= True, clear_pending= False, clear_queue= True)
+            self.status_bar.showMessage("Force stopping...", 1500)
+            stopped = self._halt_sim_stack(force= True, clear_pending= False, clear_queue= True)
             self._sim_state = "IDLE"
+
+            if not stopped:
+                self._sim_state = "STOPPING"
+                self.status_bar.showMessage(
+                    "WARNING: Failed to stop sim. Restart may be unsafe.",
+                    msecs=6000,
+                )
+                return
+            else:
+                self.status_bar.showMessage("Sim stopped successfully", 2000)
 
             if self._rerun_pending:
                 self._rerun_pending = False
                 self._start_sim_now()
+
+        self._sim_state = "IDLE"
+
+        if self._rerun_pending:
+            self._rerun_pending = False
+            self._start_sim_now()
 
     def _queue_rerun(self, requested_update= None):
         self._rerun_pending = True
@@ -1595,6 +1713,7 @@ class MainWindow(qw.QMainWindow):
         else:
             self._consume_pending_restart_update()
 
+        # defensive redundancy
         self._halt_sim_stack(force= False, clear_pending= True, clear_queue= True)
 
         self._run_id += 1
@@ -1668,6 +1787,7 @@ class MainWindow(qw.QMainWindow):
                 "func_name": func_name,
                 "_remote_exc_info": tb,
             }
+        print(f"{self.env.log_dir=}")
         logger.log(logging.ERROR, f"Simulation failed: {ex_repr}", extra= extra)
         self._rerun_pending = False
         self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
@@ -1700,17 +1820,6 @@ class MainWindow(qw.QMainWindow):
             dropdown_index, options, legend_cfg = cfg
             self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg)
 
-    def _request_stop_for_rerun(self, force= False):
-        try:
-            self._anim_timer.stop()
-        except Exception:
-            pass
-
-        if self.sim_controller is not None:
-            self.sim_controller.request_stop(force= force)
-            # if force:
-            #     self._on_sim_done() # no DONE message if force killed the process
-
     def closeEvent(self, event):
         try:
             self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
@@ -1720,10 +1829,8 @@ class MainWindow(qw.QMainWindow):
             event.accept()
 
     def _load_preset_by_name(self, name):
-        if self._sim_state == "RUNNING":
-            self._halt_sim_stack()
-            self._sim_state = "IDLE"
-
+        if self._sim_state in {"RUNNING", "STOPPING"}:
+            self._stop_sim_pragmatically()
         try:
             self.params = params_from_mapping(
                 self.presets[name]["params"],
@@ -1777,7 +1884,7 @@ class MainWindow(qw.QMainWindow):
             }
             logger.log(logging.ERROR, f"Failed to load preset {preset}: {e}", extra= extras, exc_info= e)
 
-    def reload_current_demo(self):
+    def reload_current_demo(self, restart_after= False):
         """
         Reload simulation.py / parameters.py for the current demo
         without changing which demo is active.
@@ -1824,7 +1931,8 @@ class MainWindow(qw.QMainWindow):
             logger.log(logging.ERROR, f"Failed to reload current demo: {e}", extra= extra, exc_info= e)
 
         # Re-run simulation
-        self.start_sim()
+        if restart_after:
+            self.start_sim()
 
     def _reload_config(self):
         old_models_dir = self.env.models_dir
@@ -1870,7 +1978,6 @@ class MainWindow(qw.QMainWindow):
 
         if self.settings.get("figure_mode", "tight") != old_layout_mode:
             self.apply_figure_layout_mode()
-
 
     def apply_figure_layout_mode(self):
         mode = self.settings.get("figure_mode", "tight")
@@ -1987,8 +2094,8 @@ class MainWindow(qw.QMainWindow):
         return params
 
     def load_demo(self, demo_name, autostart= True):
-        self._halt_sim_stack(force= True, clear_pending= True, clear_queue= True)
-        self._sim_state = "IDLE"
+        if self._sim_state in {"RUNNING", "STOPPING"}:
+            self._stop_sim_pragmatically()
         try:
             demo = self.demos[demo_name]
             self.sim_model = demo["details"]["simulation_model"]
@@ -2036,6 +2143,7 @@ class MainWindow(qw.QMainWindow):
         self._create_results_submenus(self.results_submenu)
         self._create_presets_submenus(self.presets, self.presets_submenu)
 
+        print(f"loading saved axis settings from load_demo")
         self._load_saved_axis_settings()
 
         self.main_splitter.addWidget(self.control_panel)

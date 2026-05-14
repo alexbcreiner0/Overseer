@@ -853,21 +853,23 @@ class GraphPanel(qw.QWidget):
         data = np.asarray(traj[plot_dict["dist"]])
         series = self._hist_series(data)
 
-        edge_color = plot_dict.get("edgecolor", "black")
+        legacy_edge_color = plot_dict.get("edgecolor")
         rwidth = plot_dict.get("rwidth", 1)
         histtype = plot_dict.get("histtype", 'bar')
         density = plot_dict.get("density", False)
 
-        color = plot_dict.get("color")
+        legacy_color = plot_dict.get("color")
         label = plot_dict.get("label")
 
         weights = plot_dict.get("weights", None)
 
         labels = self._auto_vector_labels(plot_name, plot_dict, len(series))
-        colors = self._auto_vector_colors(plot_dict, len(series))
-        edge_colors = plot_dict.get("edgecolors", ["black"]*len(colors))
-        while len(edge_colors) < len(colors):
-            edge_colors.append("black")
+        colors = self._auto_vector_colors(plot_dict, max(len(series),1)) #if plot_dict.get("gradient", "None") == "None" else None
+        edge_colors = plot_dict.get("edgecolors")
+        if edge_colors is not None:
+            edge_colors = list(edge_colors)
+            while len(edge_colors) <= len(series):
+                edge_colors.append("black")
 
         if weights is not None:
             weights = traj[weights]
@@ -881,14 +883,27 @@ class GraphPanel(qw.QWidget):
         all_edges = None
         gradient = plot_dict.get("gradient", "None")
         for i, values in enumerate(series):
+            if legacy_color is not None and gradient == "None":
+                color = legacy_color
+            elif gradient == "None" and colors is not None:
+                color = colors[i]
+            else:
+                color = None
+            if legacy_edge_color is not None:
+                edgecolor = legacy_edge_color
+            elif edge_colors is not None:
+                edgecolor = edge_colors[i]
+            else:
+                edgecolor = None
+
             counts, edges, patches = ax.hist(
                 values,
                 bins=bins,
-                edgecolor=edge_colors[i] if edge_color is None else edge_color,
+                edgecolor=edgecolor,
                 rwidth=rwidth,
                 histtype=histtype,
                 density=density,
-                color=colors[i] if color is None else color, # backwards compatibility
+                color=color,
                 label=labels[i] if label is None else label,
                 weights=weights[:, i] if weights is not None and np.asarray(weights).ndim == 2 else weights,
                 alpha=plot_dict.get("alpha", 1.0),
@@ -1251,10 +1266,23 @@ class GraphPanel(qw.QWidget):
         return [f"{plot_name} [{i}]" for i in range(n)]
 
     def _auto_vector_colors(self, plot_dict: dict, n: int):
-        base = plot_dict.get("colors", [])
+        bs_base = plot_dict.get("colors", [])
+        base = []
+        for i, color in enumerate(bs_base): # I am so fucking tilted right now, sorry if this is garbage
+            if color != "":
+                base.append(color)
+        # if base == ['']:
+        #     cmap_name = plot_dict.get("colormap")
+        #     if not cmap_name:
+        #         cmap_name = "tab20" if n <= 20 else "turbo"
+
+        #     cmap = colormaps.get(cmap_name).resampled(max(n, 1))
+        #     base[0] = cmap(0)
+
         if not isinstance(base, list):
             base = []
 
+        # print(f"{n=}")
         if len(base) >= n:
             return base[:n]
 

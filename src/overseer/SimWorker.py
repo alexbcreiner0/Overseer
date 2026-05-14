@@ -10,6 +10,7 @@ from PyQt6 import (
 import time, inspect
 from multiprocessing import Process, Pool
 import importlib
+import copy
 import queue as py_queue
 from overseer.tools.loader import params_from_mapping, to_plain
 
@@ -61,9 +62,9 @@ def child_run(
 
             if yield_every <= 1 or (i % yield_every) == 0:
                 if isinstance(output, tuple):
-                    payload = (run_id,)+output
+                    payload = (run_id,)+copy.deepcopy(output)
                 else:
-                    payload = (run_id, output)
+                    payload = (run_id, copy.deepcopy(output))
 
                 if not put_latest(queue, payload, stop_event):
                     break

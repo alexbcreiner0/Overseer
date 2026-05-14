@@ -52,6 +52,8 @@ class DemoSettingsTab(qw.QWidget):
         self.demo_list = qw.QListWidget()
         self.combo_function = qw.QComboBox()
         self.combo_preset = qw.QComboBox()
+        self.entry_sim_speed = qw.QLineEdit()
+        self.entry_sim_speed.setPlaceholderText("0")
         self.demo_list.setMinimumWidth(260)
 
         self.window = self.window()
@@ -121,6 +123,7 @@ class DemoSettingsTab(qw.QWidget):
         sec.form.addRow("Simulation model:", self.combo_model)
         sec.form.addRow("Simulation function:", self.combo_function)
         sec.form.addRow("Default preset:", self.combo_preset)
+        sec.form.addRow("Simulation Speed", self.entry_sim_speed)
         # sec.form.addRow(self.chk_starting_lims)
         # sec.form.addRow(self._wrap_layout(lims_grid))
 
@@ -154,6 +157,7 @@ class DemoSettingsTab(qw.QWidget):
             self.combo_model,
             self.combo_function,
             self.combo_preset,
+            self.entry_sim_speed
         ]
 
         self._refresh_demos()
@@ -330,13 +334,19 @@ class DemoSettingsTab(qw.QWidget):
 
 
     def _get_new_demo_dict(self, new= False):
-        new_demo = {}
+        new_demo = copy.deepcopy(self.working_data.get("demos", {}).get(self.combo_model.currentText(), {}))
         new_demo["name"] = self.edit_demo_display_name.text()
         new_demo["desc"] = self.edit_demo_desc.toPlainText()
         new_demo["details"] = {}
         new_demo["details"]["simulation_model"] = self.combo_model.currentText()
         new_demo["details"]["simulation_function"] = self.combo_function.currentText()
         new_demo["details"]["default_preset"] = self.combo_preset.currentText()
+        if self.entry_sim_speed.text():
+            try:
+                float(self.entry_sim_speed.text())
+                new_demo["details"]["simulation_speed"] = self.entry_sim_speed.text()
+            except ValueError:
+                pass
         # if self.chk_starting_lims.isChecked():
             # try:
             #     xlims = [float(self.edit_xlim_lo.text().strip()), float(self.edit_xlim_hi.text().strip())]
@@ -370,6 +380,8 @@ class DemoSettingsTab(qw.QWidget):
             self.edit_demo_desc.setPlainText(demo_dict["desc"])
 
             details = demo_dict["details"]
+            sim_speed = details.get("simulation_speed", "0.0")
+            self.entry_sim_speed.setText(str(sim_speed))
             model_index = self.combo_model.findText(details["simulation_model"])
 
             self.combo_model.setCurrentIndex(model_index)
@@ -401,14 +413,18 @@ class DemoSettingsTab(qw.QWidget):
 
     def _save_demo_changes(self):
         if self._loading_editor:
+            print(f"returning becaue loading editor")
             return
         old_key = self._current_demo_key()
         if not old_key:
+            print("returning because not old key")
             return
         new_key = self.lbl_internal_name.text().strip()
         if not new_key:
+            print(f"returning becauese not new key")
             return
 
+        print(f"getting new demo dict")
         new_demo = self._get_new_demo_dict()
         old_demo = self.working_data["demos"].get(old_key, {})
 
@@ -535,6 +551,8 @@ class DemoSettingsTab(qw.QWidget):
         self.combo_model.currentIndexChanged.connect(self._on_model_changed_autosave)
         self.combo_function.currentIndexChanged.connect(self._save_demo_changes)
         self.combo_preset.currentIndexChanged.connect(self._save_demo_changes)
+
+        self.entry_sim_speed.textChanged.connect(self._save_demo_changes)
 
         # self.chk_starting_lims.toggled.connect(self._on_starting_lims_toggled)
 

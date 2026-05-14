@@ -4,6 +4,7 @@ from PyQt6 import (
     QtGui as qg
 )
 import numpy as np
+import traceback
 import queue as py_queue
 from .tools.dataclasses import Extend, Replace, Append
 
@@ -43,10 +44,10 @@ class BridgeWorker(qc.QObject):
                 else:
                     self.t.append(t.value)
             elif isinstance(t, Extend):
-                if isinstance(t.value, np.ndarray):
-                    t = list(t.value)
+                if isinstance(t.values, np.ndarray):
+                    t = list(t.values)
                 else:
-                    if not isinstance(t.value, list):
+                    if not isinstance(t.values, list):
                         self.error.emit("Error: Trying to extend a list with a non-list-like t output.")
                         return
 
@@ -69,7 +70,7 @@ class BridgeWorker(qc.QObject):
             if isinstance(payload, Append):
                 self.traj.setdefault(key, []).append(payload.value)
             elif isinstance(payload, Extend):
-                self.traj.setdefault(key, []).extend(payload.value)
+                self.traj.setdefault(key, []).extend(payload.values)
             elif isinstance(payload, Replace):
                 self.traj[key] = payload.value
             else:
@@ -95,51 +96,58 @@ class BridgeWorker(qc.QObject):
         saw_done = False
         saw_data = False
 
-        while True:
-            try:
-                msg = self.mp_queue.get_nowait()
-            except py_queue.Empty:
-                break
+        try: 
+            while True:
+                try:
+                    msg = self.mp_queue.get_nowait()
+                except py_queue.Empty:
+                    break
 
-            if not (isinstance(msg, tuple) and msg):
-                continue
+                if not (isinstance(msg, tuple) and msg):
+                    continue
 
-            if msg[0] != self.run_id:
-                continue
+                if msg[0] != self.run_id:
+                    continue
 
-            if len(msg) >= 2 and msg[1] == "DONE":
-                print(f"Done!")
-                saw_done = True
-                continue
+                if len(msg) >= 2 and msg[1] == "DONE":
+                    print(f"Done!")
+                    saw_done = True
+                    continue
 
-            if len(msg) >= 2 and msg[1] == "ERROR":
-                self.stop()
-                self.error.emit(msg)
-                return
+                if len(msg) >= 2 and msg[1] == "ERROR":
+                    self.stop()
+                    self.error.emit(msg)
+                    return
 
-            output = msg[1:]
-            if len(output) == 2:
-                traj, t = output
-                if not isinstance(traj, dict):
-                    self.error.emit("Two outputs detected, but first is not a dictionary.")
+                output = msg[1:]
+                if len(output) == 2:
+                    traj, t = output
+                    if not isinstance(traj, dict):
+                        self.error.emit("Two outputs detected, but first is not a dictionary.")
+                        return
+                    else:
+                        self._update_progress(traj, t)
+                    saw_data = True
+                        # self.progress.emit(traj, t)
+                elif len(output) != 1:
+                    self.error.emit("Outputs yielded by sim must either be a single dictionary or a dictionary along with a list/numpy array.")
                     return
                 else:
-                    self._update_progress(traj, t)
-                saw_data = True
-                    # self.progress.emit(traj, t)
-            elif len(output) != 1:
-                self.error.emit("Outputs yielded by sim must either be a single dictionary or a dictionary along with a list/numpy array.")
-                return
-            else:
-                traj = output[0]
-                if isinstance(traj, dict):
-                    self._update_progress(traj)
-                    # self.progress.emit(traj, None)
-                else:
-                    self.error.emit("invalid output")
-                    return
-                
-                saw_data = True
+                    traj = output[0]
+                    if isinstance(traj, dict):
+                        self._update_progress(traj)
+                        # self.progress.emit(traj, None)
+                    else:
+                        self.error.emit("invalid output")
+                        return
+                    
+                    saw_data = True
+
+        except Exception as e:
+            self.stop()
+            msg = (self.run_id, "ERROR", repr(e), traceback.format_exc(), "", "")
+            self.error.emit(msg)
+            return
 
         if saw_data:
             self.progress.emit(self.traj, self.t)

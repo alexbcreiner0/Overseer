@@ -1042,6 +1042,8 @@ class PlotSettingsTab(qw.QWidget):
             edgecolors = [old_edgecolor]
         else:
             edgecolors = plot.get("edgecolors", [""]*len(colors))
+            if edgecolors is None:
+                edgecolors = [""]*len(colors)
 
         if template_mode:
             labels = [""]*len(colors)
@@ -1086,6 +1088,12 @@ class PlotSettingsTab(qw.QWidget):
                 del new_data["labels"]
         else:
             new_data["labels"] = labels
+
+
+        if colors == [""]:
+            colors = None
+        if edgecolors == [""]:
+            edgecolors = None
 
         new_data["colors"] = colors
         new_data["edgecolors"] = edgecolors
