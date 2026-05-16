@@ -18,6 +18,7 @@ from matplotlib.ticker import FormatStrFormatter
 import scienceplots
 import logging, json, hashlib
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from PIL import Image
 plt.style.use(["grid", "notebook"])
 # rcParams["figure.constrained_layout.use"] = False
 # rcParams["figure.autolayout"] = False
@@ -574,7 +575,7 @@ class GraphPanel(qw.QWidget):
                 special = plot_dict.get("special")
 
                 if special == "scatter":
-                    self._build_scatter(ax, choice_name, plot_name, plot_dict, traj)
+                    self._build_scatter(ax, choice_name, plot_name, plot_dict, traj, t)
                     continue
 
                 if special == "surface":
@@ -677,15 +678,80 @@ class GraphPanel(qw.QWidget):
         choice = self._choice_dict_from_index(dropdown_choice)
         return choice, choice.get("plots", {})
 
-    def _build_scatter(self, ax, choice_name: str, plot_name: str, plot_dict: dict, traj: dict):
-        xk, yk = plot_dict.get("traj_key_x"), plot_dict.get("traj_key_y")
-        pc = ax.scatter(
-            traj[xk], traj[yk],
-            color=plot_dict.get("color", "k"),
-            label=plot_dict["labels"][0],
-            marker=plot_dict.get("marker", 'o'),
-            edgecolors=plot_dict.get("edgecolors", 'none')
-        )
+    def _build_scatter(self, ax, choice_name: str, plot_name: str, plot_dict: dict, traj: dict, t):
+        x_key, y_key = plot_dict.get("traj_key_x"), plot_dict.get("traj_key_y")
+        y = traj[y_key]
+        if x_key is None or x_key == "" or x_key not in traj:
+            # can't use x_key, try t
+            if t is None:
+                if "t" not in traj:
+                    raise ValueError("No valid x axis data found")
+                else:
+                    x = traj["t"]
+            else:
+                x = t
+        else:
+            x = traj[x_key]
+
+        # if not isinstance(y, np.ndarray):
+        #     y = np.asarray(y)
+        # if not isinstance(x, np.ndarray):
+        #     x = np.asarray(x)
+
+        z_key = plot_dict.get("traj_key_z")
+        is_3d = (z_key is not None and traj.get(z_key) is not None and hasattr(ax, "get_zlim"))
+
+        size = plot_dict.get("size")
+        is_size_key = plot_dict.get("size_key", False)
+
+        color = plot_dict.get("color")
+        is_color_key = plot_dict.get("color_key", False)
+
+        if is_size_key and traj.get("size") is not None:
+            size = traj["size"]
+        elif size is None:
+            size = rcParams['lines.markersize'] ** 2
+
+        if isinstance(size, str):
+            try:
+                size = int(size)
+            except ValueError:
+                size = rcParams['lines.markersize'] ** 2
+
+        if is_color_key and traj.get("color") is not None:
+            color = traj["color"]
+        elif color is None or color == "":
+            color = "k"
+
+        marker = plot_dict.get("marker", 'o')
+        if marker == "":
+            marker = 'o'
+
+        if is_3d:
+            z = traj[z_key]
+            # if not isinstance(z, np.ndarray):
+            #     z = np.asarray(z)
+            
+            n = min(len(x), len(y), len(z))
+            pc = ax.scatter(
+                x[:n], y[:n],
+                z[:n],
+                c=color,
+                s= size,
+                label=plot_dict["labels"][0],
+                marker=marker,
+                edgecolors=plot_dict.get("edgecolors", 'none')
+            )
+        else:
+            n = min(len(x), len(y))
+            pc = ax.scatter(
+                x[:n], y[:n],
+                c=color,
+                s= size,
+                label=plot_dict["labels"][0],
+                marker=marker,
+                edgecolors=plot_dict.get("edgecolors", 'none')
+            )
         pc.set_gid(f"{choice_name}::{plot_name}::scatter")
 
     def _build_cplot(self, ax, choice_name: str, plot_name: str, plot_dict: dict, traj: dict):
@@ -709,14 +775,16 @@ class GraphPanel(qw.QWidget):
             ax.contour(X, Y, traj["arg_sin"], levels=arg_levels, antialiased=True, alpha=0.45, linewidths=1.2)
 
     def _build_heatmap(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, traj: dict):
-        frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
+        # frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
+        frame2d = traj.get(plot_dict.get("traj_key", {}))
         if frame2d is None:
             return
 
         disc = plot_dict.get("discrete", False)
-        cmap = None
         norm = None
+        cmap = None
         disc_values = None
+        extent= None
         disc_labels = None
         if disc:
             disc_values = traj.get(plot_dict.get("values"))
@@ -743,7 +811,14 @@ class GraphPanel(qw.QWidget):
                     last = disc_values[-1] + (disc_values[-1] - mids[-1])
                     boundaries = [first] + mids + [last]
                 norm = BoundaryNorm(boundaries, ncolors= len(disc_values), clip= True)
-                
+        else:
+            gradient = plot_dict.get("cmap")
+            if gradient == "None":
+                cmap = None
+            if gradient != None:
+                cmap = colormaps.get(gradient, None)
+            else:
+                cmap = None
 
         extent = None
         if "x" in traj and "y" in traj:
@@ -1061,6 +1136,10 @@ class GraphPanel(qw.QWidget):
 
         if not want_3d and cmap is not None:
             C_key = plot_dict.get("traj_key_C")
+            if isinstance(U, list):
+                U = np.array(U)
+            if isinstance(V, list):
+                V = np.array(V)
             C = self.traj[C_key] if C_key else np.sqrt(U**2 + V**2)
             args = args + [C]
 
@@ -1959,24 +2038,110 @@ class GraphPanel(qw.QWidget):
         if gid in over:
             line.set_label(over[gid])
 
-    def _update_scatter_artist(self, coll, gid: str, traj: dict) -> None:
-        choice_name, plot_name, plot_dict = self._get_spec_from_gid(gid)
+    def _scatter_sizes_for_n(self, plot_dict: dict, traj: dict, n: int) -> np.ndarray:
+        size = plot_dict.get("size")
+        is_size_key = plot_dict.get("size_key", False)
+
+        if is_size_key and traj.get("size") is not None:
+            size = np.asarray(traj["size"])
+            if size.ndim == 0:
+                return np.full(n, float(size))
+            return size[:n]
+
+        if size is None or size == "":
+            size = rcParams["lines.markersize"] ** 2
+
+        try:
+            size = float(size)
+        except (TypeError, ValueError):
+            size = rcParams["lines.markersize"] ** 2
+
+        return np.full(n, size)
+
+    def _scatter_colors_for_n(self, plot_dict: dict, traj: dict, n: int):
+        color = plot_dict.get("color")
+        is_color_key = plot_dict.get("color_key", False)
+
+        if is_color_key and traj.get("color") is not None:
+            color = np.asarray(traj["color"])
+
+            # One scalar/color per point.
+            if color.ndim >= 1 and len(color) == n:
+                return color[:n]
+
+            # Growing data case: slice down to current n.
+            if color.ndim >= 1 and len(color) > n:
+                return color[:n]
+
+            # Scalar-ish fallback.
+            if color.ndim == 0:
+                return color.item()
+
+            # If color length is wrong, avoid passing a mismatched array.
+            return "k"
+
+        if color is None or color == "":
+            return "k"
+
+        return color
+
+    def _update_scatter_artist(self, coll, gid: str, traj: dict, slot_index: int, t) -> None:
+        _, _, plot_dict = self._get_spec_from_gid(gid)
 
         if not plot_dict:
             return
 
-        xk, yk = plot_dict.get("traj_key_x"), plot_dict.get("traj_key_y")
-        if not xk or not yk or xk not in traj or yk not in traj:
-            return
+        x_key, y_key = plot_dict.get("traj_key_x"), plot_dict.get("traj_key_y")
+        z_key = plot_dict.get("traj_key_z")
 
-        x, y = np.asarray(traj[xk]), np.asarray(traj[yk])
-        n = min(x.shape[0], y.shape[0])
+        ax = self.axes[slot_index]
+        is_3d = (z_key is not None and traj.get(z_key) is not None and hasattr(ax, "get_zlim"))
+
+        y = np.asarray(traj[y_key])
+        if x_key is None or x_key == "" or x_key not in traj:
+            # can't use x_key, try t
+            if t is None:
+                if "t" not in traj:
+                    raise ValueError("No valid x axis data found")
+                else:
+                    x = traj["t"]
+            else:
+                x = t
+        else:
+            x = traj[x_key]
+
+        if not isinstance(x, np.ndarray):
+            x = np.asarray(x)
+
+        if is_3d:
+            z = np.asarray(traj[z_key])
+            n = min(x.shape[0], y.shape[0], z.shape[0])
+        else:
+            n = min(x.shape[0], y.shape[0])
+
         if n <= 0:
-            coll.set_offsets(np.empty((0,2), dtype= float))
+            if is_3d:
+                empty = np.empty((0,), dtype= float)
+                coll._offsets3d = (empty, empty, empty)
+            else:
+                coll.set_offsets(np.empty((0,2), dtype= float))
             return
 
-        offsets = np.column_stack((x[:n], y[:n]))
-        coll.set_offsets(offsets)
+        if is_3d:
+            x = x[:n]
+            y = y[:n]
+            z = z[:n]
+            sizes = self._scatter_sizes_for_n(plot_dict, traj, n)
+            colors = self._scatter_colors_for_n(plot_dict, traj, n)
+            coll._offsets3d = (x[:n], y[:n], z[:n])
+            coll.set_sizes(sizes)
+            coll._sizes3d = sizes
+
+            coll.set_facecolors(colors)
+            coll.set_edgecolors(plot_dict.get("edgecolors", "none"))
+        else:
+            offsets = np.column_stack((x[:n], y[:n]))
+            coll.set_offsets(offsets)
 
     def _update_pie_artist(self, ax, gid: str) -> None:
         choice_name, plot_name, plot_dict = self._get_spec_from_gid(gid)
@@ -2085,7 +2250,8 @@ class GraphPanel(qw.QWidget):
         if not plot_dict:
             return
 
-        frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
+        # frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
+        frame2d = traj.get(plot_dict.get("traj", {}))
         if frame2d is None:
             return
 
@@ -2168,23 +2334,6 @@ class GraphPanel(qw.QWidget):
         if isinstance(bins, str):
             return self.traj[plot_dict["bins"]]
 
-        if plot_dict.get("integer_bins", False):
-            if data.size == 0:
-                return np.array([0.0, 1.0])
-
-            lo = np.nanmin(data)
-            hi = np.nanmax(data)
-
-            # Snap to integer range (so 0.0/1.0 etc works)
-            ilo = int(np.floor(lo))
-            ihi = int(np.ceil(hi))
-
-            # edges: ilo-0.5, ilo+0.5, ..., ihi+0.5
-            return np.arange(ilo - 0.5, ihi + 1.5, 1.0, dtype=float)
-            # or as ndarray:
-            # return np.arange(ilo - 0.5, ihi + 1.5, 1.0, dtype=float)
-
-        # existing behavior
         if bins is None:
             nbins = int(np.unique(data).size)
             nbins = max(1, min(nbins, plot_dict.get("max_bins", 200)))
@@ -2457,21 +2606,28 @@ class GraphPanel(qw.QWidget):
         return None, None
 
     def _heatmap_frame_from_dict(self, plot_dict: dict, traj: dict):
-        """
-        Given plot_dict, return a 2D array for the current frame.
-        Supports traj[key] being:
-          - 2D (ny,nx): already a frame
-          - 3D (nt,ny,nx): take last frame
-        """
         key = plot_dict.get("traj_key")
         if not key or key not in traj:
             return None
 
-        arr = np.asarray(traj[key])
+        # Plain 2D scalar heatmap
         if arr.ndim == 2:
+            arr = np.asarray(traj[key])
             return arr
+
         if arr.ndim == 3:
-            return arr[-1]  # "latest" frame
+            # RGB/RGBA image: (height, width, channels)
+            if arr.shape[-1] in (3, 4):
+                return arr
+
+            # Time stack of scalar frames: (time, height, width)
+            return arr[-1]
+
+        if arr.ndim == 4:
+            # Time stack of RGB/RGBA images: (time, height, width, channels)
+            if arr.shape[-1] in (3, 4):
+                return arr[-1]
+
         return None
 
     def update_slot_frame(self, slot_index: int, dropdown_choice: int, options: dict, slot_cfg: dict | None = None) -> None:
@@ -2529,7 +2685,7 @@ class GraphPanel(qw.QWidget):
             
             elif kind == "collection":
                 if gid.endswith("::scatter"):
-                    self._update_scatter_artist(artist, gid, self.traj)
+                    self._update_scatter_artist(artist, gid, self.traj, slot_index, self.t)
                 elif "::graph::" in gid:
                     pass
 

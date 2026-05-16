@@ -575,17 +575,13 @@ class MainWindow(qw.QMainWindow):
         rows, cols, limits, saved_limits, dropdown_indices, slot_settings, checked = self._get_slot_settings(demo_config)
         self.control_panel._alter_slot_layout(rows, cols, limits, saved_limits, dropdown_indices, checked, slot_settings)
         self._apply_saved_projections(dropdown_indices)
-        print(f"applying {limits=}")
         self._set_graph_lims(limits)
 
     def _apply_saved_projections(self, dropdown_indices):
-        print(f"applying saved projections")
         for slot_index, idx in enumerate(dropdown_indices):
-            print("in the loop")
             choice_name = self.graph_panel._choice_name_from_index(idx)
             projection = self.graph_panel.data.get(choice_name, {}).get("projection", "2d")
             want_3d = True if projection == "3d" else False
-            print(f"{want_3d=}")
             self.graph_panel._ensure_slot_projection(slot_index, want_3d)
 
     def _get_slot_settings(self, demo_config):
@@ -896,8 +892,7 @@ class MainWindow(qw.QMainWindow):
 
     def _set_graph_lims(self, limits):
         for i, lims in enumerate(limits):
-            print(f"{lims=}, calling on_slot_axes_changed with {i=}")
-            self.on_slot_axes_changed(i, lims)
+            self.on_slot_axes_changed(i, lims, source= "other")
 
     def _make_panels(self, plotting_data, panel_data, demo):
         if plotting_data is not None:
@@ -931,7 +926,7 @@ class MainWindow(qw.QMainWindow):
         control_panel.layoutChanged.connect(self.on_layout_changed)
         control_panel.slotPlotChoiceChanged.connect(self.on_slot_plot_choice_changed)
         control_panel.slotOptionsChanged.connect(self.on_slot_options_changed)
-        control_panel.slotAxesChanged.connect(self.on_slot_axes_changed)
+        control_panel.slotAxesChanged.connect(lambda slot_index: self.on_slot_axes_changed(slot_index, source= "user"))
         control_panel.slotAxesCatChanged.connect(self.on_slot_axes_cat_save_request)
         control_panel.paramsReplaced.connect(self._on_params_replaced)
 
@@ -978,7 +973,6 @@ class MainWindow(qw.QMainWindow):
             self.on_slot_axes_cat_save_request(slot_idx)
 
     def on_slot_axes_cat_save_request(self, slot_index):
-        print("save requested?")
         lims = self.control_panel.get_slot_axes_limits(slot_index)
         cfg = self.control_panel.get_slot_config(slot_index)
         dropdown_index = cfg[0]
@@ -989,7 +983,6 @@ class MainWindow(qw.QMainWindow):
         plotting_data[dropdown_name]["default_lims"] = lims
         path = self.env.models_dir / self.sim_model / "data" / "plotting_data.yml"
 
-        print(f"Writing data to {path}")
         flow_seqify(plotting_data)
         atomic_write(path, plotting_data)
 
@@ -997,8 +990,7 @@ class MainWindow(qw.QMainWindow):
 
         self.status_bar.showMessage("Default plot category limits saved.", msecs= 4000)
 
-    def on_slot_axes_changed(self, slot_index: int, lims= None):
-        print(f"inside on_sslot_axes_changed with {slot_index=}")
+    def on_slot_axes_changed(self, slot_index: int, lims= None, source= "other"):
         if lims is None:
             lims = self.control_panel.get_slot_axes_limits(slot_index)
         if lims is None: return
@@ -1009,7 +1001,8 @@ class MainWindow(qw.QMainWindow):
             xlim, ylim = lims
             zlim = None
         self.graph_panel.edit_slot_axes(slot_index, xlim, ylim, zlim)
-        self.control_panel.set_slot_axes_limits(slot_index, xlim, ylim, zlim)
+        if source != "user":
+            self.control_panel.set_slot_axes_limits(slot_index, xlim, ylim, zlim)
 
     def on_slot_plot_choice_changed(self, slot_index: int, source: str = "checkbox"):
         if not hasattr(self, "traj") or self.traj is None: return
@@ -1020,8 +1013,6 @@ class MainWindow(qw.QMainWindow):
         dropdown_index, options, legend_cfg = cfg
 
         load_idx_defaults = self.settings.get("use_cat_limits", True)
-        print(f"{load_idx_defaults=}")
-        print(f"{source=}")
         load_idx_defaults = False if not isinstance(load_idx_defaults, bool) else load_idx_defaults 
         self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg, source= source, load_idx_defaults= load_idx_defaults)
         # self.graph_panel._on_axis_limits_changed(slot_index)
@@ -1775,7 +1766,6 @@ class MainWindow(qw.QMainWindow):
             self.start_sim()
 
     def _on_sim_error(self, msg):
-        print(msg)
         if isinstance(msg, str):
             ex_repr = msg
             extra = {}
@@ -1787,8 +1777,8 @@ class MainWindow(qw.QMainWindow):
                 "func_name": func_name,
                 "_remote_exc_info": tb,
             }
-        print(f"{self.env.log_dir=}")
         logger.log(logging.ERROR, f"Simulation failed: {ex_repr}", extra= extra)
+        self.status_bar.showMessage(f"Simulation failed: {ex_repr}", 3000)
         self._rerun_pending = False
         self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
         self._sim_state = "IDLE"

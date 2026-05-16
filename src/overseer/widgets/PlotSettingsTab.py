@@ -821,6 +821,7 @@ class PlotSettingsTab(qw.QWidget):
         disc_widget = qw.QWidget()
         cts_widget = qw.QWidget()
         disc_layout = HelpFormLayout(disc_widget)
+        cts_layout = HelpFormLayout(cts_widget)
 
         self.heatmap_disc_cell_coloring = ValueColorLabelRow(indep= True)
         self.heatmap_disc_cell_coloring.value_edit.setPlaceholderText("Values")
@@ -838,6 +839,10 @@ class PlotSettingsTab(qw.QWidget):
         disc_layout.addRow("Cell Coloring: ", self.heatmap_disc_cell_coloring)
         disc_layout.addRow("Cell Markers: ", self.heatmap_marker_editor)
 
+        self.heatmap_cts_cmap = qw.QComboBox()
+        self.heatmap_cts_cmap.addItem("None")
+        self.heatmap_cts_cmap.addItems(list(colormaps))
+        cts_layout.addRow("Colormap:", self.heatmap_cts_cmap)
 
         self.heatmap_type_stack = qw.QStackedWidget()
         self.heatmap_type_stack.addWidget(disc_widget)
@@ -859,13 +864,12 @@ class PlotSettingsTab(qw.QWidget):
             self.heatmap_traj_key, self.heatmap_type, self.heatmap_colorbar,
             self.heatmap_colorbar_labels, self.heatmap_aspect, self.heatmap_interp, self.heatmap_origin,
             self.heatmap_disc_cell_coloring.value_edit, self.heatmap_disc_cell_coloring.color_edit, 
-            self.heatmap_disc_cell_coloring.label_edit, self.heatmap_marker_editor,
+            self.heatmap_disc_cell_coloring.label_edit, self.heatmap_marker_editor, self.heatmap_cts_cmap,
         ]
 
         return w
 
     def _on_heatmap_type_changed(self, idx: int) -> None:
-        # stack_idx = {0: 1, 1: 2}.get(idx, 1)
         self.heatmap_type_stack.setCurrentIndex(idx)
         self._save_changes()
 
@@ -876,6 +880,7 @@ class PlotSettingsTab(qw.QWidget):
 
         self.heatmap_traj_key.setText(plot.get("traj_key", "") or "")
         self.heatmap_colorbar.setChecked(plot.get("colorbar", False))
+        self.heatmap_colorbar_labels.setChecked(plot.get("colobar_labels", False))
 
         val = plot.get("discrete", False)
         if val:
@@ -920,10 +925,23 @@ class PlotSettingsTab(qw.QWidget):
             sex = list(zip(codes, sizes, labels, markers, colors, edgecolors))
             self.heatmap_marker_editor.set_items(sex)
 
+        val = plot.get("cmap", "None")
+        idx = self.heatmap_cts_cmap.findText(val)
+        if idx >= 0:
+            self.heatmap_cts_cmap.setCurrentIndex(idx)
+        else:
+            self.heatmap_cts_cmap.setCurrentIndex(self.heatmap_cts_cmap.findText("None"))
+
+        self._on_heatmap_type_changed(self.heatmap_type.currentIndex())
+
     def _get_new_heatmap_data(self, new_data):
         new_data["traj_key"] = self.heatmap_traj_key.text()
         new_data["discrete"] = True if self.heatmap_type.currentText() == "Discrete" else False
         new_data["colorbar"] = self.heatmap_colorbar.isChecked()
+        new_data["colorbar_labels"] = self.heatmap_colorbar_labels.isChecked()
+        new_data["aspect"] = (self.heatmap_aspect.currentData() or "equal")
+        new_data["interpolation"] = self.heatmap_interp.currentText()
+        new_data["origin"] = (self.heatmap_origin.currentData() or "lower")
 
         if self.heatmap_disc_cell_coloring.value_edit.text():
             new_data["values"] = self.heatmap_disc_cell_coloring.value_edit.text()
@@ -932,19 +950,24 @@ class PlotSettingsTab(qw.QWidget):
         if self.heatmap_disc_cell_coloring.label_edit.text():
             new_data["labels"] = self.heatmap_disc_cell_coloring.label_edit.text()
 
+        cmap = self.heatmap_cts_cmap.currentText()
+        if cmap != "None":
+            new_data["cmap"] = cmap
+
         pairs = self.heatmap_marker_editor.get_items()
         try:
             codes, sizes, labels, markers, colors, edgecolors = zip(*pairs) # unzipping magic
         except ValueError:
             codes, sizes, labels, markers, colors, edgecolors = [], [], [], [], [], []
 
-        if len(codes) > 0:
-            new_data["overlay_markers"] = {"codes": codes}
-            if sizes: new_data["overlay_markers"]["sizes"] = sizes
-            if labels: new_data["overlay_markers"]["labels"] = labels
-            if markers: new_data["overlay_markers"]["markers"] = markers
-            if colors: new_data["overlay_markers"]["colors"] = colors
-            if edgecolors: new_data["overlay_markers"]["edgecolors"] = colors
+        if self.heatmap_type.currentText() == "Discrete":
+            if len(codes) > 0:
+                new_data["overlay_markers"] = {"codes": codes}
+                if sizes: new_data["overlay_markers"]["sizes"] = sizes
+                if labels: new_data["overlay_markers"]["labels"] = labels
+                if markers: new_data["overlay_markers"]["markers"] = markers
+                if colors: new_data["overlay_markers"]["colors"] = colors
+                if edgecolors: new_data["overlay_markers"]["edgecolors"] = colors
 
     def _build_hist_panel(self) -> qw.QWidget:
         w = qw.QWidget()
@@ -1089,7 +1112,6 @@ class PlotSettingsTab(qw.QWidget):
         else:
             new_data["labels"] = labels
 
-
         if colors == [""]:
             colors = None
         if edgecolors == [""]:
@@ -1115,17 +1137,30 @@ class PlotSettingsTab(qw.QWidget):
 
         self.scatter_traj_key_x = qw.QLineEdit()
         self.scatter_traj_key_y = qw.QLineEdit()
+        self.scatter_traj_key_z = qw.QLineEdit()
         self.scatter_label_color = LabelColorRow(indep= True)
         self.scatter_marker = qw.QLineEdit()
+        self.scatter_size = qw.QLineEdit()
 
-        layout.addRow("x-Axis Key*:", self.scatter_traj_key_x)
+        scatter_check_row = qw.QWidget()
+        scatter_check_row_lay = qw.QHBoxLayout(scatter_check_row)
+        self.scatter_size_is_key = qw.QCheckBox("Size value is trajectory key")
+        self.scatter_color_is_key = qw.QCheckBox("Color value is trajectory key")
+        scatter_check_row_lay.addWidget(self.scatter_size_is_key)
+        scatter_check_row_lay.addWidget(self.scatter_color_is_key)
+
         layout.addRow("y-Axis Key*:", self.scatter_traj_key_y)
-        layout.addRow("Label/Color:", self.scatter_label_color)
+        layout.addRow("x-Axis Key:", self.scatter_traj_key_x)
+        layout.addRow("z-Axis keys:", self.scatter_traj_key_z)
         layout.addRow("Marker:", self.scatter_marker)
+        layout.addRow("", scatter_check_row)
+        layout.addRow("Marker size:", self.scatter_size)
+        layout.addRow("Label/Color:", self.scatter_label_color)
 
         self.field_widgets += [
             self.scatter_traj_key_x, self.scatter_traj_key_y, self.scatter_label_color.label_edit,
-            self.scatter_label_color.color_edit, self.scatter_marker
+            self.scatter_label_color.color_edit, self.scatter_marker, self.scatter_size,
+            self.scatter_size_is_key, self.scatter_color_is_key, self.scatter_traj_key_z
         ]
 
         return w
@@ -1133,6 +1168,10 @@ class PlotSettingsTab(qw.QWidget):
     def _load_scatter_info(self, plot):
         self.scatter_traj_key_x.setText(plot.get("traj_key_x", "") or "")
         self.scatter_traj_key_y.setText(plot.get("traj_key_y", "") or "")
+        self.scatter_traj_key_z.setText(plot.get("traj_key_z", "") or "")
+        self.scatter_size.setText(plot.get("size", "") or "")
+        self.scatter_size_is_key.setChecked(plot.get("size_key", False))
+        self.scatter_color_is_key.setChecked(plot.get("color_key", False))
         try:
             label = plot.get("labels", "")[0]
         except Exception:
@@ -1144,9 +1183,17 @@ class PlotSettingsTab(qw.QWidget):
     def _get_new_scatter_data(self, new_data):
         new_data["traj_key_x"] = self.scatter_traj_key_x.text()
         new_data["traj_key_y"] = self.scatter_traj_key_y.text()
+        print(f"{self.scatter_traj_key_z.text()=}")
+        if self.scatter_traj_key_z.text() != "":
+            new_data["traj_key_z"] = self.scatter_traj_key_z.text()
+        else:
+            new_data["traj_key_z"] = None
         new_data["labels"] = [self.scatter_label_color.label_edit.text()]
         new_data["color"] = self.scatter_label_color.color_edit.text()
         new_data["marker"] = self.scatter_marker.text()
+        new_data["size_key"] = self.scatter_size_is_key.isChecked()
+        new_data["color_key"] = self.scatter_color_is_key.isChecked()
+        new_data["size"] = self.scatter_size.text()
 
     def _build_pie_panel(self) -> qw.QWidget:
         w = qw.QWidget()
@@ -1157,9 +1204,9 @@ class PlotSettingsTab(qw.QWidget):
         self.pie_colors = qw.QLineEdit()
         self.pie_labels = qw.QLineEdit()
 
-        layout.addRow("Data Key: ", self.pie_data)
-        layout.addRow("Color Mapping Key: ", self.pie_colors)
-        layout.addRow("Label Mapping Key: ", self.pie_labels)
+        layout.addRow("Data key*: ", self.pie_data, help_text= "The RAW data. Overseer will count unique data points for you.")
+        layout.addRow("Color mapping key*: ", self.pie_colors, help_text= "A dictionary mapping data points to colors. Data points without colors are ignored.")
+        layout.addRow("Label mapping key: ", self.pie_labels, help_text= "A dictionary mapping data points to labels for the legend.")
 
         self.field_widgets += [
             self.pie_data, self.pie_colors, self.pie_labels
@@ -1245,7 +1292,8 @@ class PlotSettingsTab(qw.QWidget):
         new_data["traj_key_W"] = self.quiver_traj_key_W.text()
 
         cmap = self.quiver_cmap.currentText()
-        new_data["cmap"] = cmap
+        if cmap != "None":
+            new_data["cmap"] = cmap
 
         traj_key_C = self.quiver_traj_key_C.text()
         if traj_key_C:
@@ -1476,16 +1524,16 @@ class PlotSettingsTab(qw.QWidget):
 
             _, cat_key = cat_payload
             old_cat = old_data.get(cat_key, {})
-            new_cat = {}
 
-            # preserve category metadata
-            for k in ("name", "title", "tooltip", "x_label",
-                      "y_label", "projection", "axis_visible",
-                      "grid_visible", "ticks_visible", "frame_visible"
-                      ):
-                if k in old_cat:
-                    new_cat[k] = old_cat[k]
+            # # preserve category metadata
+            # for k in ("name", "title", "tooltip", "x_label",
+            #           "y_label", "projection", "axis_visible",
+            #           "grid_visible", "ticks_visible", "frame_visible"
+            #           ):
+            #     if k in old_cat:
+            #         new_cat[k] = old_cat[k]
 
+            new_cat = copy.deepcopy(old_cat)
             new_cat["plots"] = {}
 
             for j in range(cat_item.childCount()):
@@ -1656,8 +1704,9 @@ class PlotSettingsTab(qw.QWidget):
 
         if data[0] == "category":
             old_dict = self._working_plot_data[self._current_model][data[1]]
+            new_data = copy.deepcopy(old_dict)
             self._get_new_cat_data(new_data)
-            new_data["plots"] = old_dict["plots"]
+            new_data["plots"] = copy.deepcopy(old_dict.get("plots", {}))
             return inter_name, new_data
 
         data_type = self._get_name_from_type_stack_idx(self.type_stack.currentIndex())

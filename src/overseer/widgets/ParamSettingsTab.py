@@ -633,6 +633,7 @@ class ParamSettingsTab(qw.QWidget):
         if valid:
             spec.value = txt
             self._update_default_order_warning()
+            self._refresh_table()
 
         # row = self._selected_row()
         # if row is not None:

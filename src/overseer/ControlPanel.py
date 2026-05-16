@@ -300,15 +300,32 @@ class ControlPanel(qw.QWidget):
                     if "checkbox_name" in plot_dict:
                         dropdown.add_checkbox(choice_dict["name"], plot_dict["checkbox_name"], plot_dict["toggled"])
 
-            if old_dropdown_indices is not None and len(old_dropdown_indices)-1 >= slot_index and len(self.dropdown_choices) > 0:
-                dropdown_idx = old_dropdown_indices[slot_index]
+            # if old_dropdown_indices is not None and len(old_dropdown_indices)-1 >= slot_index and len(self.dropdown_choices) > 0:
+            #     dropdown_idx = old_dropdown_indices[slot_index]
+            #     dropdown_choice = self._get_inter_name_from_name(self.dropdown_choices[dropdown_idx])
+            #     choice_dict = self.plotting_data[dropdown_choice]
+            #     projection = choice_dict.get("projection", "2d")
+            # else:
+            #     projection = None
+            if len(self.dropdown_choices) > 0:
+                if (
+                    old_dropdown_indices is not None
+                    and slot_index < len(old_dropdown_indices)
+                    and old_dropdown_indices[slot_index] is not None
+                    and old_dropdown_indices[slot_index] >= 0
+                ):
+                    dropdown_idx = min(old_dropdown_indices[slot_index], len(self.dropdown_choices) - 1)
+                else:
+                    dropdown_idx = 0
+
                 dropdown_choice = self._get_inter_name_from_name(self.dropdown_choices[dropdown_idx])
-                choice_dict = self.plotting_data[dropdown_choice]
+                choice_dict = self.plotting_data.get(dropdown_choice, {})
                 projection = choice_dict.get("projection", "2d")
             else:
-                projection = None
+                dropdown_idx = 0
+                projection = "2d"
 
-            z_axis = True if projection == "3d" else False
+            z_axis = (projection == "3d")
             default_font = self._auto_fontsize(rows, cols)
             options_widget = SlotControlsWidget()
             options_widget.legend_size_spin.setValue(default_font)

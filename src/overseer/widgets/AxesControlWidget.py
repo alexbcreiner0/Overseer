@@ -158,10 +158,31 @@ class AxesControlWidget(qw.QWidget):
         new_state = (dim == "3d")
 
         if new_state == self.is_3d:
+            if self.is_3d:
+                self._ensure_z_limits_present()
             return
 
         self.is_3d = new_state
         self._update_z_visibility()
+
+        if self.is_3d:
+            self._ensure_z_limits_present()
+
+    def _ensure_z_limits_present(self):
+        if self.zmin_edit.text().strip() and self.zmax_edit.text().strip():
+            return
+
+        if self._saved_zlim is not None:
+            z0, z1 = self._saved_zlim
+        else:
+            z0, z1 = -0.055, 0.055
+
+        self.zmin_edit.blockSignals(True)
+        self.zmax_edit.blockSignals(True)
+        self.zmin_edit.setText(f"{z0:g}")
+        self.zmax_edit.setText(f"{z1:g}")
+        self.zmin_edit.blockSignals(False)
+        self.zmax_edit.blockSignals(False)
 
     def _update_z_visibility(self):
         self.z_row.setVisible(self.is_3d)
@@ -203,18 +224,30 @@ class AxesControlWidget(qw.QWidget):
         else:
             (x0, x1), (y0, y1) = xlim, ylim
 
+        if self.is_3d:
+            if self.zmin_edit.text().strip() and self.zmax_edit.text().strip():
+                try:
+                    z0 = float(self.zmin_edit.text())
+                    z1 = float(self.zmax_edit.text())
+                except ValueError:
+                    z0, z1 = -0.055, 0.055
+            elif self._saved_zlim is not None:
+                z0, z1 = self._saved_zlim
+            else:
+                z0, z1 = -0.055, 0.055
+
         edits = (
             (self.xmin_edit, x0),
             (self.xmax_edit, x1),
             (self.ymin_edit, y0),
             (self.ymax_edit, y1),
         )
-        if zlim is not None:
-            more_edits = (
+        if self.is_3d:
+            edits += (
                 (self.zmin_edit, z0),
                 (self.zmax_edit, z1),
             )
-            edits += more_edits
+
         for edit, val in edits:
             edit.blockSignals(True)
             edit.setText(f"{val:g}")
