@@ -933,6 +933,8 @@ class MainWindow(qw.QMainWindow):
         return graph_panel, control_panel, dropdown_choices
 
     def _on_params_replaced(self, data):
+        print(f"on_params_replaced_called")
+        print(f"{data=}")
         new_params, new_sector_names = data
         self.params = new_params
         if new_sector_names is not None:
@@ -944,6 +946,7 @@ class MainWindow(qw.QMainWindow):
         with open(self.env.models_dir / self.sim_model / "data" / "plotting_data.yml") as f:
             plotting_data = yaml.safe_load(f)
         formatted = format_plot_config(plotting_data, names)
+        print(f"{formatted=}")
 
         self.graph_panel.apply_plotting_data(formatted)
 

@@ -1,4 +1,4 @@
-In this section we'll cover best practices for writing simulations for Overseer. It is expected that the reader has already familiarized themselves with how to handle parameters in Overseer. If not, visit [the quick-start tutorial](Quick-Start%20Tutorial%20--%20Building%20a%20Model%20From%20Scratch) and/or [the parameters section](Parameters%20and%20Presets). 
+In this section we'll cover best practices for writing simulations for Overseer. It is expected that the reader has already familiarized themselves with how to handle parameters in Overseer. If not, visit [the quick-start tutorial](1%20-%20Quick-Start%20Tutorial%20--%20Building%20a%20Model%20From%20Scratch.md) and/or [the parameters section](5%20-%20Parameters%20and%20Presets.md). 
 
 The Python code which the user is expected to interact with is found inside of a model's `simulation` directory. The only file that they are explicitly required to edit themselves inside of here is `simulation.py`. Overseer expects to find functions in here, and it expects those functions to be usable as entry points for your model. What do these expectations amount to?
 # Requirements for a valid simulation function:
@@ -325,7 +325,7 @@ class Model:
         return agent_wealths
 ```
 
-**Warning**: If you attempt to **Append** a list-like set of numbers rather than **Extend** them, Overseer will interpret that as you trying to plot a **vector** quantity, and interpret that set of numbers as a **single** piece of data. See [the curve plotting documentation](Plots%20and%20Categories#Vector%20Plots) for more information on this feature.
+**Warning**: If you attempt to **Append** a list-like set of numbers rather than **Extend** them, Overseer will interpret that as you trying to plot a **vector** quantity, and interpret that set of numbers as a **single** piece of data. See [the curve plotting documentation](7%20-%20Plots%20and%20Categories.md#Vector%20Plots) for more information on this feature.
 
 One final note about building efficient simulations in Overseer is to avoid passing Numpy arrays whenever possible. Since Overseer expects to be managing its own datasets, and it wants to be ready to append the data quickly, it will always automatically convert any Numpy arrays that it's been handed into regular Python lists. This itself takes time $O(n)$. Numpy arrays are great, and no doubt have their use within your simulation. However, you should try to keep them inside of your simulation as much as possible, and avoid passing them in their raw form to Overseer. 
 ## Non-Python Simulations

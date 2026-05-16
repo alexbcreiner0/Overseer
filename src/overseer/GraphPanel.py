@@ -839,6 +839,8 @@ class GraphPanel(qw.QWidget):
 
         ov = plot_dict.get("overlay_markers", {})
         if ov:
+            if not frame2d.ndim == 2:
+                raise ValueError(f"Invalid frame2d shape for overlay markers. Data needs to be ")
             u = np.asarray(frame2d)
             markers = ov.get("markers", [])
             sizes = ov.get("sizes", [])

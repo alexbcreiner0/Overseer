@@ -838,7 +838,6 @@ class ControlPanel(qw.QWidget):
                     self.status_bar.showMessage(f"Coordinate {init_val} is not a proper vector!", 3000)
                 dim = [1,1]
                 reshaped_init_val = np.array([1])
-            print(f"{dim=}")
             widget = MatrixEntry(param_name, label, dim, reshaped_init_val, tooltip)
             widget.textChanged.connect(self.update_plot)
             widget.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
@@ -1075,7 +1074,7 @@ class ControlPanel(qw.QWidget):
         finally:
             self.block_signals = False
 
-        # 3) tell MainWindow “params changed as a set” so it reruns once :contentReference[oaicite:10]{index=10}
+        # 3) tell MainWindow “params changed as a set” so it reruns once 
         self.paramsReplaced.emit((self.params, None))
 
     def _replace_entry_widget(self, param_name: str, new_widget: qw.QWidget) -> None:
