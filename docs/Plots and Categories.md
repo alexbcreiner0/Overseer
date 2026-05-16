@@ -67,6 +67,7 @@ def curve_demo_3d(params: Params):
 ```
 
 Results in:
+
 ![](assets/3d-curve.gif)
 
 ### Vector Plots
@@ -132,6 +133,7 @@ def surface_frame(t):
 ```
 
 Results in
+
 ![](assets/3d-surface.gif)
 
 At the time of writing this, the GUI settings are pretty lacking for these. At the moment there is only support for choosing a color map and whether or not to display the colorbar. More features will be added in the future. 
@@ -197,6 +199,7 @@ def vector_field_demo(params: Params):
 ```
 
 Results in:
+
 ![](assets/2d-vector-field.gif)
 ## Scatter Plots
 Scatter plots work much the same as curves. Only a y-axis key needs to be given, and Overseer will default in the absence of one to either a returned t-value or a "t" key in the output dictionary of your simulation. A z-axis key will be ignored if the category settings don't tell Overseer that the plot is 3D, and 2D plots can easily render in a 3D space. In the case that they do not match, data of the larger sets will be truncated, so that matplotlib does not raise errors.
@@ -293,6 +296,7 @@ def get_trajectories(params: Params):
 ```
 
 The result:
+
 ![](assets/pie-demo.gif)
 
 ## 'Heatmaps' (Images)
@@ -431,9 +435,11 @@ def solve_heat_dirichlet_sparse(u0_full, x, y, t_eval, L, alpha=0.01,
 ```
 
 With the following settings:
+
 ![](assets/cts-heatmap-settings.png)
 
 We see:
+
 ![](assets/cts-heatmap-demo.gif)
 
 The color bar kinda goes crazy right now and pushes things around. Still working on that one. Not much to say beyond what was said earlier. The sim is just iteratively passing a 2D array of scalars to Overseer, which maps those values to colors via the inferno colormap. 
