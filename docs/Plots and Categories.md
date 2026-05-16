@@ -250,6 +250,7 @@ Firstly, you can see from the "+Add series" button that vector plotting is avail
 Colors, or the first several colors, can be explicitly specified, but below that we can also see a Gradient option, which allows you to instead use a color map to make taller rectangles brighter colors compared to shorter ones etcetera. *If gradient is set to anything other than none, it will override any facecolors that you set.* Edgecolors on the other hand can still be set with a gradient.
 #### Example
 This example comes from my reconstruction of Ian Wright's [capitalist social architecture model](https://arxiv.org/abs/cond-mat/0401053), the code of which can be found [here](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright_agent_based_social_architecture). The first category demonstrates the distribution of each social role (capotalist, worker, or unemployed) over the whole course of the simulation:
+
 ![](assets/hist-demo.gif)
 
 ## Pie Charts
