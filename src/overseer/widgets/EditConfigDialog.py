@@ -30,7 +30,7 @@ class EditConfigDialog(qw.QDialog):
     def __init__(self, env, model: str = None, tab: int = 0, parent: Optional[qw.QWidget] = None):
         super().__init__(parent)
         self.setWindowTitle("Edit Config")
-        self.resize(1300, 640)
+        self.resize(1500, 850)
 
         root = qw.QVBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)

@@ -21,7 +21,7 @@ from .SimWorker import SimController
 from .BridgeWorker import BridgeWorker
 from .tools.loader import (
     load_presets, to_plain, 
-    params_from_mapping, format_plot_config, 
+    params_from_mapping,
     reload_package_folder, 
     open_with_default_app,
     get_user_data_dir
@@ -105,10 +105,12 @@ class MainWindow(qw.QMainWindow):
         self._pending_t = None
         self._anim_timer = qc.QTimer(self)
         self._anim_timer.timeout.connect(self._apply_next_frame)
+        self._param_change_mode = "widgets_decide"
 
         self.current_demo_name, self.current_demo = self._find_default(self.demos)
         self._sleep_time = self.current_demo.get("details", {}).get("simulation_speed", 0)
         self.sim_model = self.current_demo.get("details", {}).get("simulation_model", {})
+        self.sim_event_queue = Queue()
 
         self.ctx = get_context("spawn")
         # self.sim_controller = SimController(self.ctx, parent= self)
@@ -128,15 +130,6 @@ class MainWindow(qw.QMainWindow):
 
         self.model_label = qw.QLabel(f"Model: {self.current_demo.get("name", "")}")
         self.status_bar.addPermanentWidget(self.model_label)
-
-        # This is a hack I did to get commodity names into a particular economic model. 
-        #  the only general feature which could replace this would be one which allows you to
-        #  label plots based on some external function call
-        model_settings = self.config.get("model_specific_settings", {}).get(self.sim_model, None)
-        if model_settings is not None:
-            if "commodity_names" in model_settings:
-                com_names = model_settings["commodity_names"]
-                self.plotting_data = format_plot_config(self.plotting_data, com_names)
 
         # Create top bar menu
         self.presets_submenu, self.results_submenu = self._make_menu(self.presets, self.demos)
@@ -803,13 +796,22 @@ class MainWindow(qw.QMainWindow):
         self.graph_panel.traj = traj
         self.graph_panel.t = t
 
+        force_replot = getattr(self, "_force_replot_on_next_frame", False)
+        if force_replot:
+            self._force_replot_on_next_frame = False
+            self.graph_panel.legend_label_overrides.clear()
+
         num_slots = len(self.graph_panel.axes)
         for slot_index in range(num_slots):
             cfg = self.control_panel.get_slot_config(slot_index)
             if cfg is None:
                 continue
             dropdown_index, options, slot_cfg = cfg
-            self.graph_panel.update_slot_frame(slot_index, dropdown_index, options, slot_cfg)
+
+            if force_replot:
+                self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
+            else:
+                self.graph_panel.update_slot_frame(slot_index, dropdown_index, options, slot_cfg)
 
     def toggle_pause(self):
         # if self.worker:
@@ -920,44 +922,35 @@ class MainWindow(qw.QMainWindow):
             panel_data, 
             plotting_data,
             self.sim_model,
-            demo
+            demo,
+            self
         )
-        control_panel.paramChanged.connect(self.start_sim)
+        control_panel.paramChanged.connect(self.receive_param_changed)
         control_panel.layoutChanged.connect(self.on_layout_changed)
         control_panel.slotPlotChoiceChanged.connect(self.on_slot_plot_choice_changed)
         control_panel.slotOptionsChanged.connect(self.on_slot_options_changed)
         control_panel.slotAxesChanged.connect(lambda slot_index: self.on_slot_axes_changed(slot_index, source= "user"))
         control_panel.slotAxesCatChanged.connect(self.on_slot_axes_cat_save_request)
         control_panel.paramsReplaced.connect(self._on_params_replaced)
+        control_panel.postProcess.connect(self._apply_plot_postprocessing)
+        control_panel.simEvent.connect(self._on_sim_event)
 
         return graph_panel, control_panel, dropdown_choices
 
+    def _on_sim_event(self, event):
+        self.sim_event_queue.put(event)
+
     def _on_params_replaced(self, data):
-        print(f"on_params_replaced_called")
-        print(f"{data=}")
-        new_params, new_sector_names = data
+        new_params = data
         self.params = new_params
-        if new_sector_names is not None:
-            self._update_sector_names(new_sector_names)
         self.start_sim()
 
-    def _update_sector_names(self, names):
+    def _apply_plot_postprocessing(self, new_plotting_data):
+        self.plotting_data = new_plotting_data
+        self.graph_panel.apply_plotting_data(new_plotting_data, replot= False)
 
-        with open(self.env.models_dir / self.sim_model / "data" / "plotting_data.yml") as f:
-            plotting_data = yaml.safe_load(f)
-        formatted = format_plot_config(plotting_data, names)
-        print(f"{formatted=}")
-
-        self.graph_panel.apply_plotting_data(formatted)
-
-        for slot_index in range(len(self.graph_panel.axes)):
-            cfg = self.control_panel.get_slot_config(slot_index)
-            if cfg is None:
-                continue
-            dropdown_index, options, slot_cfg = cfg
-            self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, slot_cfg)
-
-        self.control_panel.plotting_data = formatted
+        # self.control_panel.plotting_data = new_plotting_data
+        self._force_replot_on_next_frame = True
 
     def _apply_next_frame(self):
         if self._pending_traj is None:
@@ -979,7 +972,15 @@ class MainWindow(qw.QMainWindow):
         lims = self.control_panel.get_slot_axes_limits(slot_index)
         cfg = self.control_panel.get_slot_config(slot_index)
         dropdown_index = cfg[0]
-        plotting_data = self.control_panel.plotting_data
+
+        raw_path = self.env.models_dir / self.sim_model / "data" / "plotting_data.yml"
+        try:
+            with open(raw_path, "r") as f:
+                plotting_data = yaml.safe_load(f) or {}
+        except Exception as e:
+            self.status_bar.showMessage(f"Could not load raw plotting_data.yml: {e}", msecs=4000)
+            return
+
         dropdown_list = list(plotting_data)
         dropdown_name = dropdown_list[dropdown_index]
         
@@ -988,8 +989,6 @@ class MainWindow(qw.QMainWindow):
 
         flow_seqify(plotting_data)
         atomic_write(path, plotting_data)
-
-        self.control_panel.plotting_data = plotting_data
 
         self.status_bar.showMessage("Default plot category limits saved.", msecs= 4000)
 
@@ -1108,6 +1107,22 @@ class MainWindow(qw.QMainWindow):
         )
         nav_toolbar.addWidget(spacer)
 
+        param_change_mode_title = qw.QLabel("Parameter change response: ")
+        nav_toolbar.addWidget(param_change_mode_title)
+        self.param_change_mode_drop = qw.QComboBox()
+        self.param_change_mode_drop.addItem("Widgets decide")
+        self.param_change_mode_drop.addItem("Restart")
+        self.param_change_mode_drop.addItem("Send message")
+        self.param_change_mode_drop.currentTextChanged.connect(self._on_param_change_mode_changed)
+        nav_toolbar.addWidget(self.param_change_mode_drop)
+
+        # self.param_change_mode_check = qw.QCheckBox()
+        # self.param_change_mode_check.setTristate(True)
+        # nav_toolbar.addWidget(self.param_change_mode_check)
+        # self.param_change_mode_check.checkStateChanged.connect(self._on_param_change_mode_check_changed)
+        # self.param_change_mode_check.setCheckState(qc.Qt.CheckState.PartiallyChecked)
+        nav_toolbar.addSeparator()
+
         figure_background_checkbox = qw.QCheckBox("Transparent Background")
         figure_background_checkbox.setChecked(True)
         figure_background_checkbox.stateChanged.connect(self._on_figure_background_checkbox_changed)
@@ -1140,6 +1155,14 @@ class MainWindow(qw.QMainWindow):
         nav_toolbar.addSeparator()
 
         return nav_toolbar #, entries, buttons
+
+    def _on_param_change_mode_changed(self, text):
+        if text == "Widget settings":
+            self._param_change_mode = "widgets_decide"
+        elif text == "Send message":
+            self._param_change_mode = "message"
+        elif text == "Restart":
+            self._param_change_mode = "restart"
 
     def _adjust_sim_speed(self, text):
         try:
@@ -1191,8 +1214,8 @@ class MainWindow(qw.QMainWindow):
 
         try:
             closest = 0
-            for i, t in enumerate(t):
-                if math.fabs(t - time) < math.fabs(t - t[closest]):
+            for i, val in enumerate(t):
+                if math.fabs(val - time) < math.fabs(val - t[closest]):
                     closest = i
 
             for name in vars(self.params):
@@ -1377,7 +1400,6 @@ class MainWindow(qw.QMainWindow):
     def _clear_presets_menu(self):
         for action in list(self.presets_submenu.actions()):
             if action.data() == "save_preset_action":
-                print(f"continuing")
                 continue
             submenu = action.menu()
             self.presets_submenu.removeAction(action)
@@ -1435,9 +1457,6 @@ class MainWindow(qw.QMainWindow):
         if "t" not in self.traj:
             self.traj["t"] = self.t
             added_t = True
-
-        for key in self.traj:
-            print(f"{key=}: {type(self.traj[key])=}")
 
         try:
             np.savez_compressed(file_path_npz, **self.traj)
@@ -1591,6 +1610,21 @@ class MainWindow(qw.QMainWindow):
 
         qc.QTimer.singleShot(1500, self._escalate_stop_if_needed)
 
+    def receive_param_changed(self, name= None, new_val= None, change_effect= None, is_meta= False):
+        print("on the mainwindow side")
+        print(f"{is_meta=}")
+        if self._param_change_mode == "restart" or is_meta:
+            self.start_sim(name, new_val)
+        elif self._param_change_mode == "message" or change_effect == "send_message":
+            event = {
+                "event": "param_changed",
+                "param_name": name,
+                "new_val": new_val
+            }
+            self._on_sim_event(event)
+        else:
+            self.start_sim(name, new_val)
+
     def start_sim(self, name= None, new_val= None):
         """ Entrypoint into starting a sim. Called both initially and when restarts are requested """
         requested_update = None
@@ -1724,6 +1758,7 @@ class MainWindow(qw.QMainWindow):
             mp_queue= self.sim_results_queue,
             sleep_time= self._sleep_time, 
             yield_every=1, 
+            sim_event_queue= self.sim_event_queue,
         )
         self.sim_controller.start()
 
@@ -1741,11 +1776,16 @@ class MainWindow(qw.QMainWindow):
         self.graph_panel.set_sim_run_id(self._run_id)
 
     def _on_worker_progress(self, new_data: dict, new_t: dict | float):
+        if self._sim_state == "STOPPING" and self._rerun_pending:
+            return
+
         self._pending_traj = new_data
         self._pending_t = new_t
 
     def _on_sim_done(self):
         self._anim_timer.stop()
+
+        finishing_for_rerun = bool(self._rerun_pending)
 
         if self._pending_traj is not None:
             self.show_partial_results(self._pending_traj, self._pending_t)
@@ -1754,11 +1794,12 @@ class MainWindow(qw.QMainWindow):
         self._halt_sim_stack(force= False, clear_pending= False, clear_queue= False)
         self._sim_state = "IDLE"
 
-        self.status_bar.showMessage("Sim completed successfully", 4000)
-
-        if self._rerun_pending:
+        if finishing_for_rerun:
             self._rerun_pending = False
             self._start_sim_now()
+            return
+
+        self.status_bar.showMessage("Sim completed successfully", 4000)
 
     def _on_sim_thread_finished(self):
         self._halt_sim_stack(force= False, clear_pending= False, clear_queue= False)
@@ -2136,7 +2177,6 @@ class MainWindow(qw.QMainWindow):
         self._create_results_submenus(self.results_submenu)
         self._create_presets_submenus(self.presets, self.presets_submenu)
 
-        print(f"loading saved axis settings from load_demo")
         self._load_saved_axis_settings()
 
         self.main_splitter.addWidget(self.control_panel)
@@ -2156,7 +2196,6 @@ class MainWindow(qw.QMainWindow):
             self.start_sim()
 
     def load_sim(self, func, name):
-        print(f"Setting sim function = {func}")
         self.current_sim_func = func
         action = self.sim_actions[name]
         action.setChecked(True)
@@ -2166,11 +2205,17 @@ class MainWindow(qw.QMainWindow):
         NewModelDialog(self).bootstrap()
 
     def open_settings(self, tab= None):
-        dlg = EditConfigDialog(env= self.env, model= self.sim_model, tab= 0 if tab is None else tab, parent= self)
-        dlg.configApplied.connect(self._on_config_applied)
-        dlg.bootstrap()
-        print("reloading config")
-        self._reload_config()
+        self._settings_dialog = EditConfigDialog(
+            env=self.env,
+            model=self.sim_model,
+            tab=0 if tab is None else tab,
+            parent=self,
+        )
+        self._settings_dialog.configApplied.connect(self._on_config_applied)
+        self._settings_dialog.destroyed.connect(
+            lambda: setattr(self, "_settings_dialog", None)
+        )
+        self._settings_dialog.bootstrap()
 
     def _on_config_applied(self):
         self._reload_config()
@@ -2355,14 +2400,18 @@ class MainWindow(qw.QMainWindow):
             formatted,
             self.sim_model,
             self.current_demo,
+            self,
             old_current_tab,
         )
-        new_cp.paramChanged.connect(self.start_sim)
+        new_cp.paramChanged.connect(self.receive_param_changed)
         new_cp.layoutChanged.connect(self.on_layout_changed)
         new_cp.slotPlotChoiceChanged.connect(self.on_slot_plot_choice_changed)
         new_cp.slotOptionsChanged.connect(self.on_slot_options_changed)
         new_cp.slotAxesChanged.connect(self.on_slot_axes_changed)
+        new_cp.slotAxesCatChanged.connect(self.on_slot_axes_cat_save_request)
         new_cp.paramsReplaced.connect(self._on_params_replaced)
+        new_cp.postProcess.connect(self._apply_plot_postprocessing)
+        new_cp.simEvent.connect(self._on_sim_event)
 
         # Swap it into the splitter
         try:

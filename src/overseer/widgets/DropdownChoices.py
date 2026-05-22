@@ -93,6 +93,48 @@ class DropdownChoices(qw.QWidget):
         boxes.append(box)
         return box
 
+    def remove_checkbox(self, option: str, label: str) -> bool:
+        """Remove a checkbox from one category/page by visible label."""
+        boxes = self.boxes.get(option)
+        grid = self.grids.get(option)
+
+        if boxes is None or grid is None:
+            return False
+
+        for i, box in enumerate(list(boxes)):
+            if box.text() != label:
+                continue
+
+            grid.removeWidget(box)
+            boxes.remove(box)
+            box.setParent(None)
+            box.deleteLater()
+
+            self._reflow_checkboxes(option)
+            return True
+
+        return False
+
+    def _reflow_checkboxes(self, option: str) -> None:
+        """Re-add existing checkbox widgets to the grid in compact row/column order."""
+        boxes = self.boxes.get(option, [])
+        grid = self.grids.get(option)
+
+        if grid is None:
+            return
+
+        for box in boxes:
+            grid.removeWidget(box)
+
+        for index, box in enumerate(boxes):
+            row = index // self.items_per_row
+            col = index % self.items_per_row
+            grid.addWidget(box, row, col)
+
+    def checkbox_labels(self, option: str) -> list[str]:
+        """Return checkbox labels for a dropdown category/page."""
+        return [box.text() for box in self.boxes.get(option, [])]
+
     def _on_checkstate_changed(self):
         self.checkStateChanged.emit()
 

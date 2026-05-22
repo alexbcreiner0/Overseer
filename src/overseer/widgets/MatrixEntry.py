@@ -18,7 +18,6 @@ class MatrixEntry(qw.QWidget):
         root.setSpacing(0)
         self.name = name
         self.dim = dim
-        print(f"{dim=}")
         self._bulk_updating = False
         self._cell_timers = []
 
@@ -52,7 +51,7 @@ class MatrixEntry(qw.QWidget):
                 self.entries[i].append(entry)
                 matrix_layout.addWidget(entry, i, j)
                 try:
-                    entry.setText(str(initial[i][j]))
+                    entry.setText(f"{initial[i][j]:.8g}")
                 except Exception:
                     pass
 
@@ -113,3 +112,25 @@ class MatrixEntry(qw.QWidget):
             self.textChanged.emit(self.name, self._current_matrix())
         except ValueError:
             pass
+
+    def focused_cell(self):
+        fw = qw.QApplication.focusWidget()
+
+        for i, row in enumerate(self.entries):
+            for j, entry in enumerate(row):
+                if fw is entry:
+                    return i, j
+
+        return None
+
+    def focus_cell(self, i, j, cursor=None, selection_start=None, selection_length=None):
+        if not (0 <= i < self.dim[0] and 0 <= j < self.dim[1]):
+            return
+
+        entry = self.entries[i][j]
+        entry.setFocus(qc.Qt.FocusReason.OtherFocusReason)
+
+        if selection_start is not None and selection_start >= 0 and selection_length:
+            entry.setSelection(selection_start, selection_length)
+        elif cursor is not None:
+            entry.setCursorPosition(min(cursor, len(entry.text())))

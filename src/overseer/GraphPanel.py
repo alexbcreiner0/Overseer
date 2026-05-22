@@ -62,6 +62,8 @@ class GraphPanel(qw.QWidget):
         self._slot_dimensions: dict[int, str] = {}
         self._camera_overrides: dict[tuple[int, str], dict] = {}
 
+        self._capture_legend_overrides = True
+
         self.box_aspect_vals = {
             (1, 1): 0.75,
             (1, 2): 0.95,
@@ -566,6 +568,7 @@ class GraphPanel(qw.QWidget):
     def _plot_on_axis(self, ax, slot_index, choice_name, traj, t, dropdown_choice, options):
         _, plots = self._choice_and_plots(dropdown_choice)
         # t = np.asarray(t)
+
 
         for plot_name, plot_dict in plots.items():
             if not self._plot_enabled(plot_dict, options):
@@ -1253,6 +1256,8 @@ class GraphPanel(qw.QWidget):
             else:
                 self.title_overrides.pop(key, None)
 
+        if not self._capture_legend_overrides:
+            return
 
         for slot_index, ax in enumerate(self.axes):
             choice_name = self._slot_choices.get(slot_index)
@@ -1417,21 +1422,15 @@ class GraphPanel(qw.QWidget):
         if slot_index < 0 or slot_index >= len(self.axes):
             return
 
-        # populate slot data 
         choice_name = self._choice_name_from_index(dropdown_choice)
         self._slot_choices[slot_index] = choice_name
         self._slot_settings[slot_index] = (dropdown_choice, options, slot_config)
 
-        # decide if the slot is meant to be 3D (defaults to 2D unless data says not to)
         want_3d = (self.data.get(choice_name, {}).get("projection", "2d") == "3d") 
-        # if the slot is supposed to be 3d and isn't, blow it up and remake it (or vice versa)
         self._ensure_slot_projection(slot_index, want_3d, preserve_limits=True)
 
-        # grab relevant slot data and objects
         ax = self.axes[slot_index]
 
-        # snapshot current camera pos
-        # if new_lims:
         default_lims = self.data.get(choice_name, {}).get("default_lims")
 
         if default_lims and load_idx_defaults and source== "dropdown":
@@ -1463,10 +1462,7 @@ class GraphPanel(qw.QWidget):
 
         self._clear_slot(slot_index) # die
 
-        # build all artists for the slot
         self._plot_on_axis(ax, slot_index, choice_name, self.traj, self.t, dropdown_choice, options)
-
-        # self explanatory
         self._restore_limits(ax, current_xlim, current_ylim, current_zlim)
 
         if slot_config is None:
@@ -2639,6 +2635,7 @@ class GraphPanel(qw.QWidget):
         expected = self._expected_artist_gids(slot_index, dropdown_choice, options)
         current = list(self._slot_artists.get(slot_index, {}).keys())
 
+
         # if anything expected is missing, (re)draw it (potentially for first time)
         if not expected or set(current) != set(expected):
             self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
@@ -2660,6 +2657,7 @@ class GraphPanel(qw.QWidget):
 
         choice_dict = self._choice_dict_from_index(dropdown_choice)
         choice_name = self._choice_name_from_index(dropdown_choice)
+
 
         # update settings as provided by the main window
         self._slot_choices[slot_index] = choice_name
@@ -2872,7 +2870,7 @@ class GraphPanel(qw.QWidget):
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
-    def apply_plotting_data(self, new_plotting_data: dict) -> None:
+    def apply_plotting_data(self, new_plotting_data: dict, replot: bool = False) -> None:
         self.data = new_plotting_data
         self.legend_label_overrides.clear()
 
@@ -2881,11 +2879,19 @@ class GraphPanel(qw.QWidget):
         self._slot_images.clear()
         self._slot_cbar.clear()
 
-        for slot_index, ax in enumerate(self.axes):
-            state = self._slot_settings.get(slot_index)
-            if not state:
-                continue
-            dropdown_choice, options, slot_cfg = state
-            self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
+        if not replot:
+            self.canvas.draw_idle()
+            return
+
+        self._capture_legend_overrides = False
+        try:
+            for slot_index, ax in enumerate(self.axes):
+                state = self._slot_settings.get(slot_index)
+                if not state:
+                    continue
+                dropdown_choice, options, slot_cfg = state
+                self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
+        finally:
+            self._capture_legend_overrides = True
 
         self.canvas.draw_idle()

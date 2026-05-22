@@ -1,26 +1,31 @@
 from __future__ import annotations
 from dataclasses import fields
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-from pprint import pprint
-import os
-import copy
-import yaml
-import re
-from numpy import ndarray
-from .HelpFormLayout import HelpFormLayout
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Literal
+import os, copy, yaml, re
+from collections.abc import Sequence
 
-from overseer.tools.loader import load_presets, params_from_mapping, load_parameters_class_from_file, try_instantiate_with_defaults
-from overseer.tools.creation_tools import flow_seqify, FlowSeq, atomic_write
-from .common import refresh_models
 import logging
-
 logger = logging.getLogger(__name__)
 
+from overseer.tools.loader import load_parameters_class_from_file
+from overseer.tools.creation_tools import flow_seqify, FlowSeq, atomic_write
+from .common import refresh_models
+from .InitControlsDialog import InitControlsDialog
+from .HelpFormLayout import HelpFormLayout
 from PyQt6 import QtWidgets as qw, QtCore as qc, QtGui as qg
 
 _DIVIDER_RE = re.compile(r"^divider(\d+)$")
 _ROW_RE     = re.compile(r"^row(\d+)$")
+
+# change so that there is a field called details which has specific things based on control type
+class ControlSpec(TypedDict):
+    param_name: str
+    control_type: str
+    type: str
+    scalar_type: str
+    range: Sequence[float]
+    label: str
+    tooltip: str
 
 def is_divider(key: str) -> bool:
     return bool(_DIVIDER_RE.match(key))
@@ -28,302 +33,9 @@ def is_divider(key: str) -> bool:
 def is_row(key: str) -> bool:
     return bool(_ROW_RE.match(key))
 
-def divider_index(key: str) -> int | None:
-    m = _DIVIDER_RE.match(key)
-    return int(m.group(1)) if m else None
-
-# yaml.add_representer(FlowSeq, flowseq_representer, Dumper=yaml.SafeDumper)
-logger = logging.getLogger(__name__)
-
-def list_subdirs(path: str | os.PathLike) -> List[str]:
-    p = Path(path)
-    if not p.exists():
-        return []
-    return sorted([x.name for x in p.iterdir() if x.is_dir()])
-
-class InitControlsDialog(qw.QDialog):
-    """
-    Minimal "one-click initializer" dialog:
-      - shows params detected from the model preset/Parameters dataclass
-      - allows include/exclude
-      - generates basic defaults
-    """
-
-    def __init__(self, env, model_name: str, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle(f"Initialize Control Panel – {model_name}")
-        self.resize(720, 520)
-
-        self._model_name = model_name
-        self._params_instance = None  # populated in _load_params()
-        self._Parameters = None
-        self._param_fields = {}
-        self._missing_required = []
-        self.env = env
-
-        root = qw.QVBoxLayout(self)
-
-        info = qw.QLabel(
-            "Select which parameters to include. The initializer will generate a basic\n"
-            "control panel layout (3 controls per row) you can refine afterwards."
-        )
-        info.setWordWrap(True)
-        root.addWidget(info)
-
-        self.table = qw.QTableWidget(0, 4)
-        self.table.setHorizontalHeaderLabels(["Include", "Name", "Type", "Shape"])
-        self.table.horizontalHeader().setSectionResizeMode(0, qw.QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(1, qw.QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(2, qw.QHeaderView.ResizeMode.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, qw.QHeaderView.ResizeMode.ResizeToContents)
-        root.addWidget(self.table, 1)
-
-        # Defaults
-        defaults_box = qw.QGroupBox("Defaults")
-        form = HelpFormLayout(defaults_box)
-        self.edit_divider_title = qw.QLineEdit("Parameters")
-        self.edit_label_template = qw.QLineEdit("{name}=")
-        self.numeric_min = qw.QLineEdit()
-        self.numeric_min.setText("0.0")
-        self.numeric_max = qw.QLineEdit()
-        self.numeric_max.setText("1.0")
-        # self.spin_numeric_min = qw.QDoubleSpinBox()
-        # self.spin_numeric_min.setRange(-1e12, 1e12)
-        # self.spin_numeric_min.setDecimals(6)
-        # self.spin_numeric_min.setValue(0.0)
-        # self.spin_numeric_max = qw.QDoubleSpinBox()
-        # self.spin_numeric_max.setRange(-1e12, 1e12)
-        # self.spin_numeric_max.setDecimals(6)
-        # self.spin_numeric_max.setValue(1.0)
-
-        label_template_help = "A string of text to accompany every control widget. Insert the placeholder {name} where you want the parameter to be substituted. For example, the default text will have your parameter name, followed by an equal sign, followed by the entry box for an entry widget. Alternatively, you could surround both sides of this with dollar signs to have the name displayed in LaTeX math mode font."
-
-        form.addRow("Divider title:", self.edit_divider_title, help_text= "A title which appears at the top of your control panel. Mostly just there to look nice. You can place more dividers to group controls together later in the actual editor.")
-        form.addRow("Label template:", self.edit_label_template, help_text= label_template_help)
-        form.addRow("Numeric range min:", self.numeric_min, help_text= "For scalar ints and floats, a slider will be created along with a text box for entering the number. These two numbers specify the upper and lower bound for every slider. (You can change individual slider settings after finishing this initialization.) Non-numeric text will be ignored. If the app detects that your parameter is an int, but the number you enter is a float, it will be truncated automatically.")
-        form.addRow("Numeric range max:", self.numeric_max)
-        root.addWidget(defaults_box)
-
-        btns = qw.QDialogButtonBox(
-            qw.QDialogButtonBox.StandardButton.Ok | qw.QDialogButtonBox.StandardButton.Cancel
-        )
-        btns.accepted.connect(self.accept)
-        btns.rejected.connect(self.reject)
-        root.addWidget(btns)
-
-        self._load_params()
-
-    def _load_params(self) -> None:
-        try:
-            Parameters = load_parameters_class_from_file(
-                self.env.models_dir / self._model_name / "simulation" / "parameters.py"
-            )
-        except Exception as e:
-            qw.QMessageBox.warning(self, "Parameters load error", str(e))
-            return
-
-        self._Parameters = Parameters
-        self._param_fields = {f.name: f for f in fields(Parameters)}
-        instance, missing = try_instantiate_with_defaults(Parameters)
-        self._params_instance = instance
-        self._missing_required = missing  # store if you want to display it
-
-        self.table.setRowCount(0)
-
-        for f in fields(Parameters):
-            name = f.name
-            typ = f.type
-            shape = ""
-
-            if instance is not None:
-                try:
-                    val = getattr(instance, name)
-                    if isinstance(val, ndarray):
-                        shape = str(val.shape)
-                    elif isinstance(val, (int, float, bool, str)):
-                        shape = ""
-                except Exception:
-                    pass
-
-            row = self.table.rowCount()
-            self.table.insertRow(row)
-
-            chk = qw.QTableWidgetItem()
-            chk.setFlags(chk.flags() | qc.Qt.ItemFlag.ItemIsUserCheckable)
-            chk.setCheckState(qc.Qt.CheckState.Checked)
-            self.table.setItem(row, 0, chk)
-
-            self.table.setItem(row, 1, qw.QTableWidgetItem(name))
-            self.table.setItem(row, 2, qw.QTableWidgetItem(getattr(typ, "__name__", str(typ))))
-            self.table.setItem(row, 3, qw.QTableWidgetItem(shape))
-
-        if missing:
-            # Optional: show a non-blocking warning in the dialog
-            # (still useful: you can generate scalar controls using default ranges even without instance)
-            qw.QMessageBox.information(
-                self,
-                "Some parameters have no defaults",
-                "Some dataclass fields have no default/default_factory, so Parameters() could not be instantiated.\n"
-                "The initializer can still create controls, but array shapes / current values may be unknown for:\n\n"
-                + ", ".join(missing),
-            )
-
-    def build_dividers(self):
-        """
-        Convert table selection + defaults into internal divider list.
-        Wizard still defaults to 3 controls per row.
-        Output schema: [{"title": str, "rows": [{"controls": [spec, ...]}, ...]}]
-        """
-        import numpy as np  # ensure np.ndarray is available
-
-        div_title = self.edit_divider_title.text().strip() or "Parameters"
-        label_tmpl = self.edit_label_template.text() or ""
-        rmin_text, rmax_text = self.numeric_min.text(), self.numeric_max.text()
-        try:
-            rmin = float(rmin_text)
-            rmax = float(rmax_text)
-        except ValueError:
-            rmin = 0.0
-            rmax = 1.0
-
-        rows = []
-        current = {"controls": []}
-
-        def flush_row():
-            nonlocal current
-            if current["controls"]:
-                rows.append(current)
-            current = {"controls": []}
-
-        # If we can't inspect params, still return a valid divider in the new shape
-        if self._Parameters is None:
-            return [{"title": div_title, "rows": [{"controls": []}]}]
-
-        for row in range(self.table.rowCount()):
-            include_item = self.table.item(row, 0)
-            if include_item is None or include_item.checkState() != qc.Qt.CheckState.Checked:
-                continue
-
-            name_item = self.table.item(row, 1)
-            if name_item is None:
-                continue
-
-            pname = name_item.text().strip()
-            if not pname:
-                continue
-
-            val = None
-            has_val = False
-            if self._params_instance is not None:
-                try:
-                    val = getattr(self._params_instance, pname)
-                    has_val = True
-                except Exception:
-                    has_val = False
-
-            f = self._param_fields.get(pname)
-            ann = None if f is None else f.type
-
-            spec = {"param_name": pname, "tooltip": ""}
-
-            if has_val:
-                # since bools are also ints, this must go at top!
-                if isinstance(val, bool):
-                    spec["control_type"] = "checkbox"
-                    spec["label"] = pname
-
-                elif isinstance(val, (int, float)):
-                    spec["control_type"] = "entry_block"
-                    spec["type"] = "scalar"
-
-                    if ann is float:
-                        spec["scalar_type"] = "float"
-                    elif ann is int:
-                        spec["scalar_type"] = "int"
-                    else:
-                        spec["scalar_type"] = "int" if isinstance(val, int) else "float"
-
-                    is_int = (spec["scalar_type"] == "int")
-                    spec["range"] = flow_seqify([int(rmin) if is_int else rmin,
-                                             int(rmax) if is_int else rmax])
-
-                    # label template: support {name}
-                    if label_tmpl in ["", "name"]:
-                        spec["label"] = pname
-                    elif "{name}" in label_tmpl:
-                        spec["label"] = label_tmpl.replace("{name}", pname)
-
-                elif isinstance(val, np.ndarray):
-                    spec["control_type"] = "entry_block"
-                    shape = val.shape
-                    if len(shape) > 1:
-                        spec["type"] = "matrix"
-                        spec["dim"] = flow_seqify(list(shape))
-                    else:
-                        spec["type"] = "vector"
-                        spec["dim"] = int(shape[0])
-
-                    if label_tmpl in ["", "name"]:
-                        spec["label"] = pname
-                    elif "{name}" in label_tmpl:
-                        spec["label"] = label_tmpl.replace("{name}", pname)
-
-                elif isinstance(val, str):
-                    spec["control_type"] = "dropdown"
-                    spec["label"] = pname
-                    spec["names"] = flow_seqify([val])
-                    spec["values"] = flow_seqify([val])
-
-            else:
-                if ann is bool:
-                    spec["control_type"] = "checkbox"
-                    spec["label"] = pname
-                    # spec["names"] = FlowSeq(["True", "False"])
-                    # spec["values"] = FlowSeq([True, False])
-
-                elif ann is str:
-                    spec["control_type"] = "dropdown"
-                    spec["label"] = pname
-                    spec["names"] = flow_seqify(["(set me)"])
-                    spec["values"] = flow_seqify([""])
-
-                elif ann is np.ndarray or (ann is not None and "ndarray" in str(ann)):
-                    spec["control_type"] = "entry_block"
-                    spec["type"] = "vector"
-                    spec["dim"] = 1
-                    spec["label"] = f"${pname}=$"
-
-                else:
-                    spec["control_type"] = "entry_block"
-                    spec["type"] = "scalar"
-                    spec["scalar_type"] = "float"
-                    spec["range"] = flow_seqify([rmin, rmax])
-                    spec["label"] = f"${pname}=$"
-
-            current["controls"].append(spec)
-            if len(current["controls"]) >= 3:
-                flush_row()
-
-        flush_row()
-        div: DividerModel = {"title": div_title, "rows": rows if rows else [{"controls": []}]}
-        return [div]
-
-
-# =========================
-# ControlSettingsTab
-# =========================
-
 class ControlSettingsTab(qw.QWidget):
-    """
-    Starter control panel editor:
-      - Model selector
-      - Load existing control_panel_data.yml into a tree:
-          Divider -> Rows (derived, 3 per row) -> Controls
-      - One-click initializer builds a basic divider+controls from Parameters
-      - Right-side editor updates selected divider/control spec
-      - Apply writes control_panel_data.yml (with .bak safety)
-    """
     ROLE = qc.Qt.ItemDataRole.UserRole
+
 
     def __init__(self, env, model= None, parent=None):
         super().__init__(parent)
@@ -338,9 +50,33 @@ class ControlSettingsTab(qw.QWidget):
         self._in_refresh_tree = False
         self._tree_sync_pending = False
 
+        # when the entry type is changed, the widgets aren't cleared
+        #  instead, the control type is edited according to the choice. 
+        #  this dict specifies which fields are to be deleted  (all except)
+        #  the current type
+        self.control_type_specific_fields = {
+            "dropdown": {
+                "names_from",
+                "values_from",
+                "names",
+                "values",
+            },
+            "entry": {
+                "type",
+                "scalar_type",
+                "range",
+                "dim",
+                "dim_from",
+            },
+            "button": {
+                "function",
+                "action_type"
+            },
+            "checkbox": set() 
+        }
+
         root = qw.QVBoxLayout(self)
 
-        # --- top bar ---
         top = qw.QHBoxLayout()
         top.addWidget(qw.QLabel("Model:"))
         self.model_combo = qw.QComboBox()
@@ -360,10 +96,9 @@ class ControlSettingsTab(qw.QWidget):
         splitter = qw.QSplitter(qc.Qt.Orientation.Horizontal)
         root.addWidget(splitter, 1)
 
-        # --- left: tree ---
-        left = qw.QWidget()
-        left_l = qw.QVBoxLayout(left)
-        left_l.addWidget(qw.QLabel("Control panel layout"))
+        left_widget = qw.QWidget()
+        left_lay = qw.QVBoxLayout(left_widget)
+        left_lay.addWidget(qw.QLabel("Control panel layout"))
 
         self.tree = qw.QTreeWidget()
         self.tree.setHeaderHidden(True)
@@ -372,42 +107,39 @@ class ControlSettingsTab(qw.QWidget):
         self.tree.setDefaultDropAction(qc.Qt.DropAction.MoveAction)
         self.tree.setDropIndicatorShown(True)
         self.tree.itemSelectionChanged.connect(self._on_tree_selection_changed)
-        m = self.tree.model()
-        m.rowsMoved.connect(lambda *args: self._schedule_tree_sync())
-        m.rowsInserted.connect(lambda *args: self._schedule_tree_sync())
-        m.rowsRemoved.connect(lambda *args: self._schedule_tree_sync())
-        m.layoutChanged.connect(self._schedule_tree_sync)
-        self.tree.model().rowsMoved.connect(self._on_tree_rows_moved)
-        left_l.addWidget(self.tree, 1)
+        tree_model = self.tree.model()
+        tree_model.rowsMoved.connect(lambda *args: self._schedule_tree_sync())
+        tree_model.rowsInserted.connect(lambda *args: self._schedule_tree_sync())
+        tree_model.rowsRemoved.connect(lambda *args: self._schedule_tree_sync())
+        tree_model.layoutChanged.connect(self._schedule_tree_sync)
+        tree_model.rowsMoved.connect(self._on_tree_rows_moved)
+        left_lay.addWidget(self.tree, 1)
 
-        # quick add/remove
-        btn_row = qw.QHBoxLayout()
-        self.btn_add_div = qw.QPushButton("+ Divider")
-        self.btn_add_div.clicked.connect(self._add_divider)
-        btn_row.addWidget(self.btn_add_div)
+        button_row = qw.QHBoxLayout()
+        self.button_add_divider = qw.QPushButton("+ Divider")
+        self.button_add_divider.clicked.connect(self._add_divider)
+        button_row.addWidget(self.button_add_divider)
 
-        self.btn_add_control = qw.QPushButton("+ Control")
-        self.btn_add_control.clicked.connect(self._add_control)
-        btn_row.addWidget(self.btn_add_control)
+        self.button_add_control = qw.QPushButton("+ Control")
+        self.button_add_control.clicked.connect(self._add_control)
+        button_row.addWidget(self.button_add_control)
 
-        self.btn_add_row = qw.QPushButton("+ Row")
-        self.btn_add_row.clicked.connect(self._add_row)
-        btn_row.addWidget(self.btn_add_row)
+        self.button_add_row = qw.QPushButton("+ Row")
+        self.button_add_row.clicked.connect(self._add_row)
+        button_row.addWidget(self.button_add_row)
 
-        self.btn_delete = qw.QPushButton("Delete")
-        self.btn_delete.clicked.connect(self._delete_selected)
-        btn_row.addWidget(self.btn_delete)
+        self.button_delete = qw.QPushButton("Delete")
+        self.button_delete.clicked.connect(self._delete_selected)
+        button_row.addWidget(self.button_delete)
 
-        left_l.addLayout(btn_row)
+        left_lay.addLayout(button_row)
+        splitter.addWidget(left_widget)
 
-        splitter.addWidget(left)
-
-        # --- right: editor stack ---
-        right = qw.QWidget()
-        right_l = qw.QVBoxLayout(right)
+        right_widget = qw.QWidget()
+        right_lay = qw.QVBoxLayout(right_widget)
 
         self.editor_stack = qw.QStackedWidget()
-        right_l.addWidget(self.editor_stack, 1)
+        right_lay.addWidget(self.editor_stack, 1)
 
         self.page_empty = qw.QLabel("Select a divider or control on the left to edit its settings.")
         self.page_empty.setWordWrap(True)
@@ -420,7 +152,7 @@ class ControlSettingsTab(qw.QWidget):
         self.page_control = self._build_control_editor()
         self.editor_stack.addWidget(self.page_control)
 
-        splitter.addWidget(right)
+        splitter.addWidget(right_widget)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)
 
@@ -457,44 +189,39 @@ class ControlSettingsTab(qw.QWidget):
         if model == self._current_model:
             ref = self._current_control_ref()
             if ref:
-                di, ri, ci = ref
-                spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-                self._populate_param_combo(spec.get("param_name", ""))
-
-    # -------------------------
-    # UI builders
-    # -------------------------
+                divider_idx, row_idx, control_idx = ref
+                control_spec = self._working_data[self._current_model][divider_idx]["rows"][row_idx]["controls"][control_idx]
+                self._populate_param_combo(control_spec.get("param_name", ""))
 
     def _build_divider_editor(self) -> qw.QWidget:
-        w = qw.QWidget()
-        form = qw.QFormLayout(w)
+        widget = qw.QWidget()
+        form = HelpFormLayout(widget)
         form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
 
-        self.div_title = qw.QLineEdit()
-        self.div_title.textChanged.connect(self._divider_title_changed)
+        self.divider_title = qw.QLineEdit()
+        self.divider_title.textChanged.connect(self._divider_title_changed)
 
-        form.addRow("Divider title:", self.div_title)
+        form.addRow("Divider title:", self.divider_title)
         form.addRow(qw.QLabel("Rows are derived automatically (3 controls per row)."))
 
-        return w
+        return widget
 
     def _add_row(self) -> None:
         if not self._current_model:
             return
-        divs = self._working_data[self._current_model]
-        if not divs:
-            divs.append({"title": "Parameters", "rows": [{"controls": []}]})
+        dividers = self._working_data[self._current_model]
+        if not dividers:
+            dividers.append({"title": "Parameters", "rows": [{"controls": []}]})
 
         payload = self._selected_payload()
-        di = payload[1] if payload and payload[0] in {"divider", "row", "control"} else 0
+        divider_idx = payload[1] if payload and payload[0] in {"divider", "row", "control"} else 0
 
-        div = divs[di]
-        div.setdefault("rows", [])
-        div["rows"].append({"controls": []})
+        divider = dividers[divider_idx]
+        divider.setdefault("rows", [])
+        divider["rows"].append({"controls": []})
         self._refresh_tree()
 
     def _schedule_tree_sync(self) -> None:
-        # Avoid reacting to the clear/rebuild done by _refresh_tree itself
         if self._in_refresh_tree or not self._current_model:
             return
         if self._tree_sync_pending:
@@ -511,18 +238,15 @@ class ControlSettingsTab(qw.QWidget):
 
         qc.QTimer.singleShot(0, _do)
 
-    def _build_control_editor(self) -> qw.QWidget:
-        w = qw.QWidget()
-        outer = qw.QVBoxLayout(w)
-
-        header = qw.QGroupBox("Control")
-        hform = qw.QFormLayout(header)
-        hform.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
+    def _build_control_group_box(self) -> qw.QWidget:
+        group_box = qw.QGroupBox("Control")
+        form = HelpFormLayout(group_box)
+        form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
 
         self.combo_param_name = qw.QComboBox()
         self.combo_param_name.setEditable(False)
         self.combo_param_name.currentTextChanged.connect(self._param_name_changed)
-        self.param_choice = qw.QComboBox()
+
         self.combo_control_type = qw.QComboBox()
         self.combo_control_type.addItems(["entry_block", "dropdown", "checkbox"])
         self.combo_control_type.currentTextChanged.connect(self._control_type_changed)
@@ -533,26 +257,20 @@ class ControlSettingsTab(qw.QWidget):
         self.edit_tooltip = qw.QPlainTextEdit()
         self.edit_tooltip.textChanged.connect(self._control_tooltip_changed)
 
-        hform.addRow("Param:", self.combo_param_name)
-        hform.addRow("Control type:", self.combo_control_type)
-        hform.addRow("Label:", self.edit_label)
-        hform.addRow("Tooltip:", self.edit_tooltip)
-        outer.addWidget(header)
+        form.addRow("Param:", self.combo_param_name)
+        form.addRow("Control type:", self.combo_control_type)
+        form.addRow("Label:", self.edit_label)
+        form.addRow("Tooltip:", self.edit_tooltip)
 
-        # type-specific editor
-        self.control_stack = qw.QStackedWidget()
-        outer.addWidget(self.control_stack, 1)
+        return group_box
 
-        # entry_block page
+    def _build_entry_page(self) -> qw.QWidget:
         entry_page = qw.QWidget()
-        eform = qw.QFormLayout(entry_page)
-        eform.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
-        # Prevent QFormLayout from wrapping the field onto the next line when space is tight.
-        # Wrapping is what makes the Dim spinboxes appear "under" the label.
-        eform.setRowWrapPolicy(qw.QFormLayout.RowWrapPolicy.DontWrapRows)
-        eform.setFieldGrowthPolicy(qw.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-        # Keep a handle so we can hide/show entire form rows without leaving gaps
-        self._entry_form = eform
+        entry_form = HelpFormLayout(entry_page)
+        entry_form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
+        entry_form.setRowWrapPolicy(qw.QFormLayout.RowWrapPolicy.DontWrapRows)
+        entry_form.setFieldGrowthPolicy(qw.QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
+        self._entry_form = entry_form
 
         self.combo_entry_kind = qw.QComboBox()
         self.combo_entry_kind.addItems(["scalar", "vector", "matrix"])
@@ -568,10 +286,7 @@ class ControlSettingsTab(qw.QWidget):
         self.range_max = qw.QLineEdit()
         self.range_max.textChanged.connect(self._range_changed)
 
-        # Dimension editor: vector uses one spinbox, matrix uses two.
         self.dim_stack = qw.QStackedWidget()
-        # Keep the dimension editor from greedily taking vertical space in the form layout.
-        # (If it expands vertically, the spinboxes can end up looking "below" the label.)
         self.dim_stack.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
 
         self.dependent_checks = {"vec": False, "mat_rows": False, "mat_cols": False}
@@ -582,8 +297,6 @@ class ControlSettingsTab(qw.QWidget):
         vec_l.setAlignment(qc.Qt.AlignmentFlag.AlignLeft)
         self.vec_dep = qw.QCheckBox("Dependent")
         self.vec_dim = qw.QLineEdit()
-        # self.spin_vec_dim = qw.QSpinBox()
-        # self.spin_vec_dim.setRange(1, 10**9)
         self.vec_dim.textChanged.connect(self._dim_changed)
         self.vec_dep.checkStateChanged.connect(self._dim_changed)
         vec_l.addWidget(self.vec_dim, 0)
@@ -616,26 +329,66 @@ class ControlSettingsTab(qw.QWidget):
         mat_l_outer.addWidget(mat_w_edits)
         self.dim_stack.addWidget(mat_w)
 
-        # Ensure the stacked widget height matches a single row of controls.
         self.dim_stack.setMaximumHeight(max(vec_w.sizeHint().height(), mat_w.sizeHint().height()))
 
-        eform.addRow("Entry type:", self.combo_entry_kind)
-        eform.addRow("Scalar type:", self.combo_scalar_type)
-        eform.addRow("Range min:", self.range_min)
-        eform.addRow("Range max:", self.range_max)
-        eform.addRow("Dim:", self.dim_stack)
+        entry_form.addRow("Entry type:", self.combo_entry_kind)
+        entry_form.addRow("Scalar type:", self.combo_scalar_type)
+        entry_form.addRow("Range min:", self.range_min)
+        entry_form.addRow("Range max:", self.range_max)
+        entry_form.addRow("Dim:", self.dim_stack)
 
-        self.control_stack.addWidget(entry_page)
+        return entry_page
 
-        # dropdown page
+    def _build_dropdown_page(self) -> qw.QWidget:
         drop_page = qw.QWidget()
-        dlay = qw.QVBoxLayout(drop_page)
+        drop_page_layout = qw.QVBoxLayout(drop_page)
+        top_drop_bar = qw.QWidget()
+        top_drop_bar_lay = qw.QHBoxLayout(top_drop_bar)
+        top_drop_bar_lay.setSpacing(30)
+        self.dropdown_values_from_check = qw.QCheckBox("Values from function: ")
+        self.dropdown_names_from_check = qw.QCheckBox("Names from function: ")
+        self.dropdown_values_from_entry = qw.QLineEdit()
+        self.dropdown_names_from_entry = qw.QLineEdit()
+        top_drop_bar_left = qw.QHBoxLayout()
+        top_drop_bar_right = qw.QHBoxLayout()
+        top_drop_bar_left.setSpacing(0)
+        top_drop_bar_right.setSpacing(0)
+        top_drop_bar_left.addWidget(self.dropdown_names_from_check)
+        top_drop_bar_left.addWidget(self.dropdown_names_from_entry)
+        top_drop_bar_right.addWidget(self.dropdown_values_from_check)
+        top_drop_bar_right.addWidget(self.dropdown_values_from_entry)
         self.dropdown_table = qw.QTableWidget(0, 2)
         self.dropdown_table.setHorizontalHeaderLabels(["Name", "Value"])
         self.dropdown_table.horizontalHeader().setSectionResizeMode(0, qw.QHeaderView.ResizeMode.Stretch)
         self.dropdown_table.horizontalHeader().setSectionResizeMode(1, qw.QHeaderView.ResizeMode.Stretch)
         self.dropdown_table.itemChanged.connect(self._dropdown_item_changed)
-        dlay.addWidget(self.dropdown_table, 1)
+        top_drop_bar_lay.addLayout(top_drop_bar_left)
+        top_drop_bar_lay.addLayout(top_drop_bar_right)
+        drop_page_layout.addWidget(top_drop_bar)
+        drop_page_layout.addWidget(self.dropdown_table, 1)
+
+        self.dropdown_names_from_check.toggled.connect(
+            lambda checked: self._set_dropdown_column_mode(col=0, from_function=checked)
+        )
+        self.dropdown_values_from_check.toggled.connect(
+            lambda checked: self._set_dropdown_column_mode(col=1, from_function=checked)
+        )
+        self.dropdown_values_from_entry.textChanged.connect(self._dropdown_vals_func_changed)
+        self.dropdown_names_from_entry.textChanged.connect(self._dropdown_names_func_changed)
+        self.dropdown_names_from_check.checkStateChanged.connect(self._dropdown_names_checkbox_changed)
+        self.dropdown_values_from_check.checkStateChanged.connect(self._dropdown_vals_checkbox_changed)
+
+        # initialize states
+        self._set_dropdown_column_mode(0, self.dropdown_names_from_check.isChecked())
+        self._set_dropdown_column_mode(1, self.dropdown_values_from_check.isChecked())
+
+        self.dropdown_widgets = [
+            self.dropdown_names_from_check,
+            self.dropdown_values_from_check,
+            self.dropdown_values_from_entry,
+            self.dropdown_names_from_entry,
+            self.dropdown_table,
+        ]
 
         dbtns = qw.QHBoxLayout()
         self.btn_add_option = qw.QPushButton("+ Option")
@@ -645,19 +398,70 @@ class ControlSettingsTab(qw.QWidget):
         self.btn_del_option.clicked.connect(self._remove_dropdown_option)
         dbtns.addWidget(self.btn_del_option)
         dbtns.addStretch(1)
-        dlay.addLayout(dbtns)
+        drop_page_layout.addLayout(dbtns)
 
-        self.control_stack.addWidget(drop_page)
+        return drop_page
 
+    def _build_control_editor(self) -> qw.QWidget:
+        widget = qw.QWidget()
+        outer_lay = qw.QVBoxLayout(widget)
+        group_box = self._build_control_group_box()
+        outer_lay.addWidget(group_box)
+        self.control_stack = qw.QStackedWidget()
+        outer_lay.addWidget(self.control_stack, 1)
+
+        # build individual stack pages
+        entry_page = self._build_entry_page()
+        self.control_stack.addWidget(entry_page)
+        dropdown_page = self._build_dropdown_page()
+        self.control_stack.addWidget(dropdown_page)
         check_page = qw.QWidget()
         self.control_stack.addWidget(check_page)
 
-        outer.addStretch(0)
-        return w
+        outer_lay.addStretch(0)
+        return widget
 
-    # -------------------------
-    # Model loading / saving
-    # -------------------------
+    def _block_dropdown_entry_signals(self, val: bool):
+        if not getattr(self, "dropdown_widgets"):
+            return
+
+        for widget in self.dropdown_widgets:
+            widget.blockSignals(val)
+
+    def _set_dropdown_column_mode(self, col: int, from_function: bool) -> None:
+        if col == 0:
+            entry = self.dropdown_names_from_entry
+        elif col == 1:
+            entry = self.dropdown_values_from_entry
+        else:
+            return
+
+        entry.setEnabled(from_function)
+        table = self.dropdown_table
+
+        table.blockSignals(True)
+        try:
+            for row in range(table.rowCount()):
+                item = table.item(row, col)
+
+                if item is None:
+                    item = qw.QTableWidgetItem("")
+                    table.setItem(row, col, item)
+
+                flags = item.flags()
+
+                if from_function:
+                    flags &= ~qc.Qt.ItemFlag.ItemIsEditable
+                    flags &= ~qc.Qt.ItemFlag.ItemIsEnabled
+                else:
+                    # Visually enabled + editable
+                    flags |= qc.Qt.ItemFlag.ItemIsEnabled
+                    flags |= qc.Qt.ItemFlag.ItemIsEditable
+
+                item.setFlags(flags)
+
+        finally:
+            table.blockSignals(False)
 
     def _refresh_models(self) -> None:
         models = refresh_models(self.env)
@@ -678,7 +482,6 @@ class ControlSettingsTab(qw.QWidget):
     def _reload_current_model(self) -> None:
         if not self._current_model:
             return
-        # discard caches for this model and reload
         self._original_data.pop(self._current_model, None)
         self._working_data.pop(self._current_model, None)
         self._ensure_loaded(self._current_model)
@@ -692,7 +495,6 @@ class ControlSettingsTab(qw.QWidget):
         self._original_data[model] = copy.deepcopy(divs)
         self._working_data[model] = copy.deepcopy(divs)
 
-
     def _load_from_yaml(self, model: str):
         path = self.env.models_dir / model / "data" / "control_panel_data.yml"
         if not os.path.exists(path):
@@ -704,7 +506,6 @@ class ControlSettingsTab(qw.QWidget):
         dividers = []
         current = None
 
-        # raw is ordered in YAML; you rely on order already :contentReference[oaicite:3]{index=3}
         for key, val in raw.items():
             if is_divider(key):
                 title = ""
@@ -730,8 +531,6 @@ class ControlSettingsTab(qw.QWidget):
 
                 current["rows"].append(row)
 
-            # else: ignore unknown keys
-
         return dividers
 
     def _populate_param_combo(self, current: str) -> None:
@@ -742,13 +541,11 @@ class ControlSettingsTab(qw.QWidget):
         self.combo_param_name.clear()
 
         if not names:
-            # still allow showing current (even if missing) so user understands state
             if current:
                 self.combo_param_name.addItem(f"(missing) {current}", userData=current)
             self.combo_param_name.blockSignals(False)
             return
 
-        # If current param isn't in lis add a visible "missing" entry at top
         if current and current not in names:
             self.combo_param_name.addItem(f"(missing) {current}", userData=current)
 
@@ -767,26 +564,19 @@ class ControlSettingsTab(qw.QWidget):
 
         self.combo_param_name.blockSignals(False)
 
-
     def _param_name_changed(self, txt: str) -> None:
-        ref = self._current_control_ref()
-        if not ref or not self._current_model:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
 
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-
-        # If it's a "(missing) X" display, keep the underlying userData if present
         idx = self.combo_param_name.currentIndex()
         val = self.combo_param_name.itemData(idx)
         if isinstance(val, str) and val:
-            spec["param_name"] = val
+            control_spec["param_name"] = val
         else:
-            # fallback: direct text, stripping marker if user somehow got it
-            spec["param_name"] = txt.replace("(missing) ", "").strip()
+            control_spec["param_name"] = txt.replace("(missing) ", "").strip()
 
         self._refresh_tree()
-
 
     def _dump_to_yaml(self, dividers: List[DividerModel]) -> Dict[str, Any]:
         out: Dict[str, Any] = {}
@@ -840,16 +630,12 @@ class ControlSettingsTab(qw.QWidget):
                 atomic_write(path, new_dict)
         except Exception as e:
             self.window.status.show(f"Error writing changes: {e}", 8000)
-            logger.log(logger.ERROR, "Error writing changes", exc_info= e)
+            logger.log(logging.ERROR, "Error writing changes", exc_info= e)
         else:
             self._original_data.clear()
             self._working_data.clear()
             self._ensure_loaded(self._current_model)
             self._refresh_tree()
-
-    # -------------------------
-    # Tree build / selection payload
-    # -------------------------
 
     def _refresh_tree(self) -> None:
         self._in_refresh_tree = True
@@ -933,7 +719,6 @@ class ControlSettingsTab(qw.QWidget):
             return None
         return item.data(0, self.ROLE)
 
-
     def _on_tree_selection_changed(self) -> None:
         payload = self._selected_payload()
         if not payload or not self._current_model:
@@ -941,20 +726,21 @@ class ControlSettingsTab(qw.QWidget):
             return
 
         kind = payload[0]
+        print(f"{payload=}")
 
         if kind == "divider":
-            _, di = payload
-            div = self._working_data[self._current_model][di]
-            self.div_title.blockSignals(True)
-            self.div_title.setText(div.get("title", ""))
-            self.div_title.blockSignals(False)
+            _, divider_idx = payload
+            div = self._working_data[self._current_model][divider_idx]
+            self.divider_title.blockSignals(True)
+            self.divider_title.setText(div.get("title", ""))
+            self.divider_title.blockSignals(False)
             self.editor_stack.setCurrentWidget(self.page_divider)
             return
 
         if kind == "control":
-            _, di, ri, ci = payload
+            _, divider_idx, row_idx, control_idx = payload
             try:
-                spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
+                spec = self._working_data[self._current_model][divider_idx]["rows"][row_idx]["controls"][control_idx]
             except Exception:
                 self.editor_stack.setCurrentIndex(0)
                 return
@@ -964,10 +750,6 @@ class ControlSettingsTab(qw.QWidget):
 
         # rows don't have settings yet
         self.editor_stack.setCurrentIndex(0)
-
-    # -------------------------
-    # Drag/drop -> sync back to internal model
-    # -------------------------
 
     def _on_tree_rows_moved(self, *args) -> None:
         """
@@ -981,15 +763,6 @@ class ControlSettingsTab(qw.QWidget):
 
 
     def _rebuild_model_from_tree(self) -> None:
-        """
-        Read current tree ordering into working model.
-        Uses explicit divider -> rows -> controls structure.
-
-        Tree payloads are expected to be:
-          ("divider", di)
-          ("row", di, ri)
-          ("control", di, ri, ci)
-        """
         model = self._current_model
         if not model:
             return
@@ -1035,10 +808,6 @@ class ControlSettingsTab(qw.QWidget):
         self._working_data[model] = new_divs
 
 
-    # -------------------------
-    # Divider operations
-    # -------------------------
-
     def _add_divider(self) -> None:
         if not self._current_model:
             return
@@ -1056,10 +825,6 @@ class ControlSettingsTab(qw.QWidget):
         it = self.tree.currentItem()
         if it:
             it.setText(0, txt)
-
-    # -------------------------
-    # Control operations
-    # -------------------------
 
     def _add_control(self) -> None:
         """
@@ -1096,7 +861,7 @@ class ControlSettingsTab(qw.QWidget):
         names = self._available_params.get(self._current_model, [])
         default_param = names[0] if names else ""
 
-        new_spec: ControlSpec = {
+        new_spec = {
             "param_name": default_param,
             "control_type": "entry_block",
             "type": "scalar",
@@ -1157,21 +922,14 @@ class ControlSettingsTab(qw.QWidget):
             self.editor_stack.setCurrentIndex(0)
             return
 
-
-    # -------------------------
-    # Control editor sync
-    # -------------------------
-
     def _current_control_ref(self) -> Optional[Tuple[int, int]]:
         payload = self._selected_payload()
         if not payload or payload[0] != "control" or not self._current_model:
             return None
-        _, di, ri, ci = payload
-        return (di, ri, ci)
+        _, divider_idx, row_idx, control_idx = payload
+        return (divider_idx, row_idx, control_idx)
 
-    def _load_control_into_editor(self, spec: ControlSpec) -> None:
-        # Block signals to prevent feedback loops
-        # self.lbl_param_name.setText(str(spec.get("param_name", "")))
+    def _load_control_into_editor(self, spec) -> None:
         self._populate_param_combo(str(spec.get("param_name", "")))
 
         self.combo_control_type.blockSignals(True)
@@ -1196,10 +954,9 @@ class ControlSettingsTab(qw.QWidget):
             self.control_stack.setCurrentIndex(0)
             self._load_entry_fields(spec)
 
-    def _load_entry_fields(self, spec: ControlSpec) -> None:
+    def _load_entry_fields(self, spec) -> None:
         kind = str(spec.get("type", "scalar"))
 
-        # --- entry kind ---
         self.combo_entry_kind.blockSignals(True)
         if kind in {"scalar", "vector", "matrix"}:
             self.combo_entry_kind.setCurrentText(kind)
@@ -1208,13 +965,11 @@ class ControlSettingsTab(qw.QWidget):
             self.combo_entry_kind.setCurrentText("scalar")
         self.combo_entry_kind.blockSignals(False)
 
-        # --- scalar type ---
         st = str(spec.get("scalar_type", "float"))
         self.combo_scalar_type.blockSignals(True)
         self.combo_scalar_type.setCurrentText(st if st in {"int", "float"} else "float")
         self.combo_scalar_type.blockSignals(False)
 
-        # --- range ---
         rng = spec.get("range", flow_seqify([0.0, 1.0]))
         try:
             r0, r1 = list(rng)
@@ -1228,8 +983,6 @@ class ControlSettingsTab(qw.QWidget):
         self.range_min.blockSignals(False)
         self.range_max.blockSignals(False)
 
-
-        # --- dim ---
         if spec.get("dim_from"):
             dim = spec.get("dim_from", 1)
             self.vec_dep.setChecked(True)
@@ -1261,11 +1014,11 @@ class ControlSettingsTab(qw.QWidget):
                         self.mat_cols_dep.setChecked(True)
                 except Exception:
                     rows, cols = 1, 1
+
             self.mat_rows.setText(str(rows))
             self.mat_cols.setText(str(cols))
             self.dim_stack.setCurrentIndex(1)
         else:
-            # scalar
             self.dim_stack.setCurrentIndex(0)
 
         self.vec_dim.blockSignals(False)
@@ -1275,22 +1028,17 @@ class ControlSettingsTab(qw.QWidget):
         self.mat_rows_dep.blockSignals(False)
         self.mat_cols_dep.blockSignals(False)
 
-
-        # --- show only relevant rows (no blank gaps) ---
         eform = getattr(self, "_entry_form", None)
         if eform is not None:
             show_scalar = (kind == "scalar")
             show_dim = (kind in {"vector", "matrix"})
 
-            # Scalar: show scalar_type + range min/max
             eform.setRowVisible(self.combo_scalar_type, show_scalar)
             eform.setRowVisible(self.range_min, show_scalar)
             eform.setRowVisible(self.range_max, show_scalar)
 
-            # Vector/Matrix: show dim editor only
             eform.setRowVisible(self.dim_stack, show_dim)
         else:
-            # Fallback: at least hide widgets if the form reference is missing
             self.combo_scalar_type.setVisible(kind == "scalar")
             self.range_min.setVisible(kind == "scalar")
             self.range_max.setVisible(kind == "scalar")
@@ -1298,115 +1046,126 @@ class ControlSettingsTab(qw.QWidget):
 
 
     def _load_dropdown_table(self, spec: ControlSpec) -> None:
-        names = list(spec.get("names", []))
+        use_names_func = spec.get("use_names_func", False)
+        use_vals_func = spec.get("use_vals_func", False)
+
+        if use_names_func:
+            names_from = spec.get("names_from")
+
+        names = spec.get("names", [])
+
+        if use_vals_func:
+            values_from = spec.get("values_from")
+
         values = list(spec.get("values", []))
 
-        self.dropdown_table.blockSignals(True)
+        self._block_dropdown_entry_signals(True)
+
         self.dropdown_table.setRowCount(0)
-        for i, (n, v) in enumerate(zip(names, values)):
+        for _, (n, v) in enumerate(zip(names, values)):
             r = self.dropdown_table.rowCount()
             self.dropdown_table.insertRow(r)
             self.dropdown_table.setItem(r, 0, qw.QTableWidgetItem(str(n)))
             self.dropdown_table.setItem(r, 1, qw.QTableWidgetItem(str(v)))
-        self.dropdown_table.blockSignals(False)
 
-    # --- live updates from editor ---
+        if use_names_func:
+            self.dropdown_names_from_check.setChecked(True)
+            self.dropdown_names_from_entry.setText(names_from)
+            self._set_dropdown_column_mode(0, True)
+
+        if use_vals_func:
+            self.dropdown_values_from_check.setChecked(True)
+            self.dropdown_values_from_entry.setText(names_from)
+            self._set_dropdown_column_mode(1, True)
+
+        self._block_dropdown_entry_signals(False)
 
     def _control_type_changed(self, ctype: str) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-        spec["control_type"] = ctype
 
-        # normalize shape for the chosen type
+        for control_type, fields in self.control_type_specific_fields:
+            if control_type == ctype:
+                continue
+            for field_name in fields:
+                control_spec.pop(field_name, None)
+
+        control_spec["control_type"] = ctype
+
         if ctype == "dropdown":
-            spec.setdefault("names", flow_seqify(["True", "False"]))
-            spec.setdefault("values", flow_seqify([True, False]))
-            spec.pop("type", None)
-            spec.pop("scalar_type", None)
-            spec.pop("range", None)
-            spec.pop("dim", None)
+            control_spec.setdefault("names", flow_seqify(["True", "False"]))
+            control_spec.setdefault("values", flow_seqify([True, False]))
             self.control_stack.setCurrentIndex(1)
-            self._load_dropdown_table(spec)
+            self._load_dropdown_table(control_spec)
         elif ctype == "checkbox":
-            spec.pop("type", None)
-            spec.pop("scalar_type", None)
-            spec.pop("range", None)
-            spec.pop("dim", None)
-            spec.pop("names", None)
-            spec.pop("values", None)
             self.control_stack.setCurrentIndex(2)
         else:
-            spec.setdefault("type", "scalar")
-            spec.setdefault("scalar_type", "float")
-            spec.setdefault("range", flow_seqify([0.0, 1.0]))
-            spec.pop("names", None)
-            spec.pop("values", None)
+            control_spec.setdefault("type", "scalar")
+            control_spec.setdefault("scalar_type", "float")
+            control_spec.setdefault("range", flow_seqify([0.0, 1.0]))
             self.control_stack.setCurrentIndex(0)
-            self._load_entry_fields(spec)
+            self._load_entry_fields(control_spec)
 
         self._refresh_tree()
 
-    def _control_label_changed(self, txt: str) -> None:
+    def _get_control_spec(self):
         ref = self._current_control_ref()
         if not ref:
+            return None
+        divider_idx, row_idx, control_idx = ref
+        return self._working_data[self._current_model][divider_idx]["rows"][row_idx]["controls"][control_idx]
+
+    def _control_label_changed(self, txt: str) -> None:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]["label"] = txt
+        control_spec["label"] = txt
 
     def _control_tooltip_changed(self) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]["tooltip"] = self.edit_tooltip.toPlainText()
+        control_spec["tooltip"] = self.edit_tooltip.toPlainText()
 
     def _entry_kind_changed(self, kind: str) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        control_spec["type"] = kind
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-        spec["type"] = kind
 
-        # normalize keys for kind
+        # get rid of the non-relevant fields, set reasonable defaults for new fields before trying to load
         if kind == "scalar":
-            spec.setdefault("scalar_type", "float")
-            spec.setdefault("range", flow_seqify([0.0, 1.0]))
-            spec.pop("dim", None)
+            control_spec.setdefault("scalar_type", "float")
+            control_spec.setdefault("range", flow_seqify([0.0, 1.0]))
+            control_spec.pop("dim", None)
         elif kind == "vector":
-            spec.pop("scalar_type", None)
-            spec.pop("range", None)
-            # store as int
-            if not isinstance(spec.get("dim", 1), int):
-                spec["dim"] = 1
-            spec.setdefault("dim", 1)
-        else:  # matrix
-            spec.pop("scalar_type", None)
-            spec.pop("range", None)
-            d = spec.get("dim")
+            control_spec.pop("scalar_type", None)
+            control_spec.pop("range", None)
+            if not isinstance(control_spec.get("dim", 1), int):
+                control_spec["dim"] = 1
+            control_spec.setdefault("dim", 1)
+        else:  
+            control_spec.pop("scalar_type", None)
+            control_spec.pop("range", None)
+            d = control_spec.get("dim")
             if not (isinstance(d, (list, tuple, FlowSeq)) and len(d) == 2):
-                spec["dim"] = flow_seqify([1, 1])
+                control_spec["dim"] = flow_seqify([1, 1])
 
-        self._load_entry_fields(spec)
+        # load whatever replacements exist for the defaults
+        self._load_entry_fields(control_spec)
 
-    def _scalar_type_changed(self, st: str) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+    def _scalar_type_changed(self, txt: str) -> None:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-        spec["scalar_type"] = st
+        control_spec["scalar_type"] = txt
 
     def _range_changed(self, _ = None) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-        if spec.get("type") != "scalar":
+        if control_spec.get("type") != "scalar":
             return
         try:
             r0 = float(self.range_min.text())
@@ -1414,60 +1173,105 @@ class ControlSettingsTab(qw.QWidget):
         except ValueError:
             return
 
-        spec["range"] = flow_seqify([int(r0), int(r1)]) if spec.get("scalar_type") == "int" else flow_seqify([r0, r1])
+        control_spec["range"] = flow_seqify([int(r0), int(r1)]) if control_spec.get("scalar_type") == "int" else flow_seqify([r0, r1])
 
     def _dim_changed(self, _=None) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
 
-        kind = spec.get("type")
+        kind = control_spec.get("type")
         if kind == "vector":
             if self.vec_dep.isChecked():
-                spec["dim_from"] = self.vec_dim.text()
-                if spec.get("dim"):
-                    del spec["dim"]
+                control_spec["dim_from"] = self.vec_dim.text()
+                if control_spec.get("dim"):
+                    del control_spec["dim"]
                 return
             
             try:
                 dim = int(self.vec_dim.text())
-                spec["dim"] = dim
+                control_spec["dim"] = dim
             except ValueError:
                 return
             finally:
-                if spec.get("dim_from"):
-                    del spec["dim_from"]
+                if control_spec.get("dim_from"):
+                    del control_spec["dim_from"]
+
         elif kind == "matrix":
             dim_rows = self.mat_rows.text()
             dim_cols = self.mat_cols.text()
             if self.mat_rows_dep.isChecked() or self.mat_cols_dep.isChecked():
-                spec["dim_from"] = flow_seqify([dim_rows, dim_cols])
-                if spec.get("dim"):
-                    del spec["dim"]
+                control_spec["dim_from"] = flow_seqify([dim_rows, dim_cols])
+                if control_spec.get("dim"):
+                    del control_spec["dim"]
             else:
-                spec["dim"] = flow_seqify([dim_rows, dim_cols])
-                if spec.get("dim_from"):
-                    del spec["dim_from"]
+                control_spec["dim"] = flow_seqify([dim_rows, dim_cols])
+                if control_spec.get("dim_from"):
+                    del control_spec["dim_from"]
 
     def _dropdown_item_changed(self, item: qw.QTableWidgetItem) -> None:
-        ref = self._current_control_ref()
-        if not ref:
+        control_spec = self._get_control_spec()
+        if control_spec is None:
             return
-        di, ri, ci = ref
-        spec = self._working_data[self._current_model][di]["rows"][ri]["controls"][ci]
-        if spec.get("control_type") != "dropdown":
+        if control_spec.get("control_type") != "dropdown":
             return
 
         names, values = [], []
-        for r in range(self.dropdown_table.rowCount()):
-            n = self.dropdown_table.item(r, 0)
-            v = self.dropdown_table.item(r, 1)
-            names.append(n.text() if n else "")
-            values.append(v.text() if v else "")
-        spec["names"] = flow_seqify(names)
-        spec["values"] = flow_seqify(values)
+        for row in range(self.dropdown_table.rowCount()):
+            name = self.dropdown_table.item(row, 0)
+            val = self.dropdown_table.item(row, 1)
+            names.append(name.text() if name else "")
+            values.append(val.text() if val else "")
+        control_spec["names"] = flow_seqify(names)
+        control_spec["values"] = flow_seqify(values)
+
+    def _dropdown_vals_func_changed(self, txt: str):
+        control_spec = self._get_control_spec()
+        if control_spec is None:
+            return
+        if control_spec.get("control_type") != "dropdown":
+            return
+        
+        control_spec.setdefault("values_from", txt)
+
+    def _dropdown_names_func_changed(self, txt: str):
+        control_spec = self._get_control_spec()
+        if control_spec is None:
+            return
+        if control_spec.get("control_type") != "dropdown":
+            return
+        if txt == "":
+            return
+
+        control_spec.setdefault("names_from", txt)
+
+    def _dropdown_names_checkbox_changed(self, checked: bool):
+        control_spec = self._get_control_spec()
+        if control_spec is None:
+            return
+        if control_spec.get("control_type") != "dropdown":
+            return
+
+        control_spec["use_names_func"] = self.dropdown_names_from_check.isChecked()
+        if checked:
+            self._dropdown_names_func_changed(self.dropdown_names_from_entry.text())
+        else:
+            if "names_from" in control_spec:
+                del control_spec["names_from"]
+
+    def _dropdown_vals_checkbox_changed(self, checked: bool):
+        control_spec = self._get_control_spec()
+        if control_spec is None:
+            return
+        if control_spec.get("control_type") != "dropdown":
+            return
+
+        control_spec["use_vals_func"] = self.dropdown_values_from_check.isChecked()
+        if checked:
+            self._dropdown_vals_func_changed(self.dropdown_values_from_entry.text())
+        else:
+            if "names_from" in control_spec:
+                del control_spec["names_from"]
 
     def _add_dropdown_option(self) -> None:
         if self.dropdown_table is None:
@@ -1476,6 +1280,8 @@ class ControlSettingsTab(qw.QWidget):
         self.dropdown_table.insertRow(r)
         self.dropdown_table.setItem(r, 0, qw.QTableWidgetItem("Option"))
         self.dropdown_table.setItem(r, 1, qw.QTableWidgetItem("Value"))
+        self._set_dropdown_column_mode(0, self.dropdown_names_from_check.isChecked())
+        self._set_dropdown_column_mode(1, self.dropdown_values_from_check.isChecked())
         # commit
         self._dropdown_item_changed(None)
 
@@ -1484,10 +1290,6 @@ class ControlSettingsTab(qw.QWidget):
         for r in rows:
             self.dropdown_table.removeRow(r)
         self._dropdown_item_changed(None)
-
-    # -------------------------
-    # Initializer
-    # -------------------------
 
     def _initialize_clicked(self) -> None:
         if not self._current_model:

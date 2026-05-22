@@ -32,14 +32,14 @@ def child_run(
         queue, run_id, module_path,
         func_name, params_path, params,
         stop_event, pause_event, sleep_value,
-        yield_every
+        yield_every, sim_event_queue
     ):
     try:
         mod = importlib.import_module(module_path)
         func = getattr(mod, func_name)
         params_dataclass = params_from_mapping(params, params_path)
 
-        result = func(params_dataclass)
+        result = func(params_dataclass, event_queue= sim_event_queue)
 
         if inspect.isgenerator(result):
             iterator = result
@@ -88,6 +88,7 @@ class SimController(qc.QObject):
         self._proc = None
         self._run_id = None
         self._yield_every = 5
+        self.sim_event_queue = None
 
         self._pause_event = ctx.Event()
         self._pause_event.set() # default to unpaused
@@ -97,13 +98,14 @@ class SimController(qc.QObject):
         self._stop = False
         self._pause = False
 
-    def configure(self, env, *, run_id, model_info, params, mp_queue, sleep_time, yield_every):
+    def configure(self, env, *, run_id, model_info, params, mp_queue, sleep_time, yield_every, sim_event_queue):
         sim_model = model_info["details"]["simulation_model"]
 
         self._run_id = run_id
         self._yield_every = yield_every
         self.mp_queue = mp_queue
         self.env = env
+        self.sim_event_queue = sim_event_queue
 
         self._module_path = f"models.{sim_model}.simulation.simulation" # multiprocessing expects the string
         self._func_name = model_info["details"]["simulation_function"]
@@ -138,7 +140,8 @@ class SimController(qc.QObject):
                 self._stop_event, 
                 self._pause_event, 
                 self._sleep_value,
-                self._yield_every
+                self._yield_every,
+                self.sim_event_queue,
             )
         )
         self._proc.start()

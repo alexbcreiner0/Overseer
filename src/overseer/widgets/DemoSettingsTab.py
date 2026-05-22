@@ -52,6 +52,7 @@ class DemoSettingsTab(qw.QWidget):
         self.demo_list = qw.QListWidget()
         self.combo_function = qw.QComboBox()
         self.combo_preset = qw.QComboBox()
+        self.combo_postprocessing = qw.QComboBox()
         self.entry_sim_speed = qw.QLineEdit()
         self.entry_sim_speed.setPlaceholderText("0")
         self.demo_list.setMinimumWidth(260)
@@ -91,6 +92,7 @@ class DemoSettingsTab(qw.QWidget):
         self.edit_demo_desc = qw.QPlainTextEdit()
         self.edit_demo_desc.setPlaceholderText("Description…")
 
+
         # Details
         self.combo_model = qw.QComboBox()
 
@@ -123,6 +125,7 @@ class DemoSettingsTab(qw.QWidget):
         sec.form.addRow("Simulation model:", self.combo_model)
         sec.form.addRow("Simulation function:", self.combo_function)
         sec.form.addRow("Default preset:", self.combo_preset)
+        sec.form.addRow("Plot postprocessing:", self.combo_postprocessing)
         sec.form.addRow("Simulation Speed", self.entry_sim_speed)
         # sec.form.addRow(self.chk_starting_lims)
         # sec.form.addRow(self._wrap_layout(lims_grid))
@@ -130,10 +133,6 @@ class DemoSettingsTab(qw.QWidget):
         # Editor actions
         editor_actions = qw.QHBoxLayout()
         self.btn_refresh_models = qw.QPushButton("Refresh Models")
-        # self.btn_save_demo = qw.QPushButton("Save")
-        # self.btn_save_as_new = qw.QPushButton("Save as New")
-        # editor_actions.addWidget(self.btn_save_demo)
-        # editor_actions.addWidget(self.btn_save_as_new)
         editor_actions.addWidget(self.btn_refresh_models)
         editor_actions.addStretch(1)
 
@@ -144,10 +143,6 @@ class DemoSettingsTab(qw.QWidget):
         self.demo_filter.textChanged.connect(self._filter_demo_list)
 
         self.btn_refresh_models.clicked.connect(self._refresh_models)
-        # self.btn_save_as_new.clicked.connect(self._on_save_as_new_clicked)
-        # self.btn_save_demo.clicked.connect(self._save_demo_changes)
-
-        # Demo-related wiring (page: Demos)
         self.demo_list.currentRowChanged.connect(self._on_demo_selected)
         self.btn_set_default.clicked.connect(self._on_set_default_clicked)
 
@@ -157,6 +152,7 @@ class DemoSettingsTab(qw.QWidget):
             self.combo_model,
             self.combo_function,
             self.combo_preset,
+            self.combo_postprocessing,
             self.entry_sim_speed
         ]
 
@@ -168,7 +164,8 @@ class DemoSettingsTab(qw.QWidget):
 
     def _refresh_models(self):
         old_combo = self.combo_model.currentText()
-        old_function = self.combo_function.currentText()
+        old_sim_function = self.combo_function.currentText()
+        old_postprocessing_function = self.combo_postprocessing.currentText()
         old_preset = self.combo_preset.currentText()
 
         self.combo_model.clear()
@@ -178,7 +175,7 @@ class DemoSettingsTab(qw.QWidget):
         self.combo_model.setCurrentText(old_combo)
 
         self._refresh_presets(old_preset)
-        self._refresh_functions(old_function)
+        self._refresh_functions(old_sim_function, old_postprocessing_function)
 
         self.window.status.show("Refreshed models.", 3000)
 
@@ -237,23 +234,45 @@ class DemoSettingsTab(qw.QWidget):
     def _update_internal_name(self, text):
         self.lbl_internal_name.setText(make_shortname(text))
 
-    def _refresh_functions(self, old_function= None):
+    def _refresh_functions(self, old_sim_function= None, old_postprocessing_function= None):
         self.combo_function.clear()
+        self.combo_postprocessing.clear()
+
         current_model = self.combo_model.currentText()
         if not current_model: return
         try:
             sim_functions_module = importlib.import_module(f"models.{current_model}.simulation.simulation")
-            functions_dict = dict(inspect.getmembers(sim_functions_module, inspect.isfunction))
-            functions_list = list(functions_dict.keys())
+            sim_functions_dict = dict(inspect.getmembers(sim_functions_module, inspect.isfunction))
+            sim_functions_list = list(sim_functions_dict.keys())
         except Exception as e:
             self.window.status.show(f"Error loading sim functions module: {e}.", 4000)
             return
 
-        for function in functions_list:
+        for function in sim_functions_list:
             self.combo_function.addItem(function)
 
-        if old_function is not None:
-            self.combo_function.setCurrentText(old_function)
+        if old_sim_function is not None:
+            self.combo_function.setCurrentText(old_sim_function)
+
+        pot_extra_func_path = self.env.models_dir / current_model / "simulation"/ "extra_functions.py"
+        if not pot_extra_func_path.exists():
+            self.combo_postprocessing.addItem("None")
+            self.combo_postprocessing.setCurrentText("None")
+            return
+
+        try:
+            extra_functions_module = importlib.import_module(f"models.{current_model}.simulation.extra_functions")
+            extra_functions_dict = dict(inspect.getmembers(extra_functions_module, inspect.isfunction))
+            extra_functions_list = list(extra_functions_dict.keys())
+        except Exception as e:
+            self.window.status.show(f"Error loading sim functions module: {e}.", 4000)
+            return
+
+        for function in extra_functions_list:
+            self.combo_postprocessing.addItem(function)
+
+        if old_postprocessing_function is not None:
+            self.combo_postprocessing.setCurrentText(old_postprocessing_function)
 
     def _refresh_presets(self, old_preset= None):
         self.combo_preset.clear()
@@ -338,6 +357,10 @@ class DemoSettingsTab(qw.QWidget):
         new_demo["name"] = self.edit_demo_display_name.text()
         new_demo["desc"] = self.edit_demo_desc.toPlainText()
         new_demo["details"] = {}
+        if self.combo_postprocessing.currentText() != "None":
+            new_demo["details"]["plot_postprocess"] = self.combo_postprocessing.currentText()
+        else:
+            new_demo["details"]["plot_postprocess"] = None
         new_demo["details"]["simulation_model"] = self.combo_model.currentText()
         new_demo["details"]["simulation_function"] = self.combo_function.currentText()
         new_demo["details"]["default_preset"] = self.combo_preset.currentText()
@@ -389,8 +412,10 @@ class DemoSettingsTab(qw.QWidget):
             self._refresh_presets()
             func_index = self.combo_function.findText(details["simulation_function"])
             preset_index = self.combo_preset.findText(details["default_preset"])
+            post_process_index = self.combo_postprocessing.findText(details["plot_postprocess"])
             self.combo_function.setCurrentIndex(func_index)
             self.combo_preset.setCurrentIndex(preset_index)
+            self.combo_postprocessing.setCurrentIndex(post_process_index)
 
             # lims = details.get("axis_settings", {}).get("limits", {}).get("a1", -1)
             # if lims != -1:
@@ -551,6 +576,7 @@ class DemoSettingsTab(qw.QWidget):
         self.combo_model.currentIndexChanged.connect(self._on_model_changed_autosave)
         self.combo_function.currentIndexChanged.connect(self._save_demo_changes)
         self.combo_preset.currentIndexChanged.connect(self._save_demo_changes)
+        self.combo_postprocessing.currentIndexChanged.connect(self._save_demo_changes)
 
         self.entry_sim_speed.textChanged.connect(self._save_demo_changes)
 
