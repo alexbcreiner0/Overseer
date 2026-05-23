@@ -63,7 +63,6 @@ class ControlSettingsTab(qw.QWidget):
                 "use_vals_func",
                 "names",
                 "values",
-                "change_effect"
             },
             "entry_block": {
                 "param_name",
@@ -72,16 +71,12 @@ class ControlSettingsTab(qw.QWidget):
                 "range",
                 "dim",
                 "dim_from",
-                "change_effect"
             },
             "button": {
                 "function",
                 "action_type",
             },
-            "checkbox": {
-                "param_name",
-                "change_effect"
-            },
+            "checkbox": {"param_name"},
         }
 
         root = qw.QVBoxLayout(self)
@@ -211,6 +206,7 @@ class ControlSettingsTab(qw.QWidget):
         self.divider_title.textChanged.connect(self._divider_title_changed)
 
         form.addRow("Divider title:", self.divider_title)
+        form.addRow(qw.QLabel("Rows are derived automatically (3 controls per row)."))
 
         return widget
 
@@ -252,7 +248,6 @@ class ControlSettingsTab(qw.QWidget):
         form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
 
         self.param_combos = {}
-        self.change_effect_combos = {}
 
         self.combo_control_type = qw.QComboBox()
         self.combo_control_type.addItems(["entry_block", "dropdown", "checkbox", "button"])
@@ -264,8 +259,8 @@ class ControlSettingsTab(qw.QWidget):
         self.edit_tooltip = qw.QPlainTextEdit()
         self.edit_tooltip.textChanged.connect(self._control_tooltip_changed)
 
-        form.addRow("Control type:", self.combo_control_type, help_text= "The type of widget.")
-        form.addRow("Label:", self.edit_label, help_text= "Accompanying text to identify your widget.")
+        form.addRow("Control type:", self.combo_control_type)
+        form.addRow("Label:", self.edit_label)
         form.addRow("Tooltip:", self.edit_tooltip)
 
         return group_box
@@ -277,22 +272,9 @@ class ControlSettingsTab(qw.QWidget):
         self.param_combos[control_type] = combo
         return combo
 
-    def _new_change_effect_combo(self, control_type: str) -> qw.QComboBox:
-        combo = qw.QComboBox()
-        combo.addItem("Restart", "restart")
-        combo.addItem("Send message", "send_message")
-        combo.setEditable(False)
-        combo.currentTextChanged.connect(self._change_effect_changed)
-        self.change_effect_combos[control_type] = combo
-        return combo
-
     def _active_param_combo(self) -> Optional[qw.QComboBox]:
         ctype = self.combo_control_type.currentText()
-        return self.param_combos.get(ctype)
-
-    def _active_change_effect_combo(self) -> Optional[qw.QComboBox]:
-        ctype = self.combo_control_type.currentText()
-        return self.change_effect_combos.get(ctype)
+        return getattr(self, "param_combos", {}).get(ctype)
 
     def _build_entry_page(self) -> qw.QWidget:
         entry_page = qw.QWidget()
@@ -303,7 +285,6 @@ class ControlSettingsTab(qw.QWidget):
         self._entry_form = entry_form
 
         self.combo_entry_param_name = self._new_param_combo("entry_block")
-        self.combo_entry_change_effect = self._new_change_effect_combo("entry_block")
 
         self.combo_entry_kind = qw.QComboBox()
         self.combo_entry_kind.addItems(["scalar", "vector", "matrix"])
@@ -319,74 +300,57 @@ class ControlSettingsTab(qw.QWidget):
         self.range_max = qw.QLineEdit()
         self.range_max.textChanged.connect(self._range_changed)
 
-        dim_func_row = qw.QWidget()
-        dim_func_row_lay = qw.QHBoxLayout(dim_func_row)
-        self.dim_func_check = qw.QCheckBox("Dimension from function:")
-        self.dim_func_name = qw.QLineEdit()
-        dim_func_row_lay.addWidget(self.dim_func_check)
-        dim_func_row_lay.addWidget(self.dim_func_name)
-
-        self.dim_func_safe_default_entry = qw.QLineEdit()
-
-        self.dim_func_row = qw.QWidget()
-        dim_func_row_lay = qw.QHBoxLayout(self.dim_func_row)
-        dim_func_row_lay.setContentsMargins(0, 0, 0, 0)
-
-        self.dim_func_check = qw.QCheckBox("Dimension from function:")
-        self.dim_func_name = qw.QLineEdit()
-
-        dim_func_row_lay.addWidget(self.dim_func_check)
-        dim_func_row_lay.addWidget(self.dim_func_name)
-
-        self.dim_func_check.toggled.connect(self._dim_changed)
-        self.dim_func_name.textChanged.connect(self._dim_changed)
-        self.dim_func_safe_default_entry.textChanged.connect(self._dim_changed)
-
         self.dim_stack = qw.QStackedWidget()
-        self.dim_stack.setSizePolicy(
-            qw.QSizePolicy.Policy.Expanding,
-            qw.QSizePolicy.Policy.Fixed,
-        )
+        self.dim_stack.setSizePolicy(qw.QSizePolicy.Policy.Expanding, qw.QSizePolicy.Policy.Fixed)
 
-        vec_specific_widget = qw.QWidget()
-        vec_specific_form = HelpFormLayout(vec_specific_widget)
+        self.dependent_checks = {"vec": False, "mat_rows": False, "mat_cols": False}
 
+        vec_w = qw.QWidget()
+        vec_l = qw.QHBoxLayout(vec_w)
+        vec_l.setContentsMargins(0, 0, 0, 0)
+        vec_l.setAlignment(qc.Qt.AlignmentFlag.AlignLeft)
+        self.vec_dep = qw.QCheckBox("Dependent")
         self.vec_dim = qw.QLineEdit()
         self.vec_dim.textChanged.connect(self._dim_changed)
+        self.vec_dep.checkStateChanged.connect(self._dim_changed)
+        vec_l.addWidget(self.vec_dim, 0)
+        vec_l.addWidget(self.vec_dep, 0)
+        self.dim_stack.addWidget(vec_w)
 
-        vec_specific_form.addRow("Dim:", self.vec_dim)
-        self.dim_stack.addWidget(vec_specific_widget)
-
-        mat_specific_widget = qw.QWidget()
-        mat_specific_form = HelpFormLayout(mat_specific_widget)  
-
-        mat_dim_widget = qw.QWidget()
-        mat_dim_widget_lay = qw.QHBoxLayout(mat_dim_widget)
-        mat_dim_widget_lay.setContentsMargins(0, 0, 0, 0)
-
+        mat_w = qw.QWidget()
+        mat_w_edits = qw.QWidget()
+        mat_w_boxes = qw.QWidget()
+        mat_l_outer = qw.QVBoxLayout(mat_w)
+        mat_l_boxes = qw.QHBoxLayout(mat_w_boxes)
+        mat_l_dims = qw.QHBoxLayout(mat_w_edits)
+        mat_l_dims.setContentsMargins(0, 0, 0, 0)
+        mat_l_dims.setAlignment(qc.Qt.AlignmentFlag.AlignLeft)
+        self.mat_rows_dep = qw.QCheckBox("Dependent rows")
         self.mat_rows = qw.QLineEdit()
         self.mat_rows.textChanged.connect(self._dim_changed)
-
+        self.mat_cols_dep = qw.QCheckBox("Dependent columns")
+        self.mat_rows_dep.checkStateChanged.connect(self._dim_changed)
         self.mat_cols = qw.QLineEdit()
         self.mat_cols.setAlignment(qc.Qt.AlignmentFlag.AlignLeft)
         self.mat_cols.textChanged.connect(self._dim_changed)
+        self.mat_cols_dep.checkStateChanged.connect(self._dim_changed)
+        mat_l_boxes.addWidget(self.mat_rows_dep, 0)
+        mat_l_boxes.addWidget(self.mat_cols_dep, 0)
+        mat_l_dims.addWidget(self.mat_rows, 0)
+        mat_l_dims.addWidget(qw.QLabel("x"), 0)
+        mat_l_dims.addWidget(self.mat_cols, 0)
+        mat_l_outer.addWidget(mat_w_boxes)
+        mat_l_outer.addWidget(mat_w_edits)
+        self.dim_stack.addWidget(mat_w)
 
-        mat_dim_widget_lay.addWidget(self.mat_rows)
-        mat_dim_widget_lay.addWidget(qw.QLabel("x"))
-        mat_dim_widget_lay.addWidget(self.mat_cols)
+        self.dim_stack.setMaximumHeight(max(vec_w.sizeHint().height(), mat_w.sizeHint().height()))
 
-        mat_specific_form.addRow("Dim:", mat_dim_widget)
-        self.dim_stack.addWidget(mat_specific_widget)
-
-        entry_form.addRow("Param:", self.combo_entry_param_name, help_text= "The parameter that the widget will effect.")
-        entry_form.addRow("Change effect:", self.combo_entry_change_effect, help_text= "Whether the simulation is to restart or send a message when the widget is altered. If you don't know what you are doing, stick to restart.")
-        entry_form.addRow("Entry type:", self.combo_entry_kind, help_text= "The type of entry.")
-        entry_form.addRow("Scalar type:", self.combo_scalar_type, help_text= "Whether the scalar is an int or a float.")
-        entry_form.addRow("Range min:", self.range_min, help_text= "The left-most position of the slider. Only effects the slider - users can still set lower entries manually.")
-        entry_form.addRow("Range max:", self.range_max, help_text= "The right-most position of the slider. Only effects the slider - users can still set lower entries manually.")
-        entry_form.addRow("", self.dim_func_row, help_text= "When checked, Overseer will look for a function by the name specified in this field in your model's extra_functions.py file, and attempt to call that in order to determine the dimension of your vector/matrix. See documentation for more info.")
-        entry_form.addRow("Safe default:", self.dim_func_safe_default_entry, help_text= "ONLY RELEVANT WHEN DIMENSION IS TO BE DETERMINED FROM A FUNCTION. When the dimension is increased, Overseer needs a 'safe-bet' number that it can use to fill in the new entries which appear. This is that.")
-        entry_form.addRow("", self.dim_stack, help_text= "The dimension of your matrix or vector.")
+        entry_form.addRow("Param:", self.combo_entry_param_name)
+        entry_form.addRow("Entry type:", self.combo_entry_kind)
+        entry_form.addRow("Scalar type:", self.combo_scalar_type)
+        entry_form.addRow("Range min:", self.range_min)
+        entry_form.addRow("Range max:", self.range_max)
+        entry_form.addRow("Dim:", self.dim_stack)
 
         return entry_page
 
@@ -398,9 +362,7 @@ class ControlSettingsTab(qw.QWidget):
         drop_param_form = HelpFormLayout(drop_param_box)
         drop_param_form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
         self.combo_dropdown_param_name = self._new_param_combo("dropdown")
-        self.combo_dropdown_change_effect = self._new_change_effect_combo("dropdown")
-        drop_param_form.addRow("Param:", self.combo_dropdown_param_name, help_text= "The parameter that the widget will effect.")
-        drop_param_form.addRow("Change effect:", self.combo_dropdown_change_effect, help_text= "Whether the simulation is to restart or send a message when the widget is altered. If you don't know what you are doing, stick to restart.")
+        drop_param_form.addRow("Param:", self.combo_dropdown_param_name)
         drop_page_layout.addWidget(drop_param_box)
         top_drop_bar = qw.QWidget()
         top_drop_bar_lay = qw.QHBoxLayout(top_drop_bar)
@@ -448,7 +410,6 @@ class ControlSettingsTab(qw.QWidget):
             self.dropdown_values_from_entry,
             self.dropdown_names_from_entry,
             self.dropdown_table,
-            self.combo_dropdown_change_effect
         ]
 
         dbtns = qw.QHBoxLayout()
@@ -468,9 +429,7 @@ class ControlSettingsTab(qw.QWidget):
         check_form = HelpFormLayout(check_page)
         check_form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
         self.combo_checkbox_param_name = self._new_param_combo("checkbox")
-        self.combo_checkbox_change_effect = self._new_change_effect_combo("checkbox")
-        check_form.addRow("Param:", self.combo_checkbox_param_name, help_text= "The parameter that the widget will effect.")
-        check_form.addRow("Change effect:", self.combo_checkbox_change_effect, help_text= "Whether the simulation is to restart or send a message when the widget is altered. If you don't know what you are doing, stick to restart.")
+        check_form.addRow("Param:", self.combo_checkbox_param_name)
         return check_page
 
     def _build_button_page(self) -> qw.QWidget:
@@ -482,12 +441,11 @@ class ControlSettingsTab(qw.QWidget):
         self.button_function.textChanged.connect(self._button_function_changed)
 
         self.button_action_type = qw.QComboBox()
-        self.button_action_type.addItem("Replace params", "replace_params")
-        self.button_action_type.addItem("Sim event", "sim_event")
-        self.button_action_type.currentIndexChanged.connect(self._button_action_type_changed)
+        self.button_action_type.addItems(["Replace params", "Sim event."])
+        self.button_action_type.currentTextChanged.connect(self._button_action_type_changed)
 
-        button_form.addRow("Function:", self.button_function, help_text= "The function to be called when the button is pressed. Functions are looked for in a file called extra_functions.py, which you should make inside of your model's simulation directory.")
-        button_form.addRow("Action type:", self.button_action_type, help_text= "When replace params is chosen, function will be expected to return a new params dataclass, to load a new set of parameters. When sim event is chosen, the function is expected to return an event, which is pushed to the sim event queue for your simulation to eventually look at and act upon.")
+        button_form.addRow("Function:", self.button_function)
+        button_form.addRow("Action type:", self.button_action_type)
         return button_page
 
     def _build_control_editor(self) -> qw.QWidget:
@@ -781,27 +739,6 @@ class ControlSettingsTab(qw.QWidget):
 
         self._refresh_tree()
 
-    def _change_effect_changed(self, txt: str) -> None:
-        control_spec = self._get_control_spec()
-        if control_spec is None:
-            return
-        if control_spec.get("control_type") == "button":
-            control_spec.pop("param_name", None)
-            return
-
-        combo = self.sender() if isinstance(self.sender(), qw.QComboBox) else self._active_change_effect_combo()
-        if combo is None:
-            return
-
-        idx = combo.currentIndex()
-        val = combo.itemData(idx)
-        if isinstance(val, str) and val:
-            control_spec["change_effect"] = val
-        else:
-            control_spec["change_effect"] = txt.replace("(missing) ", "").strip()
-
-        self._refresh_tree()
-
     def _control_yaml_key(self, spec: ControlSpec, index: int, used: set[str]) -> str:
         ctype = str(spec.get("control_type", ""))
         if ctype == "button":
@@ -959,6 +896,7 @@ class ControlSettingsTab(qw.QWidget):
             return
 
         kind = payload[0]
+        print(f"{payload=}")
 
         if kind == "divider":
             _, divider_idx = payload
@@ -1182,6 +1120,9 @@ class ControlSettingsTab(qw.QWidget):
         if ctype not in {"entry_block", "dropdown", "checkbox", "button"}:
             ctype = "entry_block"
 
+
+        if ctype == "button":
+            print(f"{spec=}")
         self.combo_control_type.blockSignals(True)
         self.combo_control_type.setCurrentText(ctype)
         self.combo_control_type.blockSignals(False)
@@ -1243,68 +1184,50 @@ class ControlSettingsTab(qw.QWidget):
         self.range_min.blockSignals(False)
         self.range_max.blockSignals(False)
 
-        use_dim_func = spec.get("use_dim_func", False)
-        if use_dim_func:
-            self.dim_func_check.blockSignals(True)
-            self.dim_func_check.setChecked(True)
-            self.dim_func_check.blockSignals(False)
-
-        if spec.get("dim_from", None) is not None:
-            func_name = spec.get("dim_from")
-            self.dim_func_name.blockSignals(True)
-            self.dim_func_name.setText(func_name)
-            self.dim_func_name.blockSignals(False)
+        if spec.get("dim_from"):
+            dim = spec.get("dim_from", 1)
+            self.vec_dep.setChecked(True)
+        else:
+            dim = spec.get("dim", 1)
 
         self.vec_dim.blockSignals(True)
         self.mat_rows.blockSignals(True)
         self.mat_cols.blockSignals(True)
-        self.dim_func_safe_default_entry.blockSignals(True)
+        self.vec_dep.blockSignals(True)
+        self.mat_rows_dep.blockSignals(True)
+        self.mat_cols_dep.blockSignals(True)
 
         if kind == "vector":
-            if spec.get("dim") is not None:
-                dim = spec.get("dim")
-                try:
-                    self.vec_dim.setText(str(dim))
-                except Exception:
-                    self.vec_dim.setText("1" if not use_dim_func else "")
-            else:
-                self.vec_dim.setText("1" if not use_dim_func else "")
+            try:
+                self.vec_dim.setText(str(dim))
+            except Exception:
+                self.vec_dim.setText("1")
             self.dim_stack.setCurrentIndex(0)
 
-            if spec.get("safe_default") is not None:
-                try:
-                    safe_default = spec.get("safe_default")
-                    self.dim_func_safe_default_entry.setText(str(safe_default))
-                except Exception:
-                    self.dim_func_safe_default_entry.setText("0.1")
         elif kind == "matrix":
-            if spec.get("dim") is not None:
-                dim = spec.get("dim")
+            rows, cols = 1, 1
+            if isinstance(dim, (list, tuple, FlowSeq)) and len(dim) == 2:
                 try:
                     rows, cols = dim[0], dim[1]
-                    self.mat_rows.setText(str(rows))
-                    self.mat_cols.setText(str(cols))
+                    if isinstance(rows, str):
+                        self.mat_rows_dep.setChecked(True)
+                    if isinstance(cols, str):
+                        self.mat_cols_dep.setChecked(True)
                 except Exception:
                     rows, cols = 1, 1
-                    self.mat_rows.setText("1" if not use_dim_func else "")
-                    self.mat_cols.setText("1" if not use_dim_func else "")
-            else:
-                self.mat_rows.setText("1" if not use_dim_func else "")
-                self.mat_cols.setText("1" if not use_dim_func else "")
+
+            self.mat_rows.setText(str(rows))
+            self.mat_cols.setText(str(cols))
             self.dim_stack.setCurrentIndex(1)
-            if spec.get("safe_default") is not None:
-                try:
-                    safe_default = spec.get("safe_default")
-                    self.dim_func_safe_default_entry.setText(str(safe_default))
-                except Exception:
-                    self.dim_func_safe_default_entry.setText("0.1")
         else:
             self.dim_stack.setCurrentIndex(0)
 
         self.vec_dim.blockSignals(False)
         self.mat_rows.blockSignals(False)
         self.mat_cols.blockSignals(False)
-        self.dim_func_safe_default_entry.blockSignals(False)
+        self.vec_dep.blockSignals(False)
+        self.mat_rows_dep.blockSignals(False)
+        self.mat_cols_dep.blockSignals(False)
 
         eform = getattr(self, "_entry_form", None)
         if eform is not None:
@@ -1315,8 +1238,6 @@ class ControlSettingsTab(qw.QWidget):
             eform.setRowVisible(self.range_min, show_scalar)
             eform.setRowVisible(self.range_max, show_scalar)
 
-            eform.setRowVisible(self.dim_func_row, show_dim)
-            eform.setRowVisible(self.dim_func_safe_default_entry, show_dim)
             eform.setRowVisible(self.dim_stack, show_dim)
         else:
             self.combo_scalar_type.setVisible(kind == "scalar")
@@ -1324,21 +1245,18 @@ class ControlSettingsTab(qw.QWidget):
             self.range_max.setVisible(kind == "scalar")
             self.dim_stack.setVisible(kind in {"vector", "matrix"})
 
+
     def _load_dropdown_table(self, spec: ControlSpec) -> None:
         use_names_func = spec.get("use_names_func", False)
         use_vals_func = spec.get("use_vals_func", False)
 
         if use_names_func:
             names_from = spec.get("names_from")
-        else:
-            names_from = ""
 
         names = spec.get("names", [])
 
         if use_vals_func:
             values_from = spec.get("values_from")
-        else:
-            values_from = ""
 
         values = list(spec.get("values", []))
 
@@ -1355,19 +1273,11 @@ class ControlSettingsTab(qw.QWidget):
             self.dropdown_names_from_check.setChecked(True)
             self.dropdown_names_from_entry.setText(names_from)
             self._set_dropdown_column_mode(0, True)
-        else:
-            self.dropdown_names_from_check.setChecked(False)
-            self.dropdown_names_from_entry.setText("")
-            self._set_dropdown_column_mode(0, False)
 
         if use_vals_func:
             self.dropdown_values_from_check.setChecked(True)
             self.dropdown_values_from_entry.setText(names_from)
             self._set_dropdown_column_mode(1, True)
-        else:
-            self.dropdown_values_from_check.setChecked(False)
-            self.dropdown_values_from_entry.setText("")
-            self._set_dropdown_column_mode(1, False)
 
         self._block_dropdown_entry_signals(False)
 
@@ -1422,12 +1332,11 @@ class ControlSettingsTab(qw.QWidget):
         self.button_function.setText(str(spec.get("function", "")))
         self.button_function.blockSignals(False)
 
-        action_type = str(spec.get("action_type", "replace_params"))
+        action_type = str(spec.get("action_type", "Replace params"))
         self.button_action_type.blockSignals(True)
-        if action_type == "replace_params":
-            self.button_action_type.setCurrentText("Replace params")
-        elif action_type == "sim_event":
-            self.button_action_type.setCurrentText("Sim event")
+        if self.button_action_type.findText(action_type) < 0:
+            action_type = "Replace params"
+        self.button_action_type.setCurrentText(action_type)
         self.button_action_type.blockSignals(False)
 
     def _button_function_changed(self, txt: str) -> None:
@@ -1439,18 +1348,13 @@ class ControlSettingsTab(qw.QWidget):
         control_spec["function"] = txt
         self._refresh_tree()
 
-    def _button_action_type_changed(self, idx: int) -> None:
+    def _button_action_type_changed(self, txt: str) -> None:
         control_spec = self._get_control_spec()
         if control_spec is None:
             return
         if control_spec.get("control_type") != "button":
             return
-
-        match self.button_action_type.currentText():
-            case "Replace params":
-                control_spec["action_type"] = "replace_params"
-            case "Sim event":
-                control_spec["action_type"] = "sim_event"
+        control_spec["action_type"] = txt
 
     def _get_control_spec(self):
         ref = self._current_control_ref()
@@ -1463,11 +1367,7 @@ class ControlSettingsTab(qw.QWidget):
         control_spec = self._get_control_spec()
         if control_spec is None:
             return
-
-        if control_spec["control_type"] == "button":
-            control_spec["name"] = txt
-        else:
-            control_spec["label"] = txt
+        control_spec["label"] = txt
 
     def _control_tooltip_changed(self) -> None:
         control_spec = self._get_control_spec()
@@ -1477,9 +1377,6 @@ class ControlSettingsTab(qw.QWidget):
 
     def _entry_kind_changed(self, kind: str) -> None:
         control_spec = self._get_control_spec()
-        if control_spec is None:
-            return
-
         control_spec["type"] = kind
         if control_spec is None:
             return
@@ -1525,42 +1422,39 @@ class ControlSettingsTab(qw.QWidget):
 
         control_spec["range"] = flow_seqify([int(r0), int(r1)]) if control_spec.get("scalar_type") == "int" else flow_seqify([r0, r1])
 
-    def _dim_changed(self, _ = None) -> None:
+    def _dim_changed(self, _=None) -> None:
         control_spec = self._get_control_spec()
         if control_spec is None:
             return
 
         kind = control_spec.get("type")
-        if kind == "vector" or kind == "matrix":
-            control_spec["use_dim_func"] = self.dim_func_check.isChecked()
-            control_spec["dim_from"] = self.dim_func_name.text()
-
         if kind == "vector":
+            if self.vec_dep.isChecked():
+                control_spec["dim_from"] = self.vec_dim.text()
+                if control_spec.get("dim"):
+                    del control_spec["dim"]
+                return
+            
             try:
                 dim = int(self.vec_dim.text())
                 control_spec["dim"] = dim
             except ValueError:
-                control_spec["dim"] = 1
-
-            try:
-                safe_default = float(self.dim_func_safe_default_entry.text())
-                control_spec["safe_default"] = safe_default
-            except ValueError:
-                control_spec["safe_default"] = 0.1
+                return
+            finally:
+                if control_spec.get("dim_from"):
+                    del control_spec["dim_from"]
 
         elif kind == "matrix":
-            try:
-                dim_rows = int(self.mat_rows.text())
-                dim_cols = int(self.mat_cols.text())
+            dim_rows = self.mat_rows.text()
+            dim_cols = self.mat_cols.text()
+            if self.mat_rows_dep.isChecked() or self.mat_cols_dep.isChecked():
+                control_spec["dim_from"] = flow_seqify([dim_rows, dim_cols])
+                if control_spec.get("dim"):
+                    del control_spec["dim"]
+            else:
                 control_spec["dim"] = flow_seqify([dim_rows, dim_cols])
-            except ValueError:
-                control_spec["dim"] = flow_seqify([1,1])
-
-            try:
-                safe_default = float(self.dim_func_safe_default_entry.text())
-                control_spec["safe_default"] = safe_default
-            except ValueError:
-                control_spec["safe_default"] = 0.1
+                if control_spec.get("dim_from"):
+                    del control_spec["dim_from"]
 
     def _dropdown_item_changed(self, item: qw.QTableWidgetItem) -> None:
         control_spec = self._get_control_spec()

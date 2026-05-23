@@ -52,7 +52,7 @@ class DemoSettingsTab(qw.QWidget):
         self.demo_list = qw.QListWidget()
         self.combo_function = qw.QComboBox()
         self.combo_preset = qw.QComboBox()
-        self.combo_postprocessing = qw.QComboBox()
+        self.combo_preprocessing = qw.QComboBox()
         self.entry_sim_speed = qw.QLineEdit()
         self.entry_sim_speed.setPlaceholderText("0")
         self.demo_list.setMinimumWidth(260)
@@ -125,7 +125,7 @@ class DemoSettingsTab(qw.QWidget):
         sec.form.addRow("Simulation model:", self.combo_model)
         sec.form.addRow("Simulation function:", self.combo_function)
         sec.form.addRow("Default preset:", self.combo_preset)
-        sec.form.addRow("Plot postprocessing:", self.combo_postprocessing)
+        sec.form.addRow("Plot preprocessing:", self.combo_preprocessing)
         sec.form.addRow("Simulation Speed", self.entry_sim_speed)
         # sec.form.addRow(self.chk_starting_lims)
         # sec.form.addRow(self._wrap_layout(lims_grid))
@@ -152,7 +152,7 @@ class DemoSettingsTab(qw.QWidget):
             self.combo_model,
             self.combo_function,
             self.combo_preset,
-            self.combo_postprocessing,
+            self.combo_preprocessing,
             self.entry_sim_speed
         ]
 
@@ -165,7 +165,7 @@ class DemoSettingsTab(qw.QWidget):
     def _refresh_models(self):
         old_combo = self.combo_model.currentText()
         old_sim_function = self.combo_function.currentText()
-        old_postprocessing_function = self.combo_postprocessing.currentText()
+        old_preprocessing_function = self.combo_preprocessing.currentText()
         old_preset = self.combo_preset.currentText()
 
         self.combo_model.clear()
@@ -175,7 +175,7 @@ class DemoSettingsTab(qw.QWidget):
         self.combo_model.setCurrentText(old_combo)
 
         self._refresh_presets(old_preset)
-        self._refresh_functions(old_sim_function, old_postprocessing_function)
+        self._refresh_functions(old_sim_function, old_preprocessing_function)
 
         self.window.status.show("Refreshed models.", 3000)
 
@@ -234,9 +234,9 @@ class DemoSettingsTab(qw.QWidget):
     def _update_internal_name(self, text):
         self.lbl_internal_name.setText(make_shortname(text))
 
-    def _refresh_functions(self, old_sim_function= None, old_postprocessing_function= None):
+    def _refresh_functions(self, old_sim_function= None, old_preprocessing_function= None):
         self.combo_function.clear()
-        self.combo_postprocessing.clear()
+        self.combo_preprocessing.clear()
 
         current_model = self.combo_model.currentText()
         if not current_model: return
@@ -256,8 +256,8 @@ class DemoSettingsTab(qw.QWidget):
 
         pot_extra_func_path = self.env.models_dir / current_model / "simulation"/ "extra_functions.py"
         if not pot_extra_func_path.exists():
-            self.combo_postprocessing.addItem("None")
-            self.combo_postprocessing.setCurrentText("None")
+            self.combo_preprocessing.addItem("None")
+            self.combo_preprocessing.setCurrentText("None")
             return
 
         try:
@@ -268,11 +268,12 @@ class DemoSettingsTab(qw.QWidget):
             self.window.status.show(f"Error loading sim functions module: {e}.", 4000)
             return
 
+        self.combo_preprocessing.addItem("None")
         for function in extra_functions_list:
-            self.combo_postprocessing.addItem(function)
+            self.combo_preprocessing.addItem(function)
 
-        if old_postprocessing_function is not None:
-            self.combo_postprocessing.setCurrentText(old_postprocessing_function)
+        if old_preprocessing_function is not None:
+            self.combo_preprocessing.setCurrentText(old_preprocessing_function)
 
     def _refresh_presets(self, old_preset= None):
         self.combo_preset.clear()
@@ -351,37 +352,36 @@ class DemoSettingsTab(qw.QWidget):
                 self.demo_list.setCurrentRow(row)
                 break
 
-
     def _get_new_demo_dict(self, new= False):
-        new_demo = copy.deepcopy(self.working_data.get("demos", {}).get(self.combo_model.currentText(), {}))
+        old_key = self._current_demo_key()
+        if old_key and old_key in self.working_data.get("demos", {}):
+            new_demo = copy.deepcopy(self.working_data["demos"][old_key])
+        else:
+            new_demo = {
+                "name": "",
+                "desc": "",
+                "details": {}
+            }
+
         new_demo["name"] = self.edit_demo_display_name.text()
         new_demo["desc"] = self.edit_demo_desc.toPlainText()
-        new_demo["details"] = {}
-        if self.combo_postprocessing.currentText() != "None":
-            new_demo["details"]["plot_postprocess"] = self.combo_postprocessing.currentText()
-        else:
-            new_demo["details"]["plot_postprocess"] = None
-        new_demo["details"]["simulation_model"] = self.combo_model.currentText()
-        new_demo["details"]["simulation_function"] = self.combo_function.currentText()
-        new_demo["details"]["default_preset"] = self.combo_preset.currentText()
+
+        details = new_demo.setdefault("details", {})
+        details["plot_preprocess"] = (
+            self.combo_preprocessing.currentText()
+            if self.combo_preprocessing.currentText() != "None"
+            else None
+        )
+        details["simulation_model"] = self.combo_model.currentText()
+        details["simulation_function"] = self.combo_function.currentText()
+        details["default_preset"] = self.combo_preset.currentText()
+
         if self.entry_sim_speed.text():
             try:
                 float(self.entry_sim_speed.text())
                 new_demo["details"]["simulation_speed"] = self.entry_sim_speed.text()
             except ValueError:
                 pass
-        # if self.chk_starting_lims.isChecked():
-            # try:
-            #     xlims = [float(self.edit_xlim_lo.text().strip()), float(self.edit_xlim_hi.text().strip())]
-            #     ylims = [float(self.edit_ylim_lo.text().strip()), float(self.edit_ylim_hi.text().strip())]
-            # except ValueError:
-            #     self.window.status.show("Error reading your limits. Please double check.", 4000)
-            #     return new_demo
-            # else:
-            #     axis_settings = new_demo["details"].setdefault("axis_settings", {})
-            #     lims = flow_seqify([xlims, ylims])
-            #     # lims = FlowSeq([FlowSeq(xlims), FlowSeq(ylims)])
-            #     axis_settings["limits"] = {"a1": lims}
 
         return new_demo
 
@@ -412,10 +412,10 @@ class DemoSettingsTab(qw.QWidget):
             self._refresh_presets()
             func_index = self.combo_function.findText(details["simulation_function"])
             preset_index = self.combo_preset.findText(details["default_preset"])
-            post_process_index = self.combo_postprocessing.findText(details["plot_postprocess"])
+            pre_process_index = self.combo_preprocessing.findText(details["plot_preprocess"])
             self.combo_function.setCurrentIndex(func_index)
             self.combo_preset.setCurrentIndex(preset_index)
-            self.combo_postprocessing.setCurrentIndex(post_process_index)
+            self.combo_preprocessing.setCurrentIndex(pre_process_index)
 
             # lims = details.get("axis_settings", {}).get("limits", {}).get("a1", -1)
             # if lims != -1:
@@ -449,7 +449,6 @@ class DemoSettingsTab(qw.QWidget):
             print(f"returning becauese not new key")
             return
 
-        print(f"getting new demo dict")
         new_demo = self._get_new_demo_dict()
         old_demo = self.working_data["demos"].get(old_key, {})
 
@@ -576,7 +575,7 @@ class DemoSettingsTab(qw.QWidget):
         self.combo_model.currentIndexChanged.connect(self._on_model_changed_autosave)
         self.combo_function.currentIndexChanged.connect(self._save_demo_changes)
         self.combo_preset.currentIndexChanged.connect(self._save_demo_changes)
-        self.combo_postprocessing.currentIndexChanged.connect(self._save_demo_changes)
+        self.combo_preprocessing.currentIndexChanged.connect(self._save_demo_changes)
 
         self.entry_sim_speed.textChanged.connect(self._save_demo_changes)
 

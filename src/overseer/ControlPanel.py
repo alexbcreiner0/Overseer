@@ -52,7 +52,7 @@ class ControlPanel(qw.QWidget):
     slotAxesChanged = qc.pyqtSignal(int)
     slotAxesCatChanged = qc.pyqtSignal(int)
     paramsReplaced = qc.pyqtSignal(object)
-    postProcess = qc.pyqtSignal(object)
+    preProcess = qc.pyqtSignal(object)
     simEvent = qc.pyqtSignal(object)
 
     def __init__(
@@ -101,7 +101,12 @@ class ControlPanel(qw.QWidget):
             self.extra_functions_dict = {}
 
         plot_controls = self._build_plot_controls_widget()
-        sim_controls = self._build_sim_controls_widget()
+        try:
+            sim_controls = self._build_sim_controls_widget()
+        except Exception as e:
+            sim_controls = qw.QWidget()
+            self.status_bar.showMessage(f"Error building sim controls panel: {e}")
+            logger.log(logging.ERROR, f"Error building sim controls panel: {e}", exc_info= e)
 
         sim_controls_scroll_area.setWidget(sim_controls)
         plot_controls_scroll_area.setWidget(plot_controls)
@@ -774,7 +779,7 @@ class ControlPanel(qw.QWidget):
         button_lay = qw.QHBoxLayout(button_wrapper)
         button = qw.QPushButton(button_name)
         button_lay.addWidget(button)
-        button_lay.setContentsMargins(15, 15, 15, 15)
+        button_lay.setContentsMargins(3, 15, 3, 15)
         button_lay.setSpacing(2)
 
         extra_functions_module = importlib.import_module(f"models.{self.sim_model}.simulation.extra_functions")
@@ -802,10 +807,11 @@ class ControlPanel(qw.QWidget):
                 case "replace_params":
                     self.params = result
                     self.load_new_params() 
-                    self._apply_plot_postprocessing()
+                    self._apply_plot_preprocessing()
                     self.paramsReplaced.emit(result)
 
                 case "sim_event":
+                    print("emitting")
                     self.simEvent.emit(result)
 
         button.clicked.connect(outer_func)
@@ -980,10 +986,10 @@ class ControlPanel(qw.QWidget):
         dim = info.get("dim")
         dim_from = info.get("dim_from")
 
-        if dim is None and dim_from is None:
-            raise ValueError("Error, no dimension information found.")
-
-        if dim is None:
+        use_dim_func = info.get("use_dim_func", False)
+        if use_dim_func: 
+            if dim_from is None:
+                raise ValueError("Error, no dimension function specified.")
             func_name = info.get("dim_from")
             if func_name not in self.extra_functions_dict:
                 raise ValueError(f"Error: parameter defined by function {func_name} not found in extra_functions.py")
@@ -992,6 +998,9 @@ class ControlPanel(qw.QWidget):
                 dim = function(self.params)
             except Exception as e:
                 raise ValueError(f"Error while calculating new value for parameter with function {func_name}: {e}")
+        else:
+            if dim is None:
+                raise ValueError("Error, no dimension specified.")
 
         return dim
 
@@ -1128,8 +1137,6 @@ class ControlPanel(qw.QWidget):
         if is_meta:
             change_effect = "restart"
 
-        print(f"{is_meta=}")
-
         sim_scroll = self.content.widget(0)
         plot_scroll = self.content.widget(1)
 
@@ -1152,8 +1159,7 @@ class ControlPanel(qw.QWidget):
 
         if not self.block_signals:
             if change_effect == "restart" and self.main_window._param_change_mode != "message" or is_meta:
-                print(f"applying postprocessing")
-                self._apply_plot_postprocessing()
+                self._apply_plot_preprocessing()
             self.paramChanged.emit(name, new_val, change_effect, is_meta)
 
     def _snapshot_focus(self):
@@ -1279,22 +1285,22 @@ class ControlPanel(qw.QWidget):
 
         return value
 
-    def _apply_plot_postprocessing(self):
-        plot_postprocess = self.demo.get("details", {}).get("plot_postprocess")
-        if plot_postprocess is not None:
-            if plot_postprocess not in self.extra_functions_dict:
-                self.status_bar.showMessage(f"Error: parameter defined by function {plot_postprocess} not found in extra_functions.py", 3000)
+    def _apply_plot_preprocessing(self):
+        plot_preprocess = self.demo.get("details", {}).get("plot_preprocess")
+        if plot_preprocess is not None:
+            if plot_preprocess not in self.extra_functions_dict:
+                self.status_bar.showMessage(f"Error: parameter defined by function {plot_preprocess} not found in extra_functions.py", 3000)
                 return
-            post_process_function = self.extra_functions_dict[plot_postprocess]
+            pre_process_function = self.extra_functions_dict[plot_preprocess]
             try:
                 base_data = copy.deepcopy(self._base_plotting_data)
-                new_data = post_process_function(self.params, base_data)
+                new_data = pre_process_function(self.params, base_data)
                 self.plotting_data = new_data
                 self.refresh_dropdown_choices(new_data)
-                self.postProcess.emit(new_data)
+                self.preProcess.emit(new_data)
             except Exception as e:
-                logger.log(logging.ERROR, f"Failed to apply plot post-processing: {e}", exc_info= e)
-                self.status_bar.showMessage(f"Failed to apply plot post-processing: {e}", 3000)
+                logger.log(logging.ERROR, f"Failed to apply plot pre-processing: {e}", exc_info= e)
+                self.status_bar.showMessage(f"Failed to apply plot pre-processing: {e}", 3000)
 
     def refresh_dropdown_choices(self, new_plotting_data: dict) -> None:
         if not new_plotting_data:

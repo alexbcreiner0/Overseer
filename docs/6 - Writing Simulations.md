@@ -12,9 +12,9 @@ The Python code which the user is expected to interact with is found inside of a
 
 The Append, Extend and Replace dataclasses are wrappers that are automatically imported in the starter code created when Overseer creates a new model, and instruct Overseer on what to do with the data it is being handed. They will be discussed in more detail below. 
 
-The second input effectively allows you to specify a default x-axis for matplotlib to use when plotting curves. This is especially useful if you are plotting lots of different time-series curves and don't want to have to fuss over specifying an x-axis array every time. 
+The second output effectively allows you to specify a default x-axis for matplotlib to use when plotting curves. This is especially useful if you are plotting lots of different time-series curves and don't want to have to fuss over specifying an x-axis array every time. 
 
-Alternatively to a second input, a default x-axis can also be specified by having a key in the output dictionary called `"t"`. Keep in mind that this can cause unintended behavior if you leave a field blank by accident. 
+Alternatively to a second output, a default x-axis can also be specified by having a key in the output dictionary called `"t"`. Keep in mind that this can cause unintended behavior if you leave a field blank by accident. 
 
 Values of the dictionary output have an identical flexibility structure to the optional $t$ output. They can be:
 - Lists or Numpy arrays.
@@ -29,8 +29,9 @@ from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
 import random
+import queue
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue = None):
     model = Model(100, 10)
     t = []
     for i in range(1000):
@@ -78,8 +79,9 @@ from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 from .Resources import Model
 import numpy as np
+import queue
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue = None):
     model = Model(100, 10)
     t = []
     for i in range(1000):
@@ -95,17 +97,17 @@ Where `Resources.py` is a file we have created in our `simulation` directory tha
 
 Below are other examples of valid simulation functions:
 ```python
-def example_sim1(params):
+def example_sim1(params, event_queue):
 	t = np.linspace(-5,5,300)
 	data = {"sin": np.sin(t), "cos": np.cos(t)}
 	return data, t
 	
-def example_sim2(params):
+def example_sim2(params, event_queue):
 	t = np.linspace(-5,5,300)
 	data = {"sin": np.sin(t), "cos": np.cos(t), "t": t}
 	return data
 	
-def example_sim3(params):
+def example_sim3(params, event_queue):
 	t = -5.0
 	eps = 0.03
 	for _ in range(300):
@@ -113,7 +115,7 @@ def example_sim3(params):
 		data = {"sin": Append(np.sin(t)), "cos": Append(np.cos(t))}
 	return data, Append(t)
 	
-def example_sim4(params):
+def example_sim4(params, event_queue):
 	t = -5.0
 	eps = 0.03
 	for _ in range(300):
@@ -123,6 +125,7 @@ def example_sim4(params):
 ```
 
 All of the above simulation functions are perfectly valid, and they all produce (effectively) the same output (please ignore the missing initial point in examples 3 and 4). To understand why all of these options are here, we need to discuss how the choices we make in this regard affect the efficiency of the simulation.
+
 # Efficiency Tips
 Suppose we wished to track the Gini coefficient in our Boltzmann wealth model from above. We might first modify our Model class to keep track of data on it's own each step:
 
@@ -131,8 +134,9 @@ from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
 import random
+import queue
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue):
     model = Model(100, 10)
     t = []
     for i in range(1000):
@@ -209,7 +213,7 @@ from overseer.tools.dataclasses import Replace, Extend, Append
 Here is how we use these in our code to avoid sending Overseer redundant data each step. In the `get_trajectories` function, we make the following change:
 
 ```python
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue):
     model = Model(100, 10)
     for t in range(10000):
         yield model.traj, Append(t)
@@ -256,7 +260,7 @@ from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
 import random
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue):
     model = Model(100, 10)
     yield model.traj
     for t in range(10000):
@@ -328,6 +332,90 @@ class Model:
 **Warning**: If you attempt to **Append** a list-like set of numbers rather than **Extend** them, Overseer will interpret that as you trying to plot a **vector** quantity, and interpret that set of numbers as a **single** piece of data. See [the curve plotting documentation](7%20-%20Plots%20and%20Categories.md#Vector%20Plots) for more information on this feature.
 
 One final note about building efficient simulations in Overseer is to avoid passing Numpy arrays whenever possible. Since Overseer expects to be managing its own datasets, and it wants to be ready to append the data quickly, it will always automatically convert any Numpy arrays that it's been handed into regular Python lists. This itself takes time $O(n)$. Numpy arrays are great, and no doubt have their use within your simulation. However, you should try to keep them inside of your simulation as much as possible, and avoid passing them in their raw form to Overseer. 
+
+## The Event Queue and Live Updating
+The second input to the trajectories function is an event queue, which Overseer can use to communicate with your simulation while it runs. Right now, this has two uses:
+1. Live updating of parameters without the restarting of the simulation.
+2. Creating buttons in the control panel which can instruct the simulation to do something it otherwise wouldn't upon clicking.
+
+We'll focus on case 1 here. For case 2, see [the section on the control panel](8%20-%20Control%20Panel%20Widgets). To make the example simple, we will work with our simple sine/cosine model from the quick-start tutorial:
+
+```python
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+import queue
+
+def get_trajectories(params: Params, *, event_queue = None):
+    a, b = params.a, params.b
+
+    eps = 0.03
+    t = -5.0
+
+    for _ in range(300):
+        t += eps
+        traj = {
+            "sine": Append(a*np.sin(b*t)),
+            "cosine": Append(b*np.cos(b*t))
+        }
+
+        yield traj, Append(t)
+```
+
+We have two scalar parameters, $a$ and $b$. When we adjust the sliders for either of these, the simulation restarts and we see a plot of these curves with the new frequency/amplitude. This happens because the default parameter change response is set to "Restart":
+
+![](parameter-change-settings.png)
+
+Try changing this from 'Restart' to 'Send message' and changing the $b$ parameter. Nothing happens now, because the simulation is no longer being stopped and restarted. Instead, what happens is that Overseer registers this change as an **event**, and adds the following dictionary to the simulation's **event queue**:
+
+```python
+            event = {
+                "event": "param_changed",
+                "param_name": a,
+                "new_val": 1.1
+            }
+```
+
+This queue is exactly the `event_queue` which our simulation functions always receive as a second argument. It's thus up to the user to periodically look at this queue and act on what it finds there. We can easily do this by just checking to see if something is in the queue each iteration of the `for` loop:
+
+```python
+from .parameters import Params
+from overseer.tools.dataclasses import Replace, Extend, Append
+import numpy as np
+import queue
+
+def get_trajectories(params: Params, event_queue):
+    a, b = params.a, params.b
+
+    eps = 0.03
+    t = -5.0
+
+    for _ in range(300):
+        try:
+            info = event_queue.get_nowait()
+            if info["event"] == "param_changed":
+                param = info["param_name"]
+                new_val = info["new_val"]
+                if param == "a":
+                    a = new_val
+                elif param == "b":
+                    b = new_val
+        except queue.Empty:
+            pass
+
+        t += eps
+        traj = {
+            "sine": Append(a*np.sin(b*t)),
+            "cosine": Append(b*np.cos(b*t))
+        }
+
+        yield traj, Append(t)
+```
+
+Now, if we restart our simulation, and try adjusting the $b$ parameter while the simulation is running, we will see the effects immediately:
+
+![](assets/live-updating-demo.gif)
+
 ## Non-Python Simulations
 The user is given complete freedom of what the functions/generators are allowed to interact with Overseer. Because you are running arbitrary Python code, there is nothing stopping you from simply writing code to tell Python to run some other interpreter, or some other binary file compiled from a different language, interface with it in some way, and pass the results on to Overseer. 
 
@@ -353,7 +441,7 @@ Our C++ code will simply be
 ```python
 EXE_PATH = "path to C++ binary"
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue):
     reporter = Reporter(EXE_PATH, params, LOG_PATH)
     sim_finished = False
     while not sim_finished:

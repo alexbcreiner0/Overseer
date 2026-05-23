@@ -932,12 +932,13 @@ class MainWindow(qw.QMainWindow):
         control_panel.slotAxesChanged.connect(lambda slot_index: self.on_slot_axes_changed(slot_index, source= "user"))
         control_panel.slotAxesCatChanged.connect(self.on_slot_axes_cat_save_request)
         control_panel.paramsReplaced.connect(self._on_params_replaced)
-        control_panel.postProcess.connect(self._apply_plot_postprocessing)
+        control_panel.preProcess.connect(self._apply_plot_preprocessing)
         control_panel.simEvent.connect(self._on_sim_event)
 
         return graph_panel, control_panel, dropdown_choices
 
     def _on_sim_event(self, event):
+        print(f"Received {event}")
         self.sim_event_queue.put(event)
 
     def _on_params_replaced(self, data):
@@ -945,7 +946,7 @@ class MainWindow(qw.QMainWindow):
         self.params = new_params
         self.start_sim()
 
-    def _apply_plot_postprocessing(self, new_plotting_data):
+    def _apply_plot_preprocessing(self, new_plotting_data):
         self.plotting_data = new_plotting_data
         self.graph_panel.apply_plotting_data(new_plotting_data, replot= False)
 
@@ -1113,6 +1114,7 @@ class MainWindow(qw.QMainWindow):
         self.param_change_mode_drop.addItem("Widgets decide")
         self.param_change_mode_drop.addItem("Restart")
         self.param_change_mode_drop.addItem("Send message")
+        self.param_change_mode_drop.setCurrentIndex(1)
         self.param_change_mode_drop.currentTextChanged.connect(self._on_param_change_mode_changed)
         nav_toolbar.addWidget(self.param_change_mode_drop)
 
@@ -2410,7 +2412,7 @@ class MainWindow(qw.QMainWindow):
         new_cp.slotAxesChanged.connect(self.on_slot_axes_changed)
         new_cp.slotAxesCatChanged.connect(self.on_slot_axes_cat_save_request)
         new_cp.paramsReplaced.connect(self._on_params_replaced)
-        new_cp.postProcess.connect(self._apply_plot_postprocessing)
+        new_cp.preProcess.connect(self._apply_plot_preprocessing)
         new_cp.simEvent.connect(self._on_sim_event)
 
         # Swap it into the splitter

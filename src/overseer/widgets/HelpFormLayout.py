@@ -55,14 +55,13 @@ class HelpFormLayout(qw.QFormLayout):
         if not isinstance(field, qw.QWidget):
             raise TypeError("HelpFormLayout.addRow(field=...) must be a QWidget")
 
-        # Only wrap when explicitly requested
         if help_flag or (isinstance(help_text, str) and help_text.strip()):
             wrapped = self._wrap_field(field, help_text=help_text)
             return super().addRow(label, wrapped)
 
         return super().addRow(label, field)
 
-    def setRowVisible(self, *args):  # noqa: N802
+    def setRowVisible(self, *args): 
         """
         Compatibility with setRowVisible(widget,bool) even if widget is nested in our wrapper.
         """
@@ -92,7 +91,6 @@ class HelpFormLayout(qw.QFormLayout):
         if self._button_fixed_width > 0:
             btn.setFixedWidth(self._button_fixed_width)
 
-        # If you requested help but provided no text and no fallback exists, hide/disable.
         if not tip:
             btn.setVisible(False)
             btn.setEnabled(False)

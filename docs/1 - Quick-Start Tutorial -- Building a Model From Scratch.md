@@ -17,12 +17,12 @@ What just happened? When you first load into Overseer, if you don't have one alr
 Inside of the `simulation.py` file for your example model, you should some minimal boilerplate starter code:
 
 ```python
-from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> dict[str, Any]:
+def get_trajectories(params: Params, *, event_queue = None):
     pass
 ```
 
@@ -31,12 +31,12 @@ In this file, you are expected to define a simulation function. A simulation fun
 Let's have our `get_trajectories` function just create some basic plots of Sine and Cosine:
 
 ```python
-from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+def get_trajectories(params: Params, *, event_queue = None):
     t = np.linspace(-5,5,300)
     traj = {
 	    "sine": np.sin(t),
@@ -49,12 +49,12 @@ def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
 If you aren't familiar with Numpy, `np.linspace(-5,5,300)` creates an array of 300 equally spaced numbers between -5 and 5 (inclusive). This will serve as the independent variable, or x-axis. By returning `t` as a second argument like this, we are saying: by default, if the user doesn't specify something different, you are plotting everything with respect to `t`. Alternatively, you can include t as a key in the dictionary:
 
 ```python
-from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+def get_trajectories(params: Params, *, event_queue = None):
     t = np.linspace(-5,5,300)
     traj = {
 	    "t": t,
@@ -68,7 +68,6 @@ def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
 If you don't include `t` as a second output, Overseer will automatically look for a "t" key in the output dictionary to use when it doesn't know what your data for a curve or scatter plot should be plotted with respect to. You could also forego on a "t" array entirely, and specify all independent variable axes manually. For some applications, such as the creation of things like heatmaps and pie charts, this is the most sensible option.
 
 This is about as minimal as a model can get. Let's now save our file and return to the Overseer interface to finish creating our model and get our plots on the screen. 
-
 ## Step 3: Declare Your Plots
 Back in Overseer, let's next move to the Plot Settings tab. Here, you tell Overseer what plots you want to see, how you want them to be organized, and what data to attempt to use for them. 
 
@@ -133,8 +132,9 @@ from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+def get_trajectories(params: Params, *, event_queue = None):
     a, b = params.a, params.b
 
     t = np.linspace(-5,5,300)
@@ -171,12 +171,12 @@ If we run this code, the loop will repeatedly call yield_example() until there i
 Let's alter our simulation like this to make use of `yield`:
 
 ```python
-from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+def get_trajectories(params: Params, *, event_queue = None):
     a, b = params.a, params.b
 
     eps = 0.03
@@ -203,12 +203,12 @@ The code we just wrote isn't very efficient. This is for two reasons:
 If we assume a new piece of data is added to every array element in the dictionary each iteration, and that data is being yielded every iteration, then the data processing here becomes quadratic time $O(n^2)$, where $n$ is the size of the trajectories dictionary. In many if not most applications, this efficiency difference *will not be felt*. I've already had many friends using Overseer falsely blame something slow about their simulation on Overseer. That said, **this efficiency loss can be avoided altogether**, if we are just a little mindful of how we are handling our data. Here is what the fix would look like:
 
 ```python
-from typing import Any
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append
 import numpy as np
+import queue
 
-def get_trajectories(params: Params) -> tuple[dict[str, Any], Any | None]:
+def get_trajectories(params: Params, *, event_queue = None):
     a, b = params.a, params.b
 
     eps = 0.03

@@ -7,10 +7,10 @@ The control settings tab allows you to edit the controls which you see in the co
 Like the plot settings tab and the `plotting_data.yml` file, the control settings tab targets a single specific file of your model folder - `control_panel_data.yml`, found in the `data` folder of your model directory. Also similarly, this is a yaml file, meaning it is very easy to simply edit manually if you would rather do that than work with the GUI interface.
 
 # Common Widget Properties
-All widgets (minus buttons) have a few things in common:
-1. They are assumed to correspond with a specific *single* parameter of your system. This is not a one-to-one correspondence - you can have parameters without control panel widgets, or multiple control panel widgets for a single parameter. 
-2. They have a label field used to identify what they control in the panel. For entry widgets specifically, LaTeX names are allowed. So if your parameter is $\epsilon$, you can make the Greek letter appear as a label by writing in \$\epsilon\$. Again to emphasize, this is currently only supported for entry widgets specifically.  
-3. They all have a ? button next to them which can be clicked or hovered over to show the user additional information about what they control. What appears in the tooltip is controlled by the Tooltip field of the widget settings. This is very useful and highly recommended if you are creating anything meant for demonstrative or educational purposes. **Latex math mode is allowed in these tooltips!** Just wrap whatever math you want to write in dollar signs $. 
+Most widgets have a few things in common:
+1. All widgets excluding buttons are assumed to correspond with a specific *single* parameter of your system. This is not a one-to-one correspondence - you can have parameters without control panel widgets, or multiple control panel widgets for a single parameter. 
+2. They have a label field used to identify what they control in the panel. For *entry widgets specifically*, LaTeX names are allowed. So if your parameter is $\epsilon$, you can make the Greek letter appear as a label by writing in \$\epsilon\$.  
+3. They all have a tooltip button next to them (the \[?\] button) which can be clicked or hovered over to show the user additional information about what they control. What appears in the tooltip is controlled by the Tooltip field of the widget settings. This is very useful and highly recommended if you are creating anything meant for demonstrative or educational purposes. **Latex math mode is allowed in these tooltips!** Just wrap whatever math you want to write in dollar signs $. 
 
 ![](assets/control-tooltip.png)
 # Organization
@@ -67,65 +67,271 @@ All types of entry blocks support LaTeX labels, and tend to look very good when 
 
 ![](assets/scalar-entry-options.png)
 
-###  Vector Entry Blocks
-These are 
+The range min and range max fields refer to the left and right boundaries of the sliders *only*. Users are still free to entry whatever numbers they would like to the text entry, which will override the slider setting. In the future, I will put a checkbox here to lock the entry block to the scalar. 
 
+The change effect field allows you to specify on a widget-by-widget basis when a parameter should restart the simulation vs when it should send an update message instead. These preferences are only respected when the 'Parameter change response' (located in the toolbar) is set to 'Widgets decide)'. If you are a beginner, it is highly recommended to just leave this field with the default 'Restart' and not worry about it. For more information on live updating, see [here](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating).
+###  Vector and Matrix Entry Blocks
+Vector and matrix entries appear as multiple text entries, without any sliders accompanying them. 
+
+![](matrix-vector-entries-widgets.png)
+
+Thus the range min and range max options don't exist for those types of entries. In place of them, we now have options for controlling the dimension. 
+
+![](vector-entry-options.png)
+
+Beginners will want to leave the 'Dimension from function' row alone, and simply specify the dimension in the field beneath that as an integer (in the case of a vector) or pair of integers (in the case of a matrix). For more information about the 'Dimension from function' section above that, [see the section on metaparameters below](#Metaparameters). 
 ## Dropdowns
-Dropdowns are meant for string parameters. For example, choosing from one of several qualitative mode descriptors. 
+Dropdowns are mostly meant for string parameters. For example, choosing from one of several qualitative mode descriptors. However, they can also be used for Boolean values (which sometimes looks better despite checkboxes being supported.)  
 
-Dividers are just meant to separate out groups of controls. The essential settings for each widget are the `control_type` which specifies what kind of widget you're making, and the `param_name`, which is which parameter (defined in your `parameters.py` file) the widget is expected to be wired to. The currently available control types are:
-- `"dropdown"`: Good for qualitative parameters, such as strings or Booleans (sorry, no checkboxes right now)
-- `"entry_block"`: Meant for numerical parameters, which **includes vectors and matrices**. See below for more info. Most of your widgets will be these.
-- `"button_group`": Sets of buttons which execute functions related to your system. Limited functionality right now, see below for more info.
+![](dropdown-options.png)
 
-In more detail now:
-### entry_block
-An example entry block:
-```yaml
-  supply_shock_mag:
-    control_type: "entry_block"
-    param_name: "supply_shock_mag"
-    label: '$\alpha_s = $'
-    type: "scalar"
-    range: [0, 1]
-    scalar_type: "float"
-    tooltip: "Controls the magnitude of the supply shocks."
+The relevant field here is the table, which allow the user to specify any number of (name, value) pairs. The name is what will appear in the dropdown, while the value is the string which will be given as the value of the parameter when that name is selected. Keep in mind that the values given from a dropdown choice are **always** strings. Thus it is up to your simulation to properly cast them as numbers if that is what is supposed to be selected.
+
+Beginngers are advised to leave the 'Names from' fields above the table blank. For more information on the purpose of these, see the [section below on metaparameters](#Metaparameters).
+## Checkboxes
+Checkboxes are very simply control widgets that can allow for easy control of Boolean parameters, e.g. True/False values. There is really not much to say about these since the only fields (a parameter and a change effect) have already been mentioned for other control widget types. 
+## Buttons
+Buttons are a bit different than other widgets, and it took a good while for the true purpose of the button widget to reveal itself over the course of development of Overseer. Unlike all other widgets, buttons are not directly wired to a specific parameter, or any parameter for that matter. Instead, they are wired to a user-defined function. 
+
+![](button-options.png)
+
+In this example case, the function name is `random_parameters`. At creation time, Overseer will look for a function by this exact name inside of an optional file called `extra_functions.py`, which should be created inside of your model's simulation directory. When pressed, Overseer will pass the function the current parameter settings along with a dataclass of relevant working directories (the latter of these will not usually be relevant, but in particular it does point towards your models directory). It will then infer how to use the output depending on the 'Action type setting'. 
+#### Replace parameters
+In the case of 'Replace params', Overseer will expect the function to return a new params dataclass, which it will load into the control panel. This can be useful for things like running your models with random parameter settings.
+#### Example
+For the [Ian Wright cross-dual disequilibrium model found in the examples](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright-cross-dual-3-commodity), I've created a button to generate random parameters. The settings in the control panel are the ones found above. The (abridged) random parameters function inside of the `extra_functions.py` file looks like this:
+
+```python
+def random_parameters(params, env, epsilon=1e-1):
+    new_params = deepcopy(params)
+    # changes applied to copy...
+    return new_params
 ```
-Explanation: `control_type`, `param_name` and `tooltip` we already have mentioned. The other specific settings to the entry block widget are
-- label: Exactly what it sounds like. Note that LaTeX is supported (use single-quotes). What would be displayed here is $\alpha_s = $ followed by an entry where the user can type values for the parameter.
-- type: Should be either `"scalar"`, `"vector"`, or `"matrix"`. Depending on which of these is picked, different extra settings are expected.     
-    - If it is a scalar, then additionally the application expects
-        - range: For scalars, a slider is created. This range defines the left and right extremes of that slider
-        - scalar_type: Self explanatory. Can be `"float"` or `"int"`
-    - If it is a vector or a matrix, then additionally the application expects
-        - dim: In the case of a vector, should be a single integer representing the dimension of the vector. Entries for each coordinate will be created as a column of text entries. In the case of a matrix, should be a pair of the form `[n,m]` where n and m are integers. What will be created is an $n \times m$ grid of text entries for each entry of the matrix.
 
-### dropdown
-An example of a dropdown:
-```yaml
-  economy_type:
-    control_type: "dropdown"
-    param_name: "economy_type"
-    label: "Model Restrictions"
-    names: ["Unrestricted", "Fixed Real Wage", "Non-decreasing Employment", "Fixed Struggle"]
-    values: ["unrestricted", "fixed_real_wage", "nondecreasing_employment", "fixed_struggle"]
-    tooltip: "Various restrictions which we may impose upon the economy. Fixed struggle combines a fixed money wage with non-decreasing employment. This could represent an economy in which the 'yellow' labor unions have significant institutional power and are able to keep the class struggle locked in a stalemate."
+When clicked, the new parameter settings are loaded into the control panel and the simulation restarts automatically:
+
+![](assets/random-parameters.gif)
+
+### Sim event
+In the case of 'Sim event', Overseer will take whatever the output of your function is, and deposit it into the [simulation event queue](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating). It is then the responsibility of the user writing the simulation function to check and act on the data deposited into this queue. 
+
+#### Example
+In the same [Ian Wright model](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright-cross-dual-3-commodity), I've created buttons which the user can click in order to implement 'shocks' to the economy in the form of changes to the technological state of production. The settings look like this:
+
+![](assets/button-settings.gif)
+
+The functions (again, defined inside of a file called `extra_functions.py` in the simulation folder), look like this:
+
+```python
+def implement_culs_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "culs"
+    }
+
+def implement_cslu_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "cslu"
+    }
+
+def implement_cs_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "cs"
+    }
+
+def implement_ls_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "ls"
+    }
 ```
-- For these widgets, the extra settings besides `control_type`, `param_name` and `tooltip` are:
-    - label: What text gets displayed above the dropdown. LaTeX not supported currently.
-    - names: The text options which the user will see
-    - values: If the $i^{th}$ name is chosen in the dropdown, then the $i^{th}$ value of this list is what the application will set the parameter equal to. (So if this is supposed to be a Boolean, make sure that the associated values are `True` or `False` (no quotes).  
 
-### button_group
-This one is a little undercooked right now, but are perfectly usable within their currently limited scope. My only use for it has an entry like this
-```yaml
-  generation:
-    control_type: "button_group"
-    names: ["Random Parameters"]
-    tooltips: ["Generate random parameters. Not entirely working at present."]
-    display: "horizontal"
-    functions: ["random_parameters"]
+The model is designed to be 'stepped' repeatedly, each step corresponding to a discrete time step. At the beginning of each time step, we check for any events:
+
+```python
+if self.event_queue is not None:
+	try:
+		info = self.event_queue.get_nowait()
+		if info["event"] == "shock_requested":
+			shock_type = info["shock_type"]
+			match shock_type:
+				case "culs":
+					self.implement_culs_shock(
+						self.params.shock_mag,
+						epsilon= self.params.cost_tradeoff
+					)
+				case "cslu":
+					self.implement_cslu_shock(
+						self.params.shock_mag,
+						epsilon= self.params.cost_tradeoff
+					)
+				case "cs":
+					self.implement_cslu_shock(
+						self.params.shock_mag,
+						lu= False,
+						epsilon= self.params.cost_tradeoff
+					)
+				case "ls":
+					self.implement_culs_shock(
+						self.params.shock_mag,
+						cu= False,
+						epsilon= self.params.cost_tradeoff
+					)
+	except queue.Empty:
+		pass
 ```
-The idea is that it will create a set of buttons which perform various functions, either arranged horizontally or vertically according to the display setting. Functions for the buttons should be created inside of a file called `extra_functions.py` inside of the simulation folder of your model directory. These functions are expected to take an instance of your parameters dataclass as input and return a new parameters dataclass as output. Names specify the text which is displayed on the button. The $i^{th}$ name will be wired to the $i^{th}$ function. 
 
-# Plot Controls Tab
+The result:
+![](assets/shocks-demo.gif)
+
+### Both?
+In the future, I would also like to add a 'both' option. This would be useful, in particular, for restricting the range of sliders for scalar variables based on the current parameters, or having events which trigger changes to parameters actually feed back into the control panel. However, this is currently not available.
+
+# Metaparameters
+Sometimes, it is helpful for parameters to effect not just the simulation, but the control panel itself. For example, suppose we have an economic model which requires a fixed number of commodities to be specified, but which can be anything. Obviously the number of commodities is a parameter of the system (we'll call it $n$, but so is the [Leontief input-output matrix](https://en.wikipedia.org/wiki/Input%E2%80%93output_model) of requirements for those commodities, which has an associated matrix entry. It would be nice to have this matrix entry's dimension change automatically when the number of commodities changes. 
+
+We call parameters which must effect not only the simulation but also the control panel itself **metaparameters**. Control panel widgets with properties that depend on metaparameters will be referred to as **metadependents**. Currently, only two control panel properties can be controlled by metaparameters - the dimension of a vector or matrix entry, and the items of a dropdown widget. More metadependents will be added in the future. 
+
+Let's say we have a matrix parameter $A$, with a matrix entry in the control panel, representing the input-output matrix described in the paragraph above. To make the dimension of this matrix a metadependency, we simply check the 'Dimension from function' box of the widget settings, and specify a function name in place of a concrete dimension:
+
+![](assets/meta-dependency-matrix.png)
+
+The 'Safe default' field specifies what values to set new entries to when they need to be created (i.e. when the matrix gets bigger). So when $n$ changes from, say, 3 to 4, all of the new entries created will be initially populated with 0.1.
+
+With these settings, Overseer will now look for a function called `new_dim_mat` inside of your `extra_functions.py` file (to be placed in your model's simulation directory) in order to determine the dimension of $A$. In our case, that function simply looks like this:
+
+```python
+def new_dim_mat(params):
+    return (params.n, params.n)
+```
+
+Notice that the function is given the entire `params` dataclass when this function is called. This is why there is no need to actually specify which parameter is the metaparameter the control panel settings - you as the user can decide which parameters are relevant, and use them however you like. 
+
+In fact, Overseer is completely blind to which parameters are and aren't metaparameters. Instead, it keeps track of the widget properties which are metadependents, which it can easily recognize by the fact that we've checked the 'dimension from function' box. Whenever *any* control panel widget is altered, it will call this simple function to recalculate the dimension of $A$, and rebuild the widget if it needs to. The result:
+
+![](assets/meta-changes-demo.gif)
+
+You can see that plots from the new prices automatically appear as well. This is possible because the model returns the prices as a vector trajectory - see [the section on plots and categories](7%20-%20Plots%20and%20Categories#Vector%20Plots) for more info on this feature, which is designed to work in tandem with dimensional metaparameters. You might also have noticed that new names were made up for the additional commodity types. This makes use of a plot-postprocessing feature which is described in the [plots and categories section](7%20-%20Plots%20and%20Categories#Plot%20Post-Processing). 
+
+Matrices and vectors aren't the only widget types which depend on $n$. Above that, in the 'Relative Surplus Value' section of the control panel, we have a dropdown called 'Sector Receiving Change'. Obviously, we want these names to also be updated when $n$ changes. To do that, we use the following settings:
+
+![](assets/dropdown-meta.png)
+
+Along with the following functions:
+```python
+CURRENT_NAMES = ["Corn", "Iron", "Sugar"]
+CURRENT_N = 3
+COMMODITIES = []
+root = Path(__file__).parent.parent
+with open( root / "data" / "commodities.txt", "r") as f:
+    for line in f:
+        COMMODITIES.append(line.strip())
+        
+def get_new_commodities(n):
+    return random.sample(COMMODITIES, n)
+
+def sector_names_for_dropdown(params):
+    global CURRENT_NAMES
+    global CURRENT_N
+    if params.n != CURRENT_N:
+        old_n = CURRENT_N
+        CURRENT_N = params.n
+        if old_n > CURRENT_N:
+            CURRENT_NAMES = CURRENT_NAMES[:CURRENT_N]
+            return ["Random"] + CURRENT_NAMES[:CURRENT_N]
+        else:
+            n_new = CURRENT_N - old_n
+            new_names = get_new_commodities(n_new)
+            CURRENT_NAMES += new_names
+            return ["Random"] + CURRENT_NAMES
+    else:
+        return ["Random"] + CURRENT_NAMES
+
+def sector_vals_for_dropdown(params):
+    out = [-1]
+    for i in range(params.n):
+        out.append(i)
+    return out
+```
+
+Thus new random commodity names are drawn and added or removed according to some liberal abuse of global variables. If you were reading the example of generating random parameters above, note that the random parameter generation function, which generates new names, must keep them updated:
+
+```python
+def random_parameters(params, env, epsilon=1e-1):
+    new_params = deepcopy(params)
+    # changes applied to copy...
+    
+    global CURRENT_NAMES
+    global CURRENT_N
+    CURRENT_NAMES = get_new_commodities(CURRENT_N)
+    
+    return new_params
+```
+
+This is why it's helpful to have all of these different meta-helper functions in the same file. 
+
+One final note about metaparameters and in relation to [live updating](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating). Obviously, having the dimension of a matrix change in the middle of a simulation is a recipe for unintended outcomes, and doesn't really make any sense to me in terms of when you might be motivated to do this. Thus **metaparameters are ineligable for live updating**. Regardless of the widget setting, and regardless of the parameter change response, **changing a metaparameter will always halt and restart the running simulation.**
+
+## Plot Pre-Processing
+Although this feature might be argued to belong in the section on plots and categories, the current state of the feature makes it hard for me to imagine any use for it besides in conjunction with metaparameters. To recap our ongoing example, we have almost finished generalizing our simulation to allow the user to change the number of commodities 'on the fly'. New plots render automatically, and widgets of the control panel are automatically mutated to reflect whatever the current value of $n$ is. 
+
+There is only one final issue: the legend labels. Now, the label template feature goes a long way here, but only if we are satisfied with numbers representing the commodities. What if we want real names? You may have noticed a plot pre-processing dropdown in the demo settings tab:
+
+![](assets/plot-preprocess-setting.png)
+
+This allows you to set a function (also defined in `extra_functions.py`), which can make changes to the active plot settings prior to any rendering of plots (or running of the simulation). This function is called by the control panel *after* it's made changes to it's metadependents, but *before* emitting any parameter changes (i.e. prior to restarting the simulation). It passes the function the current `params` dataclass, but also the dictionary representing the plotting data, which it imports from your model's `plotting_data.yml` file. This will be a dictionary, whose keys are (internal) category names, and whose values are dictionaries of all relevant information for these categories (including child plots). 
+
+The expectation is that the function called will make alterations to this dictionary, and returns the newly altered dictionary as output (I know it mutates the dictionary in place, return it anyway). That mutated dictionary will be used *instead of* the original plotting data, without altering the original data. 
+
+The following creates explicit labels to use for it's vector plots based on the current commodity names in play. It also creates some entirely new plots in the 'Real costs' category, which specify how much of each commodity is needed to make each other commodity. 
+
+```python
+def format_plot_config(params: dict, plotting_data: dict) -> dict:
+    data = deepcopy(plotting_data)
+    global CURRENT_NAMES
+
+    for _, cat_dict in data.items():
+        for _, plot_dict in cat_dict.get("plots", {}).items():
+            if plot_dict.get("labels"):
+                if len(plot_dict["labels"]) > 1:
+                    del plot_dict["labels"]
+            if plot_dict.get("label_template"):
+                template = plot_dict.get("label_template")
+                if not template:
+                    continue
+
+                plot_dict["labels"] = [
+                    template.format(*CURRENT_NAMES, i=name)
+                    for name in CURRENT_NAMES
+                ]
+        
+    real_costs_plots = data["real_costs"]["plots"]
+    plots_list = [plot_name for plot_name in real_costs_plots.keys() if plot_name not in {"labor_costs", "spectral_radii"}]
+    while len(plots_list) > len(CURRENT_NAMES):
+        name = plots_list[-1]
+        del real_costs_plots[name]
+    
+    while len(CURRENT_NAMES) > len(plots_list):
+        next_idx = len(plots_list)
+        next_name = CURRENT_NAMES[next_idx]
+        plots_list.append(f"{next_name.lower()}_costs")
+        real_costs_plots[f"{next_name}_costs"] = {
+            "checkbox_name": f"Materials Costs of {next_name}",
+            "toggled": False,
+            "linestyle": "solid",
+            "linewidth": 1.5,
+            "labels": [f"{name} cost of {next_name}" for name in CURRENT_NAMES],
+            "colors": ["red", "green", "blue"],
+            "traj_key": f"a_{next_idx}"
+        }
+
+    return data
+```
+
+The result is brand new checkboxes which correctly reflect the current names of each commodity type whenever the $n$ parameter is changed:
+
+![](assets/plot-preprocessing.gif)
+
+Thus, with all of Overseer's advanced features combined: metaparameters, plot pre-processing, and vector trajectories, we are able to create a model which is completely fluid with respect to the dimension of the overall system!
