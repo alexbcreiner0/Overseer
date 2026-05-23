@@ -73,17 +73,17 @@ The change effect field allows you to specify on a widget-by-widget basis when a
 ###  Vector and Matrix Entry Blocks
 Vector and matrix entries appear as multiple text entries, without any sliders accompanying them. 
 
-![](matrix-vector-entries-widgets.png)
+![](assets/matrix-vector-entries-widgets.png)
 
 Thus the range min and range max options don't exist for those types of entries. In place of them, we now have options for controlling the dimension. 
 
-![](vector-entry-options.png)
+![](assets/vector-entry-options.png)
 
 Beginners will want to leave the 'Dimension from function' row alone, and simply specify the dimension in the field beneath that as an integer (in the case of a vector) or pair of integers (in the case of a matrix). For more information about the 'Dimension from function' section above that, [see the section on metaparameters below](#Metaparameters). 
 ## Dropdowns
 Dropdowns are mostly meant for string parameters. For example, choosing from one of several qualitative mode descriptors. However, they can also be used for Boolean values (which sometimes looks better despite checkboxes being supported.)  
 
-![](dropdown-options.png)
+![](assets/dropdown-options.png)
 
 The relevant field here is the table, which allow the user to specify any number of (name, value) pairs. The name is what will appear in the dropdown, while the value is the string which will be given as the value of the parameter when that name is selected. Keep in mind that the values given from a dropdown choice are **always** strings. Thus it is up to your simulation to properly cast them as numbers if that is what is supposed to be selected.
 
@@ -93,7 +93,7 @@ Checkboxes are very simply control widgets that can allow for easy control of Bo
 ## Buttons
 Buttons are a bit different than other widgets, and it took a good while for the true purpose of the button widget to reveal itself over the course of development of Overseer. Unlike all other widgets, buttons are not directly wired to a specific parameter, or any parameter for that matter. Instead, they are wired to a user-defined function. 
 
-![](button-options.png)
+![](assets/button-options.png)
 
 In this example case, the function name is `random_parameters`. At creation time, Overseer will look for a function by this exact name inside of an optional file called `extra_functions.py`, which should be created inside of your model's simulation directory. When pressed, Overseer will pass the function the current parameter settings along with a dataclass of relevant working directories (the latter of these will not usually be relevant, but in particular it does point towards your models directory). It will then infer how to use the output depending on the 'Action type setting'. 
 #### Replace parameters
