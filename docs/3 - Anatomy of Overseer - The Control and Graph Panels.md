@@ -63,7 +63,7 @@ Another place that constrained mode can cause problems is that it tends to react
 
 Because of these problems with constrained mode, and despite it being newer and recommended, I have included tight mode as an optional setting. The main advantage of tight layout mode is that it allows you to tell it to automatically adjust itself by pressing F6, or pressing the top right button in the toolbar:
 
-![](tight-advantages.gif)
+![](assets/tight-advantages.gif)
 
 Here you can see that while in tight layout mode, weird visual bugs appear more often, but can always be dealt with via a few taps of the F6 key. 
 
