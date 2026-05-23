@@ -184,6 +184,7 @@ if self.event_queue is not None:
 ```
 
 The result:
+
 ![](assets/shocks-demo.gif)
 
 ### Both?
