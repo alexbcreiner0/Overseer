@@ -53,7 +53,7 @@ For many if not most actually interesting systems, a steady state equilibrium of
 
 Here we have an economic model in which profit rates are clearly converging to one another over time at a steady equilibrium:
 
-![](disequilibrium-chaos.png)
+![](assets/disequilibrium-chaos.png)
 
 We would like to see how the profit rates change in response to sudden changes in technology, but we do not want our findings to be muddied by the disequilibrium chaos. 
 
