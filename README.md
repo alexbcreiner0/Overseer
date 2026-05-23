@@ -68,6 +68,7 @@ The fastest way to get started using Overseer is to go through the [quick-start 
 
 # Documentation On My Included Models
 The example models are not just samples of how to use Overseer. They are simulations I have developed for my own research and put a significant amount of work into. I like to be transparent with my research, so all of the models I develop will be open source and included when you download Overseer. Here is some additional documentation on the included models (not finished currently).
+
 [About My Models](https://github.com/alexbcreiner0/Overseer/blob/main/docs/My%20Models/About%20My%20Models.md)
 
 [Wright's Cross-Dual Disequilibrium Model](https://github.com/alexbcreiner0/Overseer/blob/main/docs/My%20Models/Models-%E2%80%90-Wright's-Cross%E2%80%90Dual-Disequilibrium-Model-(Three-Commodity).md)
