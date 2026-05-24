@@ -70,7 +70,7 @@ The simulation function, `get_trajectories` simply instantiates a Model object, 
 
 If we weren't sure if the way you are doing things is valid, the Model Settings tab of Overseer has a diagnostics tool which you can run to make sure. In the case of our example we would see:
 
-![](diagnostics.png)
+![](assets/diagnostics.png)
 
 We can see here that the diagnostics tool is reporting some problems, because it expects everything defined inside of the `simulation.py` file to be a function conforming to the above specifications. However, the user can create whatever other Python files they want inside of the `simulation` directory and import them. The best practice here is to define the Model and Agent classes in a different file. So our `simulation.py` file should really look like this:
 
