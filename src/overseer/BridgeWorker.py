@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from PyQt6 import (
     QtCore as qc,
     QtWidgets as qw,

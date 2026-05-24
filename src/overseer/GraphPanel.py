@@ -111,12 +111,15 @@ class GraphPanel(qw.QWidget):
         self.plot_slot_from_scratch(0,0, {}, slot_config= None)
         self.dragging = False
 
-        self.canvas.mpl_connect("button_press_event", self._on_press)
-        self.canvas.mpl_connect("motion_notify_event", self.on_motion)
-        self.canvas.mpl_connect("resize_event", self.on_motion)
-        self.canvas.mpl_connect("button_release_event", self.on_release)
-        self.canvas.mpl_connect("scroll_event", self._on_scroll)
-      
+        self._mpl_cids = []
+
+        self._mpl_cids.append(self.canvas.mpl_connect("draw_event", self._on_canvas_draw))
+        self._mpl_cids.append(self.canvas.mpl_connect("button_press_event", self._on_press))
+        self._mpl_cids.append(self.canvas.mpl_connect("motion_notify_event", self.on_motion))
+        self._mpl_cids.append(self.canvas.mpl_connect("resize_event", self.on_motion))
+        self._mpl_cids.append(self.canvas.mpl_connect("button_release_event", self.on_release))
+        self._mpl_cids.append(self.canvas.mpl_connect("scroll_event", self._on_scroll))
+
         self.camera_controls = qw.QWidget()
 
         layout = qw.QVBoxLayout()
@@ -2869,6 +2872,25 @@ class GraphPanel(qw.QWidget):
     def _do_tight_layout(self):
         self.figure.tight_layout()
         self.canvas.draw_idle()
+
+    def dispose(self):
+        for cid in getattr(self, "_mpl_cids", []):
+            try:
+                self.canvas.mpl_disconnect(cid)
+            except Exception:
+                pass
+        self._mpl_cids = []
+
+        try:
+            self.canvas.setParent(None)
+        except Exception:
+            pass
+
+        try:
+            if getattr(self, "_orig_canvas_set_cursor", None) is not None:
+                self.canvas.set_cursor = self._orig_canvas_set_cursor
+        except Exception:
+            pass
 
     def apply_plotting_data(self, new_plotting_data: dict, replot: bool = False) -> None:
         self.data = new_plotting_data

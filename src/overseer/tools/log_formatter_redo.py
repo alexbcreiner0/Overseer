@@ -13,9 +13,12 @@ STANDARD_ATTRS = {
 }
 
 class JSONFormatter(logging.Formatter):
+    # fmt_keys are specified in the logging_config.yml file.
     def __init__(self,*, fmt_keys: dict[str, str] | None= None):
         super().__init__()
         self.fmt_keys = fmt_keys if fmt_keys is not None else {}
+
+        print(f"{fmt_keys=}")
 
     def format(self, record: logging.LogRecord) -> str:
         message = self._prepare_log_dict(record)
@@ -28,28 +31,27 @@ class JSONFormatter(logging.Formatter):
               .astimezone()
               .strftime("%Y-%m-%d %H:%M:%S.%f %Z")
         )
-        always_fields = {
+
+        message = {
             "message": record.getMessage(),
             "timestamp": timestamp
         }
 
         if record.exc_info is not None:
-            always_fields["exc_info"] = self.formatException(record.exc_info).splitlines()
+            message["exc_info"] = self.formatException(record.exc_info).splitlines()
 
         remote_exc = getattr(record, "_remote_exc_info", None)
         if record.exc_info is None and remote_exc:
-            always_fields["exc_info"] = str(remote_exc).splitlines()
+            message["exc_info"] = str(remote_exc).splitlines()
 
         if record.stack_info is not None:
-            always_fields["stack_info"] = self.formatStack(record.stack_info)
+            message["stack_info"] = self.formatStack(record.stack_info)
 
-        message = {
-            key: msg_val 
-            if (msg_val := always_fields.pop(val, None)) is not None 
-            else getattr(record, val)
-            for key, val in self.fmt_keys.items()
-        }
-        message.update(always_fields)
+        specially_computed_fields = {"message", "timestamp", "exc_info", "stack_info"}
+        for fmt_name, source_name in self.fmt_keys.items():
+            if source_name in specially_computed_fields:
+                continue
+            message[fmt_name] = getattr(record, source_name, None)
 
         extras = {
             k: v for k, v in record.__dict__.items()
@@ -60,3 +62,5 @@ class JSONFormatter(logging.Formatter):
             message["extra"] = extras
 
         return message
+
+

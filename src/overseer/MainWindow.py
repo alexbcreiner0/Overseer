@@ -17,6 +17,7 @@ import sys, importlib, yaml, math, inspect
 from .paths import anonymous_submission_mode_active, release_mode_active
 from .ControlPanel import ControlPanel
 from .GraphPanel import GraphPanel
+from .LogViewer import LogViewer
 from .SimWorker import SimController
 from .BridgeWorker import BridgeWorker
 from .tools.loader import (
@@ -113,7 +114,6 @@ class MainWindow(qw.QMainWindow):
         self.sim_event_queue = Queue()
 
         self.ctx = get_context("spawn")
-        # self.sim_controller = SimController(self.ctx, parent= self)
         self.sim_controller = None
     
         (
@@ -176,7 +176,16 @@ class MainWindow(qw.QMainWindow):
 
         self.main_splitter = qw.QSplitter(qc.Qt.Orientation.Horizontal)
         self.main_splitter.addWidget(self.control_panel)
-        self.main_splitter.addWidget(self.graph_panel)
+
+        self.right_stack = qw.QStackedWidget()
+        self.log_panel = LogViewer(self.env.log_dir / "log.jsonl", parent= self)
+        self.right_stack.addWidget(self.graph_panel)
+        self.right_stack.addWidget(self.log_panel)
+        self.right_stack.setCurrentIndex(0)
+        self.main_splitter.addWidget(self.right_stack)
+
+        self.right_stack.currentChanged.connect(self._sync_right_panel_buttons)
+        self._sync_right_panel_buttons(self.right_stack.currentIndex())
 
         self.main_splitter.setStretchFactor(0,3)
         self.main_splitter.setStretchFactor(1,5)
@@ -230,6 +239,10 @@ class MainWindow(qw.QMainWindow):
             "prev_control_tab": {
                 "shortcut": keybindings.get("prev_control_tab", "Ctrl+Shift+Tab"),
                 "slot": lambda: self._advance_tab(-1)
+            },
+            "next_main_panel": {
+                "shortcut": keybindings.get("next_main_panel", "Alt+Grave"),
+                "slot": lambda: self._advance_right_tab(-1)
             },
             "pause_sim": {
                 "shortcut": keybindings.get("pause_sim", "Space"),
@@ -443,7 +456,11 @@ class MainWindow(qw.QMainWindow):
 
         for name, short_dict in self.shortcuts.items():
             key_seq = short_dict["shortcut"]
-            shortcut = qg.QShortcut(qg.QKeySequence(key_seq), self)
+            if key_seq == "Alt+Grave":
+                qt_key_seq = qg.QKeySequence(qc.Qt.KeyboardModifier.AltModifier | qc.Qt.Key.Key_QuoteLeft)
+            else:
+                qt_key_seq = qg.QKeySequence(key_seq)
+            shortcut = qg.QShortcut(qt_key_seq, self)
             shortcut.setContext(qc.Qt.ShortcutContext.ApplicationShortcut)
             shortcut.activated.connect(short_dict["slot"])
             shortcut.activatedAmbiguously.connect(
@@ -548,6 +565,10 @@ class MainWindow(qw.QMainWindow):
     def _advance_tab(self, dir):
         current_idx = self.control_panel.content.currentIndex()
         self.control_panel.content.setCurrentIndex((current_idx + dir) % 2)
+
+    def _advance_right_tab(self, dir):
+        current_idx = self.right_stack.currentIndex()
+        self.right_stack.setCurrentIndex((current_idx + dir) % self.right_stack.count())
 
     def toggle_control_panel(self):
         sizes = self.main_splitter.sizes()
@@ -1106,7 +1127,28 @@ class MainWindow(qw.QMainWindow):
             qw.QSizePolicy.Policy.Expanding,
             qw.QSizePolicy.Policy.Preferred,
         )
+
         nav_toolbar.addWidget(spacer)
+
+        self.right_panel_view = qw.QButtonGroup(self)
+        self.right_panel_view.setExclusive(True)
+        graph_button = qw.QPushButton("Plots")
+        graph_button.setCheckable(True)
+        log_button = qw.QPushButton("Logs")
+        log_button.setCheckable(True)
+
+        self.right_panel_view.idClicked.connect(
+            lambda index: self.right_stack.setCurrentIndex(index)
+        )
+
+        self.right_panel_view.addButton(graph_button, 0)
+        self.right_panel_view.addButton(log_button, 1)
+
+        nav_toolbar.addWidget(qw.QLabel("Viewing:"))
+        nav_toolbar.addWidget(graph_button)
+        nav_toolbar.addWidget(log_button)
+
+        nav_toolbar.addSeparator()
 
         param_change_mode_title = qw.QLabel("Parameter change response: ")
         nav_toolbar.addWidget(param_change_mode_title)
@@ -2146,34 +2188,51 @@ class MainWindow(qw.QMainWindow):
             logger.log(logging.ERROR, "Failed to load demo.", extra= extra, exc_info= e)
             return
         
-        if model_settings is not None:
-            if "commodity_names" in model_settings:
-                com_names = model_settings["commodity_names"]
-                plotting_data = format_plot_config(plotting_data, com_names)
-
         self.traj, self.t = None, None
-
-        # self.presets_submenu.clear()
-        # self._create_presets_submenus(self.presets, self.presets_submenu)
-        self._clear_presets_menu()
-        self._clear_results_menu()
 
         if self.settings.get("autosave_axis_settings", False):
             self._save_slot_settings()
-        saved_state = self.main_splitter.saveState()
-        if hasattr(self, "main_splitter") and self.main_splitter is not None:
-            for w in (self.control_panel, self.graph_panel):
-                try:
-                    w.setParent(None)
-                    w.deleteLater()
-                except Exception:
-                    pass
 
-        # --- Reset the figure to a clean single-plot layout ---
+        old_idx = self.right_stack.currentIndex()
+        saved_sizes = self.main_splitter.sizes()
+
+        old_graph_panel = getattr(self, "graph_panel", None)
+        old_graph_index = self.right_stack.indexOf(old_graph_panel) if old_graph_panel is not None else -1
+
         self.figure.clear()
         self.axis = self.figure.add_subplot(1, 1, 1)
 
-        self.graph_panel, self.control_panel, self.dropdown_choices = self._make_panels(plotting_data, panel_data, demo)
+        if old_graph_panel is not None:
+            try:
+                old_graph_panel.dispose()
+            except AttributeError:
+                pass
+
+            if old_graph_index >= 0:
+                self.right_stack.removeWidget(old_graph_panel)
+
+            old_graph_panel.setParent(None)
+            old_graph_panel.deleteLater()
+
+        old_control_panel = getattr(self, "control_panel", None)
+        if old_control_panel is not None:
+            old_control_panel.setParent(None)
+            old_control_panel.deleteLater()
+
+        new_graph_panel, new_control_panel, self.dropdown_choices = self._make_panels(plotting_data, panel_data, demo)
+
+        self.graph_panel = new_graph_panel
+        self.control_panel = new_control_panel
+
+        self._clear_presets_menu()
+        self._clear_results_menu()
+
+        self.main_splitter.insertWidget(0, self.control_panel)
+        if old_graph_index >= 0:
+            self.right_stack.insertWidget(old_graph_index, self.graph_panel)
+        else:
+            self.right_stack.addWidget(self.graph_panel)
+
         self.current_demo_name = demo_name
         self.current_demo = self.demos[self.current_demo_name]
         self._create_results_submenus(self.results_submenu)
@@ -2181,13 +2240,20 @@ class MainWindow(qw.QMainWindow):
 
         self._load_saved_axis_settings()
 
-        self.main_splitter.addWidget(self.control_panel)
-        self.main_splitter.addWidget(self.graph_panel)
-
         self.main_splitter.setStretchFactor(0, 3)
         self.main_splitter.setStretchFactor(1, 5)
+        self.main_splitter.setCollapsible(1, False)
 
-        self.main_splitter.restoreState(saved_state)
+        self.graph_panel.setMinimumWidth(50)
+        self.right_stack.setMinimumWidth(50)
+
+        # Restore sizes only if compatible; otherwise use sane defaults.
+        if saved_sizes:
+            self.main_splitter.setSizes(saved_sizes)
+        else:
+            self.main_splitter.setSizes([300, 700])
+
+        self.right_stack.setCurrentIndex(old_idx)
 
         self._sleep_time = demo.get("details", {}).get("simulation_speed", 0)
         self.sim_speed_edit.setText(str(self._sleep_time))
@@ -2202,6 +2268,35 @@ class MainWindow(qw.QMainWindow):
         action = self.sim_actions[name]
         action.setChecked(True)
         self.start_sim()
+
+    def _replace_graph_panel_in_stack(self, new_graph_panel):
+        old_graph_panel = getattr(self, "graph_panel", None)
+
+        old_index = -1
+        if old_graph_panel is not None:
+            old_index = self.right_stack.indexOf(old_graph_panel)
+
+        # Disconnect old graph panel from matplotlib before removing it.
+        if old_graph_panel is not None:
+            try:
+                old_graph_panel.dispose()
+            except AttributeError:
+                pass
+
+            if old_index >= 0:
+                self.right_stack.removeWidget(old_graph_panel)
+
+            old_graph_panel.setParent(None)
+            old_graph_panel.deleteLater()
+
+        self.graph_panel = new_graph_panel
+
+        if old_index >= 0:
+            self.right_stack.insertWidget(old_index, self.graph_panel)
+        else:
+            self.right_stack.addWidget(self.graph_panel)
+
+        self.right_stack.setCurrentWidget(self.graph_panel)
 
     def new_model(self):
         NewModelDialog(self).bootstrap()
@@ -2568,3 +2663,7 @@ class MainWindow(qw.QMainWindow):
         dialog = DescDialog(self, desc)
         dialog.bootstrap()
 
+    def _sync_right_panel_buttons(self, idx):
+        desired_button = self.right_panel_view.button(idx)
+        if desired_button:
+            desired_button.setChecked(True)

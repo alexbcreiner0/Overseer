@@ -32,9 +32,21 @@ def child_run(
         queue, run_id, module_path,
         func_name, params_path, params,
         stop_event, pause_event, sleep_value,
-        yield_every, sim_event_queue
+        yield_every, sim_event_queue, log_config_path= None,
+        log_file_path= None
     ):
     try:
+        if log_config_path is not None and log_file_path is not None:
+            import yaml
+            import logging.config
+
+            with open(log_config_path, "r") as f:
+                logging_config = yaml.safe_load(f)
+
+            logging_config["handlers"]["app_file"]["filename"] = str(log_file_path)
+            logging.config.dictConfig(logging_config)
+            logging.captureWarnings(True)
+
         mod = importlib.import_module(module_path)
         func = getattr(mod, func_name)
         params_dataclass = params_from_mapping(params, params_path)
@@ -142,6 +154,8 @@ class SimController(qc.QObject):
                 self._sleep_value,
                 self._yield_every,
                 self.sim_event_queue,
+                self.env.app_dir / "logging_config.yml",
+                self.env.log_dir / "log.jsonl"
             )
         )
         self._proc.start()

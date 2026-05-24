@@ -23,7 +23,7 @@ handlers:
     level: INFO
     formatter: json 
     filename: __LOG_FILE__
-    maxBytes: 5000000
+    maxBytes: 500000
     backupCount: 3
 
   stderr:
@@ -37,11 +37,6 @@ handlers:
     level: WARNING
     formatter: simple
     stream: ext://sys.stdout
-
-  # queue_handler:
-  #   class: logging.handlers.QueueHandler
-  #   handlers: [app_file, stderr]
-  #   respect_handler_level: true
 
 root:
   level: DEBUG
