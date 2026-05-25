@@ -534,3 +534,5 @@ The only required entry here is $A$, which is an adjacency matrix. This can be e
 Finally, the node colors are just a set of colors which Overseer will follow as a guide for the first however-many nodes it needs to make. If more nodes are needed, it will make up more colors that you didn't specify. These are the settings for the graph of the Leontief input/output matrix for my [labor time economy working group's simulation](https://github.com/BC-LTEWG/Labor-Time-Economy-Simulation). It looks like this:
 
 ![](assets/network-demo.png)
+
+[Continue to Section 8: Control Panel Widgets](8%20-%20Control%20Panel%20Widgets)

@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 logger = logging.getLogger(__name__)
 from os import name
+import queue
 from pathlib import Path
 import re, inspect
 import yaml
@@ -190,7 +191,7 @@ def _check_sim_contract(func_name: str, func: Callable, params: Any) -> list[str
     lines = []
 
     try:
-        out = func(params)
+        out = func(params, event_queue= None)
     except TypeError as e:
         raise CheckFailure(f"{func_name} could not be called as {func_name}(params): {e}")
     except Exception as e:

@@ -39,3 +39,5 @@ Since you could have a whole variable grid of different plots visible at a given
 - Ctrl+L,Ctrl+T toggles the slot target's title.
 - Ctrl+L,Ctrl+X toggles the slot target's X-axis title.
 - Ctrl+L,Ctrl+Y toggles the slot target's Y-axis title.
+
+[Continue to Section 3: Anatomy of Overseer](3%20-%20Anatomy%20%of%20Overseer%20-%20The%20Control%20and%20Graph%20Panels)

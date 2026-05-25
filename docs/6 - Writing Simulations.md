@@ -633,3 +633,6 @@ class Reporter()
 ```
 
 The reporter initializes the Collector, tells it to start collecting, and then whenever it is told to step, it loops over the collector's queue updating its aggregates until if finds that the reported time is not the same as what the current time is according to the reporter. At this point, it takes an extra moment to prepare a new round of data for Overseer from those aggregates. 
+
+[Continue to Section 7: Plots and Categories](7%20-%20Plots%20and%20Categories)
+

@@ -243,4 +243,6 @@ Saving and loading presets is exactly the same process as saving results. Just n
 # Wrap Up
 From here, the idea should be clear - Overseer augments your existing developer environment by giving you a way to incrementally and dialectically build your models. You can make small changes, then switch over to Overseer and tap F7 to immediately see what those small changes result in. 
 
-You're now familiar with all of the core components of Overseer:  models, demos, parameters, presets, controls, categories and plots. See the specific pages for any of these topics for more in depth documentation on how they all work. 
+You're now familiar with all of the core components of Overseer:  models, demos, parameters, presets, controls, categories and plots. In the following sections, we'll get more accustomed to all of these facets. 
+
+[Continue to Section 2: Controls and Keybindings](2%20-%20Controls%20and%20Keybindings)

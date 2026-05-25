@@ -71,3 +71,5 @@ If you have all of this and it's still not working, open up an issue and let me 
 It's worth noting that this is a harmless button to press, since the parameters which do not have matching keys in the dictionary will not be changed. This fact is what allows for the feature to exist in a general sense. 
 ## Live Updating Parameters
 Parameters do not have to restart your simulation when changed. It is possible to make the effects apply during simulation. To see more information on how to do this, see [here](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating).
+
+[Continue to Section 6: Writing Simulations](6%20-%20Writing%20Simulations)

@@ -46,3 +46,11 @@ loggers:
   MESA.mesa.model:
     level: WARNING
     propagate: true
+
+  matplotlib.font_manager:
+    level: ERROR
+    propagate: true
+
+  matplotlib.pyplot:
+    level: WARNING
+    propagate: true

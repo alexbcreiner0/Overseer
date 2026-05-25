@@ -1,1 +1,9 @@
-Explain how to build a release for each OS. \<publication mode\>
+Overseer isn't just a tool for building and exploring models. It is also a framework for developing fully features standalone applications meant to act as communication tools. Through the use of tooltips in particular and experimentation, users can learn as they play.  
+
+Because of this, I took very seriously the need to supply the tools needed for making special restricted versions of Overseer, which I'll call **feature model releases**. The differences between a feature model release and the standard **studio edition** of Overseer is as follows:
+1. Feature model releases are self contained with its own Python environment. This makes them bigger, but makes them more like Apps in that nothing more is required of the software but itself - the user does not need to have Python installed in order to open and play with a feature model release. 
+2. Feature model releases 'focus inward', and do not create any files or folder on the user's computer besides the ones it comes with. 
+
+These are currently the only *necessary* differences of feature model releases and the normal studio version of Overseer. In short, these are versions of Overseer meant to be used by folks with no assumed level of technical expertise, and who do not have any interest in using Overseer to build their own models, nor even knowledge that the software can be used that way at all. The only assumption about the user of a feature model release of Overseer is that they are a curious audience with whom you want to communicate your model. 
+
+The pipelines for creating feature model releases for Windows and Mac OS can be found in the release folder. 
