@@ -4,7 +4,7 @@ from PyQt6 import (
     QtCore as qc
 ) 
 import yaml
-from .tools.loader import get_user_models_dir, get_user_logs_dir
+from .tools.loader import get_user_models_dir, get_user_logs_dir, configure_matplotlib_cache
 import sys, os, shutil
 from .paths import APP_DIR, assets_path, anonymous_submission_mode_active, release_mode_active
 from .bootstrap import bootstrap_user_environment
@@ -51,7 +51,6 @@ def handle_thread_exception(args: threading.ExceptHookArgs):
 threading.excepthook = handle_thread_exception
 sys.excepthook = handle_exception
 
-from .MainWindow import MainWindow
 
 def apply_dpi_scaled_font(app: qw.QApplication, base_pt: float = 10.0) -> None:
     screen = app.primaryScreen()
@@ -120,6 +119,9 @@ def reconfigure_logging(env, log_dir):
     return log_file
 
 def main():
+    configure_matplotlib_cache()
+    from .MainWindow import MainWindow
+
     args = parse_args()
     env = bootstrap_user_environment(config_override= args.config)
 
@@ -128,7 +130,7 @@ def main():
             settings = yaml.safe_load(f).get("global_settings", {})
     else:
         with open(env.config_dir / "config.example.yml", "r") as f:
-            settings = yaml.safe_load(f).get("global_settings", {})            
+            settings = yaml.safe_load(f).get("global_settings", {})
 
     if not release_mode_active(APP_DIR):
         env.models_dir = get_user_models_dir(settings, env)

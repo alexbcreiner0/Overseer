@@ -6,7 +6,7 @@ from .parameters import Params
 from .extra_functions import MoneyModel
 import time
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, event_queue):
     model = MoneyModel(params)
     t = []
     for i in range(params.T):

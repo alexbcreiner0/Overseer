@@ -14,7 +14,6 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from .widgets.CustomNavigationToolbar import CustomNavigationToolbar
 from matplotlib import pyplot as plt
 import sys, importlib, yaml, math, inspect
-from .paths import anonymous_submission_mode_active, release_mode_active
 from .ControlPanel import ControlPanel
 from .GraphPanel import GraphPanel
 from .LogViewer import LogViewer
@@ -89,7 +88,7 @@ class MainWindow(qw.QMainWindow):
 
         with open(env.demos_file, "r") as f:
             self.demos = yaml.safe_load(f).get("demos", {})
-        
+
         ensure_models_on_path(self.env.models_dir)
 
         self._live_animation = True
@@ -210,6 +209,11 @@ class MainWindow(qw.QMainWindow):
 
     def _assign_keybinds(self, first_boot = False):
         """ Does what it says """
+
+        release_mode_exclusions = {
+            "next_main_panel"
+        }
+
         try:
             with open(self.env.config_dir / "keybindings.yml", "r") as f:
                 keybindings = yaml.safe_load(f)
@@ -307,10 +311,6 @@ class MainWindow(qw.QMainWindow):
             "refresh_keybindings": {
                 "shortcut": keybindings.get("refresh_keybindings", "F9"),
                 "slot": self._assign_keybinds
-            },
-            "close": {
-                "shortcut": keybindings.get("close", "Esc"),
-                "slot": self.close
             },
             "expand_grid_right": {
                 "shortcut": keybindings.get("expand_grid_right", "Ctrl+Shift+Right"),
@@ -455,9 +455,11 @@ class MainWindow(qw.QMainWindow):
         }
 
         for name, short_dict in self.shortcuts.items():
+            if self.settings.get("paper_release_mode", False) and name in release_mode_exclusions:
+                continue
             key_seq = short_dict["shortcut"]
             if key_seq == "Alt+Grave":
-                qt_key_seq = qg.QKeySequence(qc.Qt.KeyboardModifier.AltModifier | qc.Qt.Key.Key_QuoteLeft)
+                qt_key_seq = qg.QKeySequence(qc.Qt.KeyboardModifier.ControlModifier | qc.Qt.Key.Key_QuoteLeft)
             else:
                 qt_key_seq = qg.QKeySequence(key_seq)
             shortcut = qg.QShortcut(qt_key_seq, self)
@@ -1144,11 +1146,12 @@ class MainWindow(qw.QMainWindow):
         self.right_panel_view.addButton(graph_button, 0)
         self.right_panel_view.addButton(log_button, 1)
 
-        nav_toolbar.addWidget(qw.QLabel("Viewing:"))
-        nav_toolbar.addWidget(graph_button)
-        nav_toolbar.addWidget(log_button)
+        if not self.settings.get("paper_release_mode", False):
+            nav_toolbar.addWidget(qw.QLabel("Viewing:"))
+            nav_toolbar.addWidget(graph_button)
+            nav_toolbar.addWidget(log_button)
 
-        nav_toolbar.addSeparator()
+            nav_toolbar.addSeparator()
 
         param_change_mode_title = qw.QLabel("Parameter change response: ")
         nav_toolbar.addWidget(param_change_mode_title)
@@ -1351,6 +1354,7 @@ class MainWindow(qw.QMainWindow):
         edit_keybindings_action.triggered.connect(lambda: open_with_default_app(self.env.config_dir / "keybindings.yml"))
 
         quit_button = qg.QAction("Quit", self)
+        quit_button.setShortcut(qg.QKeySequence.StandardKey.Quit)  # Ctrl+Q / Cmd+Q
         file_menu.addAction(quit_button)
         quit_button.triggered.connect(self.close)
 
@@ -2036,7 +2040,12 @@ class MainWindow(qw.QMainWindow):
             with open(self.env.demos_file, "r") as f:
                 self.demos = yaml.safe_load(f).get("demos", {})
 
-            self.current_demo = self.demos[self.current_demo_name]
+            if self.current_demo_name in self.demos:
+                self.current_demo = self.demos[self.current_demo_name]
+            else:
+                self.current_demo_name, self.current_demo = self._find_default(self.demos)
+
+            self.sim_model = self.current_demo.get("details", {}).get("simulation_model", "")
 
             if old_models_dir != self.env.models_dir:
                 refresh_models_path(old_models_dir, self.env.models_dir)

@@ -1,0 +1,25 @@
+presets:
+  default_preset:
+    name: Default
+    desc: ''
+    params: null
+  fixed:
+    name: Fixed?
+    desc: ''
+    params:
+      N: 500
+      M: 50000
+      L: 4
+      R: 20
+      C: 2
+      T: 10000
+      max_trade_attempts: 25
+      avg_interval: 70
+      l: [1.0, 3.0, 3.0, 6.0]
+      use_custom_l: true
+      use_custom_c: true
+      psi: 0.5
+      const_gamma: 0.5
+      omega: 0.5
+      c: [3.0, 17.0, 19.0, 15.0]
+      tol: 0.005

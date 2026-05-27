@@ -15,6 +15,7 @@ pyinstaller `
   --noconfirm `
   --additional-hooks-dir=. `
   --collect-data overseer `
+  --add-data "../../../src/overseer/defaults/models;overseer/defaults/models" `
   --icon ../../../src/overseer/assets/icon.ico `
   --collect-data scienceplots `
   --hidden-import overseer.tools.log_formatter `

@@ -186,9 +186,7 @@ class EditConfigDialog(qw.QDialog):
         tab = self.idx_to_page[self.stack.currentIndex()]
         tab.on_apply_clicked()
 
-        # I don't remember what this is for?
         self.settings = self.page_global.get_settings_for_config()
-
         self.configApplied.emit()
 
     def _on_save_clicked(self) -> None:

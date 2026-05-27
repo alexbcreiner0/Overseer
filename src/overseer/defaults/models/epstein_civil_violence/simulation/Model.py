@@ -106,7 +106,6 @@ class EpsteinModel(mesa.Model):
         self.activ_order = params.activ_order
         self.grid_type = params.grid_type
 
-        # THIS EXISTS?!
         match self.grid_type:
             case "Moore":
                 self.grid = OrthogonalMooreGrid(

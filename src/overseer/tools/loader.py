@@ -22,6 +22,44 @@ import subprocess
 # from parameters import Params, params_from_mapping
 logger = logging.getLogger(__name__)
 
+def configure_matplotlib_cache() -> None:
+    """
+    Force Matplotlib to use a persistent, writable cache directory.
+
+    This must run before any import of matplotlib, pyplot, FigureCanvasQTAgg,
+    scienceplots, etc.
+    """
+    import os
+    import sys
+    from pathlib import Path
+
+    if "MPLCONFIGDIR" in os.environ:
+        return
+
+    if sys.platform == "darwin":
+        cache_dir = (
+            Path.home()
+            / "Library"
+            / "Caches"
+            / "Overseer"
+            / "matplotlib"
+        )
+    elif sys.platform.startswith("win"):
+        cache_dir = (
+            Path(os.environ.get("LOCALAPPDATA", Path.home()))
+            / "Overseer"
+            / "matplotlib"
+        )
+    else:
+        cache_dir = (
+            Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+            / "overseer"
+            / "matplotlib"
+        )
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    os.environ["MPLCONFIGDIR"] = str(cache_dir)
+
 def open_with_default_app(path: Path):
     url = qc.QUrl.fromLocalFile(str(path.resolve()))
     qg.QDesktopServices.openUrl(url)
@@ -366,6 +404,10 @@ def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
     return Parameters
 
 def get_user_data_dir(settings: dict, env) -> Path:
+    if settings.get("paper_release_mode", False):
+        from overseer.paths import USER_APP_DIR
+        return USER_APP_DIR
+
     raw_text = settings.get("user_data_dir")
     if raw_text is None:
         return env.user_data_dir
@@ -382,6 +424,7 @@ def get_user_data_dir(settings: dict, env) -> Path:
     return env.user_data_dir
 
 def get_user_models_dir(settings: dict, env) -> Path:
+
     raw_text = settings.get("user_models_dir")
     if raw_text is None:
         return env.models_dir

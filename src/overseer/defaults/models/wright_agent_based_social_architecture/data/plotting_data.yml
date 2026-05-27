@@ -1,38 +1,48 @@
-histograms:
+historical_aggregate_data:
   name: Historical Aggregate Data
   x_label: Counts
+  projection: 3d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
   plots:
-    capitalists:
+    number_of_capitalists:
       special: hist
       checkbox_name: Number of Capitalists
       toggled: true
       dist: N_capitalists
-      density: true
-      label: Distn of Capitalists
-      color: green
-      edgecolor: '#000000'
-      histtype: bar
+      density: false
       gradient: None
+      labels: [Distn of Capitalists]
+      colors: [green]
+      edgecolors: ['#000000']
+      histtype: bar
       align: mid
-    workers:
+    number_of_workers:
       special: hist
       checkbox_name: Number of Workers
       toggled: true
       dist: N_workers
-      density: true
-      label: Distn of Workers
-      color: red
-      histtype: bar
+      density: false
       gradient: None
+      labels: [Distn of Workers]
+      colors: [red]
+      edgecolors: [black]
+      histtype: bar
       align: left
-    unemployed:
+    number_of_unemployed:
       special: hist
       checkbox_name: Number of Unemployed
       toggled: false
-      color: blue
       dist: N_unemployed
-      density: true
-      label: Distn of Unemployed
+      density: false
+      gradient: None
+      labels: [Distn of Unemployed]
+      colors: [blue]
+      edgecolors: [black]
+      histtype: bar
+      align: mid
     number_of_capitalists_fitted:
       checkbox_name: Number of Capitalists (Fitted)
       linestyle: solid

@@ -6,33 +6,3 @@ global_settings:
   anonymous_submission_mode: false
   paper_release_mode: false
   figure_mode: constrained
-model_specific_settings:
-  wright-cross-dual-3-commodity:
-    commodity_names: [Corn, Iron, Sugar]
-demos:
-  wright_s_cross_dual_disequilibrium_model_three_commodities:
-    name: Wright's Cross-Dual Disequilibrium Model (Three Commodities)
-    desc: Starting parameters are based on the example in Wright's PhD thesis. See
-      the GitHub wiki pages for detailed information.
-    details:
-      simulation_model: wright-cross-dual-3-commodity
-      simulation_function: simulate2
-      default_preset: default_preset
-      axis_settings:
-        limits:
-          a1: [[-1.09712, 98.8391], [-1.65313, 15.2356]]
-        dimension: [1, 1]
-        dropdown_indices: [0, 3, 4, 7]
-        checked_plots:
-          a1: [Unit Prices, Unit Values]
-        settings:
-          a1:
-            legend_visible: true
-            legend_fontsize: 10
-            legend_loc: upper right
-            title: true
-            xlabel: false
-            ylabel: false
-        saved_limits:
-          a1: [[-0.641058, 98.6897], [-0.701702, 14.4947]]
-    default: true

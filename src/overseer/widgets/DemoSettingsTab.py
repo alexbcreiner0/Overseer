@@ -412,10 +412,14 @@ class DemoSettingsTab(qw.QWidget):
             self._refresh_presets()
             func_index = self.combo_function.findText(details["simulation_function"])
             preset_index = self.combo_preset.findText(details["default_preset"])
-            pre_process_index = self.combo_preprocessing.findText(details["plot_preprocess"])
+            plot_preprocess_func = details.get("plot_preprocess")
+            if plot_preprocess_func is not None:
+                pre_process_index = self.combo_preprocessing.findText(details["plot_preprocess"])
+                self.combo_preprocessing.setCurrentIndex(pre_process_index)
+            else:
+                self.combo_preprocessing.setCurrentIndex(0)
             self.combo_function.setCurrentIndex(func_index)
             self.combo_preset.setCurrentIndex(preset_index)
-            self.combo_preprocessing.setCurrentIndex(pre_process_index)
 
             # lims = details.get("axis_settings", {}).get("limits", {}).get("a1", -1)
             # if lims != -1:

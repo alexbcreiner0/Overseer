@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_data_files
 
-datas = []
+datas = [('../../../src/overseer/defaults/models', 'overseer/defaults/models')]
 datas += collect_data_files('overseer')
 datas += collect_data_files('scienceplots')
 

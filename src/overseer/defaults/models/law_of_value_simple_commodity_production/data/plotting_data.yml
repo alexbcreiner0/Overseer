@@ -1,0 +1,314 @@
+prices_and_values:
+  name: Prices and Values
+  plots:
+    average_prices:
+      checkbox_name: Average Prices
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Avg Per-Period Price of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: avg_prices_per_period
+      traj_key_x: avg_interval_T
+      toggled: true
+    average_labor_values:
+      checkbox_name: Average Labor Values
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: MELT Adjusted Value of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: per_period_values
+      traj_key_x: avg_interval_T
+      toggled: true
+    price_value_correlation:
+      checkbox_name: Price Value Correlation
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Price-Value Pearson Correlation Coefficient]
+      colors: [orange]
+      traj_key: p_v_corr
+      traj_key_x: ''
+      toggled: false
+    long_run_prices:
+      checkbox_name: Long-Run Prices
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Price of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: avg_prices
+      traj_key_x: ''
+      toggled: false
+    long_run_values:
+      checkbox_name: Long-Run Values
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Long-Run Labor Value C{k}
+      colors: [red, blue, green, purple]
+      traj_key: values
+      traj_key_x: ''
+      toggled: false
+    average_melt:
+      checkbox_name: Average MELT
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Per-Period MELT]
+      colors: ['#ff3cb1']
+      traj_key: per_period_MELT
+      traj_key_x: avg_interval_T
+      toggled: false
+    long_run_melt:
+      checkbox_name: Long-Run MELT
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [MELT]
+      colors: ['#ff3cb1']
+      traj_key: MELT
+      traj_key_x: ''
+      toggled: false
+    gini_coefficient:
+      checkbox_name: Gini  Coefficient
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Gini Coefficient]
+      colors: ['#00d0ff']
+      traj_key: gini
+      traj_key_x: ''
+      toggled: false
+    theoretical_prices:
+      checkbox_name: Theoretical Prices
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq Price C{k}
+      colors: ['#ff631a', '#228dff', '#51ff2a', '#cd7dff']
+      traj_key: diff_eq_prices
+      traj_key_x: diff_eq_T
+      toggled: false
+  default_lims: [[0.0, 1200.0], [-15.4323, 201.782]]
+wealth_distribution:
+  name: Wealth Distribution
+  plots:
+    wealth:
+      special: hist
+      checkbox_name: Wealth
+      toggled: true
+      dist: wealth
+      density: false
+      label: Agent Wealth
+      color: red
+      edgecolor: black
+      histtype: bar
+      gradient: None
+      align: left
+  default_lims: [[0.0, 2000.0], [0.0, 50000.0]]
+division_of_labor:
+  name: Division of Labor
+  plots:
+    sector_employments:
+      checkbox_name: Sector Employments
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Agents Employed in Sector {k}
+      colors: [red, blue, green, purple]
+      traj_key: sector_sizes
+      traj_key_x: ''
+      toggled: true
+    efficient_distribution_of_labor:
+      checkbox_name: Efficient Distribution of Labor
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Equilibrium Employment of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: efficient_distn
+      traj_key_x: ''
+      toggled: true
+    diff_eq_sector_sizes:
+      checkbox_name: Diff Eq Sector Sizes
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq Sector {k} Size
+      colors: ['#ff4e08', '#039eff', '#52800c', '#801d7b']
+      traj_key: diff_eq_sector_sizes
+      traj_key_x: diff_eq_T
+      toggled: false
+  default_lims: [[0.0, 1000.0], [0.0, 500.0]]
+social_facts_of_production:
+  name: Social Facts of Production
+  plots:
+    living_labor_times:
+      checkbox_name: Living Labor Times
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Living Labor Required for C{k}
+      colors: [red, blue, green, purple]
+      traj_key: living_labor_times
+      traj_key_x: ''
+      toggled: true
+    consumption_times:
+      checkbox_name: Consumption Times
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Consumption Time for C{k}
+      colors: [red, blue, green, purple]
+      traj_key: consumption_indices
+      traj_key_x: ''
+      toggled: true
+    eta:
+      checkbox_name: Eta
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Eta]
+      colors: ['#ffca0a']
+      traj_key: eta
+      traj_key_x: ''
+      toggled: true
+  default_lims: [[0.0, 1000.0], [0.0, 30.0]]
+economic_capacity:
+  name: Economic Capacity
+  plots:
+    ideal_output:
+      checkbox_name: Ideal Output
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Social Demand C{k}
+      colors: [red, blue, green, purple]
+      traj_key: social_demand
+      traj_key_x: ''
+      toggled: true
+    productive_capacities:
+      checkbox_name: Productive Capacities
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Productive Capacity of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: productive_capacities
+      traj_key_x: ''
+      toggled: true
+    total_supply:
+      checkbox_name: Total Supply
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Total Supply C{k}
+      colors: [red, blue, green, purple]
+      traj_key: total_supply
+      traj_key_x: avg_interval_T
+      toggled: false
+  default_lims: [[0.0, 1000.0], [0.0, 150.0]]
+social_satisfaction:
+  name: Social Satisfaction
+  plots:
+    average_discontent:
+      checkbox_name: Average Discontent
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Average Discontent]
+      colors: ['#7a1d16']
+      traj_key: avg_discontent
+      traj_key_x: ''
+      toggled: false
+  default_lims: [[0.0, 1200.0], [0.0, 10.0]]
+income_distribution:
+  name: Income Distribution
+  plots:
+    sectoral_income_proportions:
+      checkbox_name: Sectoral Income Proportions
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Per Period Income Proportion for Sector {k}
+      colors: [red, blue, green, purple]
+      traj_key: sectoral_per_period_income_proportions
+      traj_key_x: avg_interval_T
+      toggled: true
+    ideal_expenditure_rates:
+      checkbox_name: Ideal Expenditure Rates
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Sector {k} Ideal Expenditure Rate
+      colors: [red, blue, green, purple]
+      traj_key: long_run_ideal_expenditure_rates
+      traj_key_x: ''
+      toggled: false
+    diff_eq_sector_income_props:
+      checkbox_name: Diff Eq Sector Income Props
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq Per Period Income Proportion Sector {k}
+      colors: [red, blue, green, purple]
+      traj_key: diff_eq_sector_income_props
+      traj_key_x: diff_eq_T
+      toggled: false
+  default_lims: [[0.0, 1200.0], [0.0, 1.0]]
+testing_diff_eq:
+  name: Testing Diff Eq
+  plots:
+    diff_eq_prices:
+      checkbox_name: Diff Eq Prices
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq Price C{k}
+      colors: ['#ff631a', '#228dff', '#51ff2a', '#cd7dff']
+      traj_key: diff_eq_prices
+      traj_key_x: diff_eq_T
+      toggled: false
+    sector_employment_proportions:
+      checkbox_name: Sector Employment Proportions
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq Sector {k} Size
+      colors: ['#ff4e08', '#039eff', '#52800c', '#801d7b']
+      traj_key: diff_eq_sector_props
+      traj_key_x: diff_eq_T
+      toggled: true
+    sectoral_income_proportions:
+      checkbox_name: Sectoral Income Proportions
+      linestyle: dotted
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Diff Eq a{k}
+      colors: [red, blue, green, purple]
+      traj_key: diff_eq_sector_income_props
+      traj_key_x: diff_eq_T
+      toggled: false
+    equilibrium_points:
+      checkbox_name: Equilibrium Points
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Equilibrium Employment of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: eqb_points
+      traj_key_x: ''
+      toggled: true
+    labor_values:
+      checkbox_name: Labor Values
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      label_template: Value of C{k}
+      colors: [red, blue, green, purple]
+      traj_key: diff_eq_adjusted_values
+      traj_key_x: diff_eq_T
+      toggled: true
+  default_lims: [[0.0, 1200.0], [0.0, 0.8]]

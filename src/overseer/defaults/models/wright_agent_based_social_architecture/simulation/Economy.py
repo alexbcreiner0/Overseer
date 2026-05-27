@@ -197,6 +197,7 @@ class Economy(mesa.Model):
                         a.annual_wages_paid += rand_wage
                         self._total_wages_paid += rand_wage
                     else:
+                        # the fuck was I doing here lmao
                         seq = range(0,a.m+1)
                         if len(seq) == 0:
                             continue

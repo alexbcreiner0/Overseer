@@ -1,0 +1,94 @@
+presets:
+  default_preset:
+    name: Default
+    desc: ''
+    params:
+      y1i: 130
+      y2i: 100
+      e: 1
+      a: 0.5
+      k1: 1
+      k2: 4
+      r: 0.02
+      s: 0.8
+      N0: 180
+      T: 50
+      dt: 0.01
+      analytic_soln: False
+  nice_example:
+    name: Nice examle
+    desc: ''
+    params:
+      y1i: 130.0
+      y2i: 100.0
+      e: 1.0
+      a: 0.5
+      k1: 1.0
+      k2: 4.0
+      r: 0.02
+      s: 0.8
+      N0: 180
+      T: 50
+      dt: 0.01
+      balanced: false
+      balanced_indep: y1
+      money_reinvestment: false
+  figure_15:
+    name: Figure 15
+    desc: 'Marx''s Original Parameters
+
+      marxs-actual-schema'
+    params:
+      y1i: 6000.0
+      y2i: 3000.0
+      e: 1.0
+      a: 0.5
+      k1: 4.0
+      k2: 2.0
+      r: 0.02
+      s: 0.8
+      N0: 180
+      T: 50
+      dt: 0.01
+      balanced: false
+      balanced_indep: y1
+      money_reinvestment: false
+      analytic_soln: true
+      enforce_nonneg: false
+      enforce_population_constraints: false
+  default:
+    name: Default
+    desc: ''
+    params:
+      y1i: 130.0
+      y2i: 100.0
+      e: 1.0
+      a: 0.5
+      k1: 1.0
+      k2: 4.0
+      r: 0.02
+      s: 0.8
+      N0: 180
+      T: 50
+      dt: 0.01
+      balanced: false
+      balanced_indep: y1
+      money_reinvestment: false
+      analytic_soln: false
+      enforce_nonneg: false
+      enforce_population_constraints: false
+    axis_settings:
+      limits:
+        a1: [[0.0169296, 9.40667], [-50.1173, 800.05]]
+      dimension: [1, 1]
+      dropdown_indices: [0]
+      checked_plots:
+        a1: [Value Outputs, Balanced Growth Paths]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true

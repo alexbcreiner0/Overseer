@@ -12,7 +12,7 @@ from multiprocessing import Process, Pool
 import importlib
 import copy
 import queue as py_queue
-from overseer.tools.loader import params_from_mapping, to_plain
+from overseer.tools.loader import params_from_mapping, to_plain, configure_matplotlib_cache
 
 def put_latest(q, msg, stop_event):
     while True:
@@ -35,6 +35,7 @@ def child_run(
         yield_every, sim_event_queue, log_config_path= None,
         log_file_path= None
     ):
+    configure_matplotlib_cache()
     try:
         if log_config_path is not None and log_file_path is not None:
             import yaml

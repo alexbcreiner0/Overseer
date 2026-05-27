@@ -1,8 +1,0 @@
-all:
-  name: All
-  plots:
-    thing:
-      special: cplot
-      toggled: true
-      traj_key: sin
-      contours: true
