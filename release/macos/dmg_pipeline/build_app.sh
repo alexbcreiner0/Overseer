@@ -15,9 +15,9 @@ cd "$(dirname "$0")"
 rm -rf build dist dmgroot "${DMG_NAME}.dmg"
 
 # Optional signing/notarization-related flags (move inside the pyinstaller command below if using:
-#   --osx-bundle-identifier "$BUNDLE_ID"
-#   --codesign-identity "$IDENTITY"
-#   --osx-entitlements-file ./entitlements.plist
+#   --osx-bundle-identifier "$BUNDLE_ID" \
+#   --codesign-identity "$IDENTITY" \
+#   --osx-entitlements-file ./entitlements.plist \
 
 pyinstaller \
   -n "$APP_NAME" \

@@ -1,0 +1,8 @@
+global_settings:
+  default_save_dir: .
+  default_save_name: figure
+  run_on_startup: true
+  autosave_axis_settings: false
+  anonymous_submission_mode: false
+  paper_release_mode: false
+  figure_mode: constrained

@@ -1,0 +1,2500 @@
+presets:
+  default_preset:
+    name: Default
+    desc: ''
+    params:
+      A: [[0.2, 0.2, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: none
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1e-05
+      mu_L: 0.5
+      eps_u: 1e-08
+      eps_m: 1e-08
+      T: 100
+      res: 3
+  figure_1:
+    name: Figure 1
+    desc: ''
+    params:
+      A: [[0.2, 0.2, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: none
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 30.0], [-1.39891, 15.5381]]
+        a2: [[0.0, 30.0], [-0.18071, 1.31929]]
+        a3: [[0.0, 30.0], [-0.0976874, 1.14277]]
+        a4: [[0.0, 15.0], [-0.5, 1.0]]
+        a5: [[0.0, 30.0], [-0.0904106, 0.599928]]
+        a6: [[0.0, 30.0], [0.227861, 0.969349]]
+      dimension: [2, 3]
+      dropdown_indices: [0, 4, 2, 3, 6, 5]
+      checked_plots:
+        a1: [Unit Prices, Unit Values]
+        a2: [Employment, Unemployment, Hourly Wage]
+        a3: [Outputs, Supplies, Demand]
+        a4: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+        a5: [Total Interest, Total Profit of Enterprise]
+        a6: [Capitalist Savings, Hourly Wage, Worker Savings]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 5
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a5:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a6:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_3:
+    name: Figure 3
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.4, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.0
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [1.0, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: none
+      economy_type: fixed_real_wage
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.5
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 0
+      init_tssi_melt: 1
+      output_equation: relative
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 69.0], [-0.75773, 2.81993]]
+        a2: [[1.44071, 48.4785], [-0.277294, 11.7891]]
+        a3: [[20.5191, 81.4154], [-0.00692571, 0.937498]]
+        a4: [[0.336262, 97.262], [0.0381242, 0.141506]]
+      dimension: [2, 2]
+      dropdown_indices: [4, 2, 0, 3]
+      checked_plots:
+        a1: [Employment, Unemployment, Hourly Wage]
+        a2: [Outputs, Demand]
+        a3: [Unit Prices, Unit Values]
+        a4: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: false
+        a4:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_4:
+    name: Figure 4
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.5
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[43.6677, 66.4994], [0.0357898, 0.184446]]
+        a2: [[37.615, 72.0418], [0.136549, 1.05059]]
+        a3: [[39.5698, 69.5698], [-0.092431, 1.00463]]
+        a4: [[35.0, 70.0], [0.0, 5.0]]
+        a5: [[40.197, 68.0136], [0.173037, 0.965209]]
+        a6: [[36.431, 70.9482], [-0.049168, 0.309443]]
+      dimension: [2, 3]
+      dropdown_indices: [3, 4, 2, 0, 5, 6]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Okishio Predicted Profit
+            Rates]
+        a2: [Employment, Unemployment, Hourly Wage]
+        a3: [Outputs, Supplies, Demand]
+        a4: [Unit Prices, Unit Values]
+        a5: [Capitalist Savings, Worker Savings]
+        a6: [Total Interest, Total Profit of Enterprise]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 5
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: false
+        a4:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a5:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a6:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_2a:
+    name: Figure 2a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.4, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [1.0, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: fixed_real_wage
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.5
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 0
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 100.0], [0.0, 0.5]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_2b:
+    name: Figure 2b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.4, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [1.0, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: fixed_real_wage
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.5
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 0
+      init_tssi_melt: 1
+      output_equation: relative
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 100.0], [0.0, 0.5]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_5a:
+    name: Figure 5a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.07, 0.075]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_5b:
+    name: Figure 5b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.069271, 0.074271]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_6:
+    name: Figure 6
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 10
+      shock_mag: 0.15
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 1700
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[2.00578, 1684.22], [0.04226, 0.294337]]
+        a2: [[17.5648, 1670.27], [-0.114276, 1.23651]]
+      dimension: [1, 2]
+      dropdown_indices: [3, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Max. Rate of Profit]
+        a2: [Employment, Unemployment, Hourly Wage]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  figure_7a:
+    name: Figure 7a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 10
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.0, 0.2]]
+      dimension: [1, 1]
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_7b:
+    name: Figure 7b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 10
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.02, 0.08]]
+      dimension: [1, 1]
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_8a:
+    name: Figure 8a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 10
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 500
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 500.0], [0.0, 0.2]]
+      dimension: [1, 1]
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Max. Rate of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_9a:
+    name: Figure 9a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cslu
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.062, 0.11]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_9b:
+    name: Figure 9b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cslu
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[3.50716, 190.2], [0.0348877, 0.238342]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_10a:
+    name: Figure 10a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[40.8302, 66.6037], [-0.00913546, 0.217476]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_10b:
+    name: Figure 10b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[39.849, 67.5369], [-0.0860334, 0.290925]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_10c:
+    name: Figure 10c
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+  figure_10d:
+    name: Figure 10d
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cslu
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[39.8747, 68.4639], [-0.00724284, 0.239545]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_11:
+    name: Figure 11
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.5
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 0
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[40.0, 68.0], [0.04, 0.11]]
+        a2: [[39.7779, 68.3671], [0.315855, 5.31586]]
+        a3: [[35.0, 68.4639], [0.0, 3.8]]
+        a4: [[0.0, 100.0], [0.16, 1.0]]
+        a5: [[39.8747, 68.4639], [0.15, 0.9]]
+        a6: [[0.0, 100.0], [0.085317, 13.0]]
+        a7: [[39.8747, 68.4639], [0.0, 4.3]]
+        a8: [[42.0, 60.0], [0.8, 4.5]]
+        a9: [[5.68434e-14, 100.0], [0.226396, 0.876396]]
+      dimension: [3, 3]
+      dropdown_indices: [3, 0, 2, 4, 5, 8, 7, 1, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate, Value Rate of Profit]
+        a2: [Unit Prices, Unit Values]
+        a3: [Demand, Sectoral Output Values]
+        a4: [Employment, Unemployment, Hourly Wage]
+        a5: [Capitalist Savings, Hourly Wage, Worker Savings]
+        a6: [Capital Intensities, Composition of Capital Advanced]
+        a7: [Value of Constant Capital, Value of Means of Subsistence, Total Surplus Value]
+        a8: [Unit Labor Values]
+        a9: [Value of Hourly Real Wage, Value of Hourly Capitalist Income, Rate of Exploitation]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a3:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper left
+          title: true
+          xlabel: false
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: true
+        a5:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: true
+        a6:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: true
+        a7:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a8:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a9:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_12a:
+    name: Figure 12a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[18.2306, 28.0483], [-0.0689279, 0.158336]]
+        a2: [[18.2386, 23.7365], [-0.0168627, 0.0108042]]
+      dimension: [1, 2]
+      dropdown_indices: [3, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest rate]
+        a2: [Slope of Employment]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_12b:
+    name: Figure 12b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.3
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[18.4799, 27.4799], [-0.0653552, 0.134645]]
+        a2: [[18.2346, 23.7056], [-0.033446, 0.0268576]]
+      dimension: [1, 2]
+      dropdown_indices: [3, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest rate]
+        a2: [Slope of Employment]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_13:
+    name: Figure 13
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.4
+      cost_tradeoff: 0.8
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 8
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[43.4878, 68.4817], [0.0375165, 0.113163]]
+        a2: [[33.6177, 84.7593], [3.96064, 5.74673]]
+        a3: [[40.3159, 70.3159], [0.362635, 0.662635]]
+        a4: [[32.2969, 92.5274], [0.574146, 0.664153]]
+      dimension: [2, 2]
+      dropdown_indices: [3, 8, 7, 2]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate, Value Rate of Profit]
+        a2: [Value Composition of Capital, Money Composition of Capital]
+        a3: [Rate of Exploitation, Money Rate of Exploitation]
+        a4: [Relative Output Value, Relative Output Price]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_8b:
+    name: Figure 8b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 2
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 20
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 200.0], [0.0679263, 0.0743768]]
+      dimension: [1, 1]
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Okishio Predicted Profit Rates]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_14:
+    name: Figure 14
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: discrete
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.1
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 0
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 100
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[35.0, 72.0], [0.02, 0.046]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Interest rate]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_15:
+    name: Figure 15
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 200
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[5.9021, 201.464], [0.0276984, 0.0459133]]
+        a2: [[0.777653, 201.091], [0.0923536, 3.85326]]
+        a3: [[-0.00484119, 199.995], [-0.43349, 8.6312]]
+        a4: [[1.6537, 200.163], [-0.067381, 1.15336]]
+        a5: [[0.339882, 201.841], [-0.0210939, 0.272295]]
+        a6: [[0.0, 200.0], [-0.0141908, 1.14764]]
+      dimension: [2, 3]
+      dropdown_indices: [3, 2, 5, 9, 6, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Interest rate]
+        a2: [Outputs, Demand]
+        a3: [Total Sectoral Money Investment]
+        a4: ['Materials Costs of {c1}', Labor Costs]
+        a5: [Total Profit of Enterprise, Total Profit]
+        a6: [Employment, Unemployment, Hourly Wage]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper left
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a5:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: false
+        a6:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_16:
+    name: Figure 16
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[-5.84706, 594.153], [0.0288818, 0.0470967]]
+        a2: [[1.91055, 596.668], [-0.872702, 13.5816]]
+        a3: [[3.73911, 589.109], [-0.280479, 10.5666]]
+        a4: [[1.6537, 600.0], [0.0119272, 1.23267]]
+        a5: [[0.339882, 600.0], [-1.03948, 28.9605]]
+        a6: [[-4.58776, 577.727], [0.00670303, 0.0570156]]
+      dimension: [2, 3]
+      dropdown_indices: [3, 2, 2, 4, 5, 6]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate, Max. Rate of Profit]
+        a2: [Outputs]
+        a3: [Total Output Value, Sectoral Output Values]
+        a4: [Employment, Unemployment, Hourly Wage]
+        a5: [Sectoral Capital Advanced]
+        a6: [Total Profit of Enterprise]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper left
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a5:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: false
+        a6:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_17:
+    name: Figure 17
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.0
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: 1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 250
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 250.0], [-0.000110444, 0.00788956]]
+        a2: [[0.0, 250.0], [0.0, 1.4]]
+        a3: [[3.05031, 251.671], [-0.160262, 1.22902]]
+        a4: [[2.41539, 241.467], [0.831285, 0.930366]]
+      dimension: [2, 2]
+      dropdown_indices: [3, 9, 5, 4]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Interest rate, Max. Rate
+            of Profit]
+        a2: ['Materials Costs of {c1}', Labor Costs]
+        a3: [Relative Sectoral Money Investment]
+        a4: [Employment, Hourly Wage]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+        a2:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a3:
+          legend_visible: true
+          legend_fontsize: 8
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+        a4:
+          legend_visible: true
+          legend_fontsize: 6
+          legend_loc: upper right
+          title: true
+          xlabel: true
+          ylabel: true
+  figure_18b:
+    name: Figure 18b
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 600.0], [0.0276033, 0.0333557]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_18a:
+    name: Figure 18a
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: ls
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 600.0], [0.0, 0.215043]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_18c:
+    name: Figure 18c
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.580328, 592.581], [0.0294288, 0.035441]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_18d:
+    name: Figure 18d
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [0.01, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: cslu
+      change_type: cts
+      economy_type: unrestricted
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[4.77084, 588.879], [0.0212621, 0.0324425]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit, Interest rate]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
+  figure_19:
+    name: Figure 19
+    desc: ''
+    params:
+      A: [[0.2, 0.0, 0.4], [0.2, 0.4, 0.0], [0.0, 0.1, 0.1]]
+      l: [0.7, 0.6, 0.3]
+      b_bar: [0.6, 0.0, 0.2]
+      c_bar: [0.2, 0.0, 0.4]
+      alpha_w: 0.8
+      alpha_c: 0.7
+      alpha_L: 0.0
+      kappa: [1, 1, 1]
+      eta: [2, 2, 2]
+      eta_w: 0.25
+      eta_r: 0
+      L: 1
+      w: 0.5
+      r: 0.03
+      q: [0.01, 0.1, 0.1]
+      p: [1.0, 0.8, 0.5]
+      s: [1.0, 0.1, 0.25]
+      m_w: 0.5
+      M: 1.0
+      M_change_type: none
+      money_injection_target: capitalists
+      M_change_interval: 20
+      M_change_duration: 1
+      delta_M: 1
+      shock_type: culs
+      change_type: cts
+      economy_type: fixed_real_wage
+      wage_deflation: 0.0
+      gamma_L: 0.3
+      atrophy_with_unemployment: always
+      supply_shock_mag: 0.5
+      supply_shock_interval: 50
+      supply_shock_setting: none
+      change_interval: 50
+      shock_mag: 0.03
+      cost_tradeoff: 0.01
+      stop_cts_changes_halfway: false
+      fix_sector_receiving_change: -1
+      init_tssi_melt: 1
+      output_equation: absolute
+      employment_guardrails: false
+      s_floor: 1.0e-05
+      mu_L: 0.5
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
+      T: 600
+      res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[1.39763, 562.455], [0.0754922, 0.090002]]
+      dimension: [1, 1]
+      dropdown_indices: [3]
+      checked_plots:
+        a1: [Equilibrium Rate of Profit]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 7
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false

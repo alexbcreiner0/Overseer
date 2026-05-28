@@ -1,0 +1,26 @@
+# If something goes wrong with the user's saved params.yml file, the program will try to load these parameter settings as a fallback.
+default_preset:
+  name: Default
+  desc: ''
+  params:
+    A: [[0.2, 0.0, 0.4], [0.2, 0.8, 0.0], [0.0, 0.1, 0.1]]
+    l: [0.7, 0.6, 0.3]
+    b_bar: [0.6, 0.0, 0.2]
+    c_bar: [0.2, 0.0, 0.4]
+    alpha_w: 0.8
+    alpha_c: 0.7
+    alpha_L: 0.0
+    kappa: [1, 1, 1]
+    eta: [2, 2, 2]
+    eta_w: 0.25
+    L: 1
+    eta_r: 2
+    q0: [0.01, 0.1, 0.1]
+    p0: [1.0, 0.8, 0.5]
+    s0: [0.01, 0.1, 0.25]
+    m_w0: 0.5
+    w0: 0.5
+    r0: 0.0
+    T: 100
+    res: 3
+  

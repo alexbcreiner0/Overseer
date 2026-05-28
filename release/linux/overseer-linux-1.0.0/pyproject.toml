@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "overseer"
+version = "1.0.0"
+description = "Model visualization and simulation tool"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    # NEEDED BY APP
+    "PyQt6",
+    "matplotlib",
+    "numpy",
+    "scienceplots",
+    "pyyaml",
+    "platformdirs",
+    # NEEDED BY SPECIFIC MODELS
+    "scipy",
+    "mesa",
+    "networkx"
+]
+
+[project.scripts]
+overseer = "overseer.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+overseer = [
+    "*",
+    "assets/**/*",
+    "defaults/**/*",
+    "templates/**/*",
+]

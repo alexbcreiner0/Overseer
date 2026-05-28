@@ -66,6 +66,7 @@ class MainWindow(qw.QMainWindow):
 
         self.status_bar = self.statusBar()
         self.settings = self.config.get("global_settings", {})
+        print(f"{self.settings=}")
 
         self.setWindowTitle("Overseer")
 
@@ -1159,7 +1160,7 @@ class MainWindow(qw.QMainWindow):
         self.param_change_mode_drop.addItem("Widgets decide")
         self.param_change_mode_drop.addItem("Restart")
         self.param_change_mode_drop.addItem("Send message")
-        self.param_change_mode_drop.setCurrentIndex(1)
+        self.param_change_mode_drop.setCurrentIndex(0)
         self.param_change_mode_drop.currentTextChanged.connect(self._on_param_change_mode_changed)
         nav_toolbar.addWidget(self.param_change_mode_drop)
 

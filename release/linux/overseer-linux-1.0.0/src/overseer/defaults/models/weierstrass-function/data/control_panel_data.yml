@@ -1,0 +1,56 @@
+divider1:
+  title: Parameters
+row1:
+  X:
+    param_name: X
+    tooltip: 'Rendering bounds for the x-axis. Assumed symmetric so X=10 will mean
+      the function appears from -10 to 10. '
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 20.0]
+    label: $X=$
+  b_lower:
+    param_name: b_lower
+    tooltip: 'Lower bound for b. Starting condition of the simulation. '
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $b_0=$
+  b_upper:
+    param_name: b_upper
+    tooltip: 'Upper bound of b. Where the simulation finishes. '
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 10.0]
+    label: $b_1=$
+row2:
+  b_res:
+    param_name: b_res
+    tooltip: Resolution of the b range. Higher numbers will make the animation smoother
+      and also make the sim go on for longer.
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0.0, 1000.0]
+    label: $b_{res}=$
+  curve_res:
+    param_name: curve_res
+    tooltip: Resolution of the $x$-range. Higher values will make the function look
+      smoother.
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0.0, 100.0]
+    label: $curve_{res}=$
+  func_res:
+    param_name: func_res
+    tooltip: 'The Weierstrass function is defined as an infinite sum of terms. This
+      number controls how many terms are summed in order to approximate the true value. '
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0.0, 1000.0]
+    label: $f_{res}= $

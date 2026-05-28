@@ -1,0 +1,326 @@
+histograms:
+  name: Historical Aggregate Data
+  plots:
+    capitalists:
+      special: hist
+      checkbox_name: Number of Capitalists
+      toggled: true
+      dist: N_capitalists
+      color: green
+      density: True
+      label: Distn of Capitalists
+    workers:
+      special: hist
+      checkbox_name: Number of Workers
+      toggled: true
+      color: red
+      dist: N_workers
+      density: True
+      label: Distn of Workers
+    unemployed:
+      special: hist
+      checkbox_name: Number of Unemployed
+      toggled: false
+      color: blue
+      dist: N_unemployed
+      density: true
+      label: Distn of Unemployed
+    number_of_capitalists_fitted:
+      checkbox_name: Number of Capitalists (Fitted)
+      linestyle: solid
+      labels: [Number of Capitalists (Fitted)]
+      colors: [green]
+      traj_key: N_capitalists_fit
+      traj_key_x: fitted_x_c
+      toggled: true
+    number_of_workers_fitted:
+      checkbox_name: Number of Workers (Fitted)
+      linestyle: solid
+      labels: [Number of Workers (Fitted)]
+      colors: [red]
+      traj_key: N_workers_fit
+      traj_key_x: fitted_x_w
+      toggled: true
+    number_of_unemployed_fitted:
+      checkbox_name: Number of Unemployed (Fitted)
+      linestyle: solid
+      labels: [Number of Unemployed (Fitted)]
+      colors: [blue]
+      traj_key: N_unemployed_fit
+      traj_key_x: fitted_x_u
+      toggled: false
+    recession_durations:
+      special: hist
+      checkbox_name: Duration of Recessions
+      toggled: false
+      color: pink
+      dist: recession_durations
+      density: false
+      histtype: step
+      label: Duration of Recessions
+
+time_series:
+  name: Time-Series Data
+  plots:
+    capitalists:
+      checkbox_name: Capitalists
+      linestyle: solid
+      labels: [Num. Capitalists]
+      colors: [green]
+      traj_key: N_capitalists
+      toggled: true
+    workers:
+      checkbox_name: Workers
+      linestyle: solid
+      labels: [Num. Workers]
+      colors: [red]
+      traj_key: N_workers
+      toggled: false
+    unemployed:
+      checkbox_name: Unemployed
+      linestyle: solid
+      labels: [Num. Unemployed]
+      colors: [blue]
+      traj_key: N_unemployed
+      toggled: false
+    gdp:
+      checkbox_name: gdp
+      linestyle: solid
+      labels: [GDP]
+      colors: [magenta]
+      traj_key: gdp
+      traj_key_x: annual_parallel_x
+      toggled: false
+
+Wage and Profit Shares:
+  name: Annual Statistics
+  x_label: Years
+  plots:
+    wage_share:
+      special: scatter
+      checkbox_name: Wage Share
+      toggled: true
+      traj_key_x: scatter_year
+      traj_key_y: wage_share
+      labels: ['']
+      color: orange
+      marker: ^
+
+    profit_share:
+      special: scatter
+      checkbox_name: Profit Share
+      toggled: true
+      traj_key_x: scatter_year
+      traj_key_y: profit_share
+      labels: ['']
+      color: Purple
+      marker: s
+
+    wage_share_v_profit_share:
+      special: hist
+      checkbox_name: Wage Share vs Profit Share
+      toggled: false
+      dist: wage_share_v_profit_share
+      label: 'Wage Share vs Profit Share'
+      color: green
+
+income_dist:
+  name: Distribution of Income
+  plots:
+
+    # money_distn_workers_scatter:
+    #   special: scatter
+    #   checkbox_name: (Scatter) Worker Distn
+    #   traj_key_y: worker_income_scatter
+    #   traj_key_x: worker_income_scatter_x
+    #   toggled: false
+    #   color: red
+    #   labels: ["Scatter Worker Distn"]\
+    annual_income:
+      special: hist
+      checkbox_name: Annual Incomes
+      toggled: false
+      color: orange
+      dist: annual_incomes
+      histtype: step
+      edgecolor: "#f78f07"
+      density: true
+      label: Distn of Income
+    income_workers:
+      special: hist
+      checkbox_name: Worker Annual Income
+      toggled: true
+      dist: annual_worker_incomes
+      histtype: step
+      color: red
+      edgecolor: red
+      density: true
+      label: Distn of Income (Workers)
+    income_workers_lognormal_fit:
+      checkbox_name: Worker Annual Income (Fitted)
+      linestyle: solid
+      labels: [Annual Income Workers (Fitted)]
+      colors: [red]
+      traj_key: annual_worker_incomes_fit
+      traj_key_x: fitted_x_m_w
+      toggled: true
+    income_workers_pareto_fit:
+      checkbox_name: Worker Annual Inncome Pareto
+      linestyle: dashed
+      labels: [Annual Income Workers (Pareto Fit)]
+      colors: [red]
+      traj_key: annual_worker_income_fit_pareto
+      traj_key_x: fitted_x_m_w
+      toggled: false
+
+
+    income_capitalists:
+      special: hist
+      checkbox_name: Capitalist Annual Income
+      toggled: true
+      color: green
+      dist: annual_capitalist_incomes
+      histtype: step
+      edgecolor: green
+      density: true
+      label: Distn of Income (Capitalists)
+    income_capitalist_pareto:
+      checkbox_name: Capitalist Annual Income (Fitted)
+      linestyle: solid
+      labels: [Money Distn Capitalists (Fitted)]
+      colors: [green]
+      traj_key: annual_cap_income_fit
+      traj_key_x: fitted_x_m_c
+      toggled: true
+    income_capitalist_lognormal:
+      checkbox_name: Capitalist Annual Inncome Lognormal Fit
+      linestyle: dashed
+      labels: [Annual Income Workers (Lognormal Fit)]
+      colors: [red]
+      traj_key: annual_cap_income_fit_lognormal
+      traj_key_x: fitted_x_m_w
+      toggled: false
+
+money_distn:
+  name: Distribution of Wealth
+  plots:
+    money_distn:
+      special: hist
+      checkbox_name: Overall Wealth
+      toggled: false
+      dist: money_distn
+      color: "#f78f07"
+      edgecolor: "#f78f07"
+      histtype: step
+      label: Overall Wealth Distribution
+    money_distn_ccdf:
+      special: scatter
+      checkbox_name: Overall Wealth (CCDF)
+      traj_key_y: ccdf_y
+      traj_key_x: sorted_money_distn
+      toggled: true
+      color: "#f78f07"
+      labels: ["Overall Wealth Distribution (CCDF)"]
+    money_distn_ccdf_caps:
+      special: scatter
+      checkbox_name: Capitalist Wealth (CCDF)
+      traj_key_y: ccdf_y_caps
+      traj_key_x: sorted_money_distn_caps
+      color: green
+      toggled: true
+      labels: ["Capitalist Wealth Distn (CCDF)"]
+    money_distn_ccdf_workers:
+      special: scatter
+      checkbox_name: Worker Wealth (CCDF)
+      traj_key_y: ccdf_y_workers
+      traj_key_x: sorted_money_distn_workers
+      color: red
+      toggled: true
+      labels: ["Distribution of Income (Workers) (CCDF)"]
+
+firm_sizes:
+  name: Firms
+  plots:
+      firm_sizes:
+        special: scatter
+        checkbox_name: Firm Sizes
+        traj_key_y: firm_sizes_y
+        traj_key_x: firm_sizes_x
+        color: red
+        toggled: true
+        labels: ["Firm Sizes"]
+
+      firm_sizes_fit:
+        checkbox_name: Firm Sizes
+        linestyle: solid
+        traj_key: firm_sizes_fit
+        traj_key_x: firm_sizes_fit_x
+        colors: [red]
+        labels: [Firm Squares Least Squares Line]
+        toggled: true
+
+      firm_growth_rates_persons:
+        special: hist
+        checkbox_name: Growth Rates (Employees)
+        dist: firm_growth_rates_persons
+        bins: firm_growth_rates_persons_bins
+        histtype: step
+        edgecolor: purple
+        label: "Firm Growth Rates (Employees)"
+        toggled: false
+
+      firm_growth_rates_revenue:
+        special: hist
+        checkbox_name: Growth Rates (Revenue)
+        dist: firm_growth_rates_revenues
+        bins: firm_growth_rates_revenues_bins
+        histtype: step
+        edgecolor: magenta
+        label: "Firm Growth Rates (Revenues)"
+        toggled: false
+
+      # firm_growth_rates_revenue:
+      #   special: scatter
+      #   checkbox_name: Growth Rates (Rev)
+      #   traj_key_y: firm_growth_rates_revenues_y
+      #   traj_key_x: firm_growth_rates_revenues_x
+      #   color: magenta
+      #   labels: ["Firm Growth Rates (Revenue)"]
+      #   toggled: false
+
+      firm_deaths:
+        special: scatter
+        checkbox_name: Firm Deaths
+        traj_key_y: firm_deaths_y
+        traj_key_x: firm_deaths_x
+        color: black
+        labels: ["Monthly Firm Deaths"]
+        toggled: false
+
+profitability:
+  name: Profit Rates
+  plots:
+    capital_weighted_profit_rates:
+      special: hist
+      checkbox_name: Capital Weighted Profit Rates
+      dist: profit_rates
+      bins: profit_rates_bins
+      weights: capital_investment_weights
+      edgecolor: "#f78f07"
+      label: "Capital Weighted Profit Rates"
+      toggled: true
+      histtype: step
+    firm_weighted_profit_rates:
+      special: hist
+      checkbox_name: Firm Weighted Profit Rates
+      dist: profit_rates
+      bins: profit_rates_bins
+      weights: firm_investment_weights
+      edgecolor: magenta
+      label: "Capital Weighted Profit Rates"
+      toggled: true
+      histtype: step
+
+
+
+

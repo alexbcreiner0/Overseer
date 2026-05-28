@@ -1,0 +1,174 @@
+outputs:
+  name: Value Outputs
+  title: null
+  tooltip: null
+  x_label: Time [t]
+  y_label: Value [t]
+  plots:
+    y_normal:
+      checkbox_name: Value Outputs
+      colors: [blue, red]
+      labels: [Dept. I Value Output, Dept. II Value Output]
+      linestyle: solid
+      toggled: true
+      on_startup: true
+      traj_key: y
+    total_value:
+      checkbox_name: Total Value Output
+      colors: [green]
+      labels: [Total Value Output]
+      linestyle: solid
+      toggled: false
+      traj_key: total_val
+    y_normal_bal:
+      checkbox_name: Balanced Growth Paths
+      colors: [blue, red]
+      labels: [Dept. I Balanced Growth, Dept. II Balanced Growth]
+      linestyle: dashed
+      toggled: true
+      traj_key: y_bal
+    total_price_outputs:
+      checkbox_name: Price Outputs
+      colors: ['#fcdc3a', '#04b8f9']
+      labels: [Dept. I Price Output, Dept. II Price Output]
+      linestyle: dashed
+      toggled: false
+      traj_key: p_vec
+    total_price:
+      checkbox_name: Total Output Price
+      colors: [green]
+      labels: ['Total Specific Price?']
+      linestyle: dashed
+      toggled: false
+      traj_key: p_out
+    ideal_y:
+      checkbox_name: Ideal Growth Paths
+      colors: [blue, red]
+      labels: [Dept. I Ideal Value Output, Dept. II Ideal Value Output]
+      linestyle: solid
+      toggled: false
+      traj_key: ideal_y
+    marx_curves:
+      checkbox_name: Marx's Reproduction Schema
+      colors: [blue, red]
+      labels: [Dept. I Value Output (Original Schema), Dept. II Value Output (Original
+          Schema)]
+      linestyle: solid
+      toggled: false
+      traj_key: marx_curves
+    total_surplus:
+      checkbox_name: Total Surplus Value
+      colors: [teal]
+      labels: [Total Surplus Value]
+      linestyle: solid
+      toggled: false
+      traj_key: total_surplus
+    total_money_profit:
+      checkbox_name: Total Profit
+      colors: [teal]
+      labels: [Total Profit]
+      linestyle: dashed
+      toggled: false
+      traj_key: total_money_profit
+rates:
+  name: Rates
+  title: null
+  tooltip: null
+  x_label: Time [t]
+  y_label: null
+  plots:
+    value_rop:
+      checkbox_name: Value Rate of Profit
+      colors: [black]
+      labels: [Value Rate of Profit]
+      linestyle: solid
+      toggled: true
+      traj_key: val_profit
+    balanced_growth_value_rop:
+      checkbox_name: Balanced Growth Value RoP
+      colors: [black]
+      labels: [Balanced Growth Value RoP]
+      linestyle: dashed
+      toggled: false
+      traj_key: val_profit_bal
+    sectoral_value_profit_rates:
+      checkbox_name: Sectoral Profit Rates (Value)
+      colors: [blue, red]
+      labels: [Dept. I Value RoP, Dept. II Value RoP]
+      linestyle: dashed
+      toggled: true
+      traj_key: sectoral_value_profit_rates
+    exploitation:
+      checkbox_name: Rate of Exploitation
+      colors: [magenta]
+      labels: [Rate of Exploitation]
+      linestyle: solid
+      toggled: false
+      traj_key: e
+    gdp_rate:
+      checkbox_name: Rate of Value Added Growth (Value)
+      colors: [red]
+      labels: [Total Value Added]
+      linestyle: solid
+      toggled: false
+      traj_key: gdp
+    golden_age_value_rop:
+      checkbox_name: Money Rate of Profit
+      colors: [orange]
+      labels: [Money Rate of Profit]
+      linestyle: solid
+      toggled: true
+      traj_key: pg_out
+    k_sects:
+      checkbox_name: Sectoral Compositions
+      colors: [blue, red]
+      labels: [Dept. I Value Composition, Dept. II Value Composition]
+      linestyle: dashed
+      toggled: false
+      traj_key: k_sects
+    labor_demand:
+      checkbox_name: Labor Demand
+      colors: [green]
+      labels: [Demand for Labor]
+      linestyle: solid
+      toggled: false
+      traj_key: labor_demand
+    overall_composition:
+      checkbox_name: Composition of Capital
+      colors: [purple]
+      labels: [Value Composition of Capital]
+      linestyle: solid
+      toggled: false
+      traj_key: overall_composition
+    roam_value_version:
+      checkbox_name: Money Rate of Accumulation
+      colors: [orange]
+      labels: [Rate of Accumulation (Money)]
+      linestyle: dashed
+      toggled: false
+      traj_key: roam
+    roav_value_version:
+      checkbox_name: Value Rate of Accumulation
+      colors: [orange]
+      labels: [Rate of Accumulation (Value)]
+      linestyle: solid
+      toggled: false
+      traj_key: roav
+population:
+  name: Population
+  tooltip: These plots currently have no meaning when the simulation mode is set to
+    analytic, since population constraints cannot be implemented on top of the closed-form
+    solution.
+  plots:
+    E:
+      checkbox_name: Total Employment
+      colors: [green]
+      labels: [Total Employment]
+      toggled: true
+      traj_key: E
+    N:
+      checkbox_name: Working Population Size
+      colors: [red]
+      labels: [Working Population Size]
+      toggled: true
+      traj_key: N

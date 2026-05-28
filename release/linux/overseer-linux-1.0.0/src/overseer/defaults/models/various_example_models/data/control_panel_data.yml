@@ -1,0 +1,19 @@
+divider1:
+  title: Parameters
+row1:
+  a:
+    param_name: a
+    tooltip: ''
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 5.0]
+    label: a=
+  b:
+    param_name: b
+    tooltip: ''
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 5.0]
+    label: b=

@@ -1,0 +1,448 @@
+divider1:
+  title: Simulation Options and Perturbations
+row1:
+  economy_type:
+    control_type: dropdown
+    param_name: economy_type
+    label: Model Restrictions
+    names: [Unrestricted, Fixed Real Wage, Non-decreasing Employment, Fixed Struggle]
+    values: [unrestricted, fixed_real_wage, nondecreasing_employment, fixed_struggle]
+    tooltip: Various restrictions which we may impose upon the economy. Fixed struggle
+      combines a fixed money wage with non-decreasing employment. This could represent
+      an economy in which the 'yellow' labor unions have significant institutional
+      power and are able to keep the class struggle locked in a stalemate.
+  output_equation:
+    control_type: dropdown
+    param_name: output_equation
+    label: Equation Modifiers
+    names: [Relative Output Scales With Profit Rate, Absolute Output Scales With Profit,
+      Cross-Dual Price/Output]
+    values: [relative, absolute, cross-dual]
+    tooltip: Wright's original thesis uses an output equation in which the relative
+      change in output is proportional to the profit rate. In his newer versions he
+      has changed this to having the absolute output being proportional to the total
+      profit. I'm not sure which I prefer so I am including both. If you aren't sure,
+      leave this alone.
+  employment_guardrails:
+    control_type: dropdown
+    param_name: employment_guardrails
+    label: Employment Guardrails
+    names: ['On', 'Off']
+    values: [true, false]
+    tooltip: Actively prevent employment employment from exceeding the size of the
+      labor force. (Only needed in case where real wage is fixed.)
+row2:
+  res:
+    control_type: entry_block
+    param_name: res
+    label: $\delta= $
+    type: scalar
+    range: [1, 100]
+    scalar_type: int
+    tooltip: Number of points to sample per time step. Higher numbers will produce
+      smoother curves at the cost of computation time.
+  T:
+    control_type: entry_block
+    param_name: T
+    label: $T= $
+    type: scalar
+    range: [10, 1000]
+    scalar_type: int
+    tooltip: Number of periods simulated. Keep in mind larger values of this will
+      slow down simulation speed.
+divider2:
+  title: Absolute Surplus Value
+row3:
+  alpha_L:
+    control_type: entry_block
+    param_name: alpha_L
+    label: $\alpha_L= $
+    type: scalar
+    range: [-1, 1]
+    scalar_type: float
+    tooltip: Rate of population growth of the working class.
+  atrophy_with_unemployment:
+    control_type: dropdown
+    param_name: atrophy_with_unemployment
+    label: Wage Decay Type
+    names: [Always, Only With Severe Unemployment]
+    values: [always, unemployment]
+    tooltip: If set to always, wage will decay at the rate $\epsilon_w$ regardless
+      of unemployment. If set to the latter, wage will only begin to decay after unemployment
+      reaches the amount $\gamma_L$
+  mu_L:
+    control_type: entry_block
+    label: $\mu_L= $
+    type: scalar
+    param_name: mu_L
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Maximal unemployment. Population will grow initially at the rate $\alpha_l$
+      but logistically approach a number such that unemployment is this (i.e. it acts
+      as a ceiling). Model dynamics are virtually the same even if this number is
+      effectively infinity.
+row4:
+  gamma_L:
+    control_type: entry_block
+    param_name: gamma_L
+    label: $\gamma_L= $
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Maximal rate of unemployment before wages begin to atrophy.
+  wage_deflation:
+    control_type: entry_block
+    label: $\epsilon_w = $
+    type: scalar
+    param_name: wage_deflation
+    range: [-1, 1]
+    scalar_type: float
+    tooltip: Exogenous decay rate of the wage. Positive numbers could represent an
+      economy in which the working class is continually ceding ground to the capitalists
+      in the class struggle, while negative numbers could represent the reverse.
+divider3:
+  title: Relative Surplus Value
+row5:
+  shock_type:
+    control_type: dropdown
+    param_name: shock_type
+    label: Technical Change
+    names: ['Capital Using, Labor Saving', 'Capital Saving, Labor Using', Capital
+        Saving, Labor Saving]
+    values: [culs, cslu, cs, ls]
+    tooltip: The type of innovation being introduced.
+  change_type:
+    control_type: dropdown
+    param_name: change_type
+    label: Scenario
+    names: [None, Fits and Starts, Continuous]
+    values: [none, discrete, cts]
+    tooltip: Fits and starts introduces the technological changes in fixed intervals,
+      all at once, while continuous should be self-explanatory.
+  fix_sector_receiving_change:
+    control_type: dropdown
+    param_name: fix_sector_receiving_change
+    label: Sector Receiving Change
+    names: [Random, Corn, Iron, Sugar]
+    values: [-1, 0, 1, 2]
+    tooltip: Which sector receives technical changes.
+row6:
+  shock_mag:
+    control_type: entry_block
+    param_name: shock_mag
+    label: $\beta_T= $
+    type: scalar
+    range: [0, 0.5]
+    scalar_type: float
+    tooltip: Rate of decrease of resource costs (either capital goods requirements
+      in the case of CSLU or living labor requirements in the case of CULS).
+  cost_tradeoff:
+    control_type: entry_block
+    param_name: cost_tradeoff
+    label: $\epsilon_T= $
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: In the case of CULS or CSLU technical change, either capital or labor
+      requirements increase along with the other decreasing. No matter what, the innovation
+      must be cost-reducing for the capitalist. This number controls how slim the
+      margin is of that cost-saving. Lower numbers mean slimmer margins means weaker
+      super-profits and a less extreme effect of the innovation on the economy.
+  change_interval:
+    control_type: entry_block
+    param_name: change_interval
+    label: $D_T= $
+    type: scalar
+    range: [0, 100]
+    scalar_type: int
+    tooltip: In the case where innovation is applied 'in fits and starts', this number
+      controls the interval at which the changes are applied.
+divider4:
+  title: Money Injections and Supply Shocks
+row7:
+  supply_shock_setting:
+    control_type: dropdown
+    param_name: supply_shock_setting
+    label: Supply Shocks
+    names: [None, Periodic, Continuous]
+    values: [none, periodic, cts]
+    tooltip: Applies an exogenous deduction from the existing supply according to
+      the shock magnitude.
+  M_change_type:
+    control_type: dropdown
+    param_name: M_change_type
+    label: Money Injections
+    names: [None, Discrete Intervals]
+    values: [none, discrete]
+    tooltip: Whether or not to 'print money' at fixed intervals.
+  money_injection_target:
+    control_type: dropdown
+    param_name: money_injection_target
+    label: Money Injection Beneficiary
+    names: [Workers, Capitalists]
+    values: [workers, capitalists]
+    tooltip: If money is being printed, who does it go to?
+row8:
+  delta_M:
+    control_type: entry_block
+    param_name: delta_M
+    label: $\beta_M = $
+    type: scalar
+    range: [0, 100]
+    scalar_type: float
+    tooltip: Controls the magnitude of the money injections.
+  M_change_interval:
+    control_type: entry_block
+    label: $D_M = $
+    type: scalar
+    param_name: M_change_interval
+    range: [0, 100]
+    scalar_type: int
+    tooltip: The intervals between money injection events.
+  M_change_duration:
+    control_type: entry_block
+    label: $\delta_M = $
+    type: scalar
+    param_name: M_change_duration
+    range: [0, 100]
+    scalar_type: float
+    tooltip: Money injections have virtually no effect on the economy if applied all
+      at once. When money is injected at discrete intervals, this number controls
+      how long the 'injection period' will last.
+row9:
+  supply_shock_mag:
+    control_type: entry_block
+    param_name: supply_shock_mag
+    label: $\alpha_s = $
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Controls the magnitude of the supply shocks.
+  supply_shock_interval:
+    control_type: entry_block
+    label: $D_s = $
+    type: scalar
+    param_name: supply_shock_interval
+    range: [0, 100]
+    scalar_type: int
+    tooltip: The intervals between supply shocks.
+divider5:
+  title: Main Parameters
+row10:
+  generation:
+    control_type: button_group
+    names: [Random Parameters]
+    tooltips:
+    - Generate random parameters.
+    display: horizontal
+    functions:
+    - random_parameters
+    param_name: generation
+row11:
+  A:
+    control_type: entry_block
+    param_name: A
+    label: $A= $
+    tooltip: The requirements matrix. Rows and columns (for this and the vectors next
+      to this) represent the first, second and third commodities circulating (for
+      sake of example corn, iron, and sugar). The (i,j) entry of this matrix represents
+      the number of units of commodity i needed to produce a unit of commodity j.
+      So the bottom right entry is the amount of 'sugar' needed to make 'sugar'.
+    type: matrix
+    dim_from:
+    - n
+    - n
+    safe_default: 0.1
+  l:
+    control_type: entry_block
+    param_name: l
+    label: $\mathbf{l}= $
+    tooltip: The living labor vector. The ith entry of this is the number of hours
+      of labor required to produce a unit of the ith commodity.
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+row12:
+  composite1:
+    control_type: hsub_panel1
+    entries:
+      b:
+        control_type: entry_block
+        param_name: b_bar
+        label: $\mathbf{b}= $
+        tooltip: Workers will spend a proportion of their savings each period on a
+          means of subsistence bundle amounting to a scalar multiple of this vector.
+          By default, we have workers consuming corn and sugar, but mostly corn.
+        type: vector
+        dim_from: n
+        safe_default: 0.1
+        vsize_policy: expanding
+      c:
+        control_type: entry_block
+        param_name: c_bar
+        label: $\mathbf{c}= $
+        tooltip: Workers will spend a proportion of their savings each period on a
+          consumption bundle amounting to a scalar multiple of this vector. By default,
+          we have capitalists consuming corn and sugar, but mostly sugar.
+        type: vector
+        dim_from: n
+        safe_default: 0.1
+        vsize_policy: expanding
+    param_name: composite1
+  composite2:
+    control_type: vsub_panel1
+    entries:
+      alpha_w:
+        control_type: entry_block
+        param_name: alpha_w
+        label: $\alpha_w= $
+        type: scalar
+        range:
+        - 0
+        - 1
+        scalar_type: float
+        tooltip: Worker propensity to consume. Workers spend this proportion of their
+          savings each period on means of subsistence.
+      alpha_c:
+        control_type: entry_block
+        param_name: alpha_c
+        label: $\alpha_c= $
+        type: scalar
+        range:
+        - 0
+        - 1
+        scalar_type: float
+        tooltip: Capitalist propensity to consume. Capitalists spend this proportion
+          of their savings each period on consumption.
+    param_name: composite2
+row13:
+  q:
+    control_type: entry_block
+    param_name: q
+    label: $\mathbf{q}(0)= $
+    tooltip: Initial output vector. This one is much less consequential than the initial
+      supply vector found next to this.
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+  s:
+    control_type: entry_block
+    param_name: s
+    label: $\mathbf{s}(0)= $
+    tooltip: Initial supply vector. Default example has an initial shortage of 'iron'.
+      Try increasing this amount (the second entry) and see what changes.
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+  p:
+    control_type: entry_block
+    param_name: p
+    label: $\mathbf{p}(0)= $
+    tooltip: The initial unit price vector. Entry i is the price of a unit of i at
+      the start of the simulation.
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+row14:
+  L:
+    control_type: entry_block
+    param_name: L
+    label: $L(0)= $
+    type: scalar
+    range: [0, 100]
+    scalar_type: float
+    tooltip: Initial total amount of labor available for employment (can be broken
+      into arbitrarily small pieces). Note this stands in for the amount of workers
+      available.
+  w:
+    control_type: entry_block
+    param_name: w
+    label: $w(0)= $
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Initial hourly wage rate.
+  m_w:
+    control_type: entry_block
+    param_name: m_w
+    label: $m_w(0)= $
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Initial worker savings. Total circulating money in the economy is fixed
+      at M=1. Understand that all money in the simulation is possessed by either workers
+      or capitalists. Thus the more money workers have, the less capitalists have,
+      driving up interest rates.
+row15:
+  M:
+    control_type: entry_block
+    param_name: M
+    label: $M(0)= $
+    type: scalar
+    range: [1, 100]
+    scalar_type: float
+    tooltip: Initial total money circulating in the economy. All money is possessed
+      by either capitalists or workers (so that the sum of their savings is always
+      M)
+  r:
+    control_type: entry_block
+    param_name: r
+    label: $r(0)=$
+    type: scalar
+    range: [0, 1]
+    scalar_type: float
+    tooltip: Initial interest rate. Capitalists finance all production through borrowing
+      at this rate.
+divider6:
+  title: Particularities
+row16:
+  eta_w:
+    control_type: entry_block
+    param_name: eta_w
+    label: $\eta_w= $
+    type: scalar
+    range: [0, 2]
+    scalar_type: float
+    tooltip: Constant of integration representing the elasticity of the hourly wage
+      with respect to unemployment. Essentially, the higher this number is, the more
+      dramatically wages will change with unemployment.
+  eta_r:
+    control_type: entry_block
+    param_name: eta_r
+    label: $\eta_r= $
+    type: scalar
+    range: [0, 2]
+    scalar_type: float
+    tooltip: Constant of integration representing the elasticity of the interest rate
+      with respect to capitalist savings. Essentially, the higher this number is,
+      the more dramatically the interest rate will fall with respect to changes in
+      the total money posessed by capitalists.
+row17:
+  eta:
+    control_type: entry_block
+    param_name: eta
+    label: $\mathbf{\eta}= $
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+    tooltip: Elasticity constants representing how dramatically each price fluctuate
+      in response to changes in supply.
+  kappa:
+    control_type: entry_block
+    param_name: kappa
+    label: $\mathbf{\kappa}= $
+    type: vector
+    dim_from: n
+    safe_default: 0.1
+    tooltip: Elasticity constants representing how dramatically outputs fluctuate
+      in resonse to profitability
+row18:
+  init_tssi_melt:
+    control_type: entry_block
+    param_name: init_tssi_melt
+    label: $\tau(0)= $
+    type: scalar
+    range: [0, 5]
+    scalar_type: float
+    tooltip: Initial condition for the TSSI MELT (without a base case, this is not
+      well defined)

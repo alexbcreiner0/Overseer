@@ -1,0 +1,16 @@
+presets:
+  default_preset:
+    name: Default
+    desc: ''
+    params: null
+  good:
+    name: Good
+    desc: ''
+    params:
+      func_res: 300
+      eps: 0.01
+      X: 10.0
+      b_upper: 5.0
+      curve_res: 300
+      b_lower: 0.1
+      b_res: 1000

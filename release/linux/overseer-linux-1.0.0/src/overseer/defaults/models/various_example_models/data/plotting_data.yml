@@ -1,0 +1,99 @@
+3d_plot_demo:
+  name: 3D Plot Demo
+  projection: 3d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    slinky:
+      checkbox_name: Slinky
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Slinky]
+      colors: [red]
+      traj_key: sine
+      traj_key_x: cosine
+      traj_key_z: z
+  default_lims: [[-1.5, 1.5], [-1.5, 1.5], [0.0, 70.0]]
+3d_surface_demo:
+  name: 3D Surface Demo
+  projection: 3d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    wave_interference:
+      special: surface
+      checkbox_name: Wave Interference
+      toggled: true
+      traj_key_X: X
+      traj_key_Y: Y
+      traj_key_Z: Z
+      cmap: plasma
+      colorbar: false
+vector_field_demo:
+  name: Vector Field Demo
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    crazy_arrows:
+      special: vector
+      checkbox_name: Crazy Arrows
+      toggled: true
+      traj_key_X: vec_X
+      traj_key_Y: vec_Y
+      traj_key_U: vec_U
+      traj_key_V: vec_V
+      traj_key_W: ''
+      cmap: magma
+      traj_key_C: vec_C
+      colorbar: false
+scatter_demo:
+  name: Scatter Demo
+  projection: 3d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    slinky_scatter:
+      special: scatter
+      checkbox_name: Slinky Scatter
+      toggled: true
+      traj_key_x: cosine
+      traj_key_y: sine
+      traj_key_z: z
+      labels: [Fun!]
+      color: color
+      marker: o
+      size_key: true
+      color_key: true
+      size: size
+cts_heatmap_demo:
+  name: Cts Heatmap Demo
+  projection: 2d
+  axis_visible: false
+  grid_visible: false
+  ticks_visible: false
+  frame_visible: false
+  plots:
+    heat:
+      special: heatmap
+      checkbox_name: Heat
+      toggled: true
+      traj_key: u
+      discrete: false
+      colorbar: true
+      colorbar_labels: true
+      aspect: equal
+      interpolation: quadric
+      origin: lower
+      cmap: inferno
+  default_lims: [[-5.45596, 120.604], [-11.6349, 82.9103]]
