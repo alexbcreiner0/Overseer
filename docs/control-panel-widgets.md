@@ -47,7 +47,7 @@ All of these elements - widgets, rows and dividers, can be seen as elements with
 
 However, the reader should be warned that this feature is a little wonky at the time of writing this. Sometimes, if you drag the widgets around and don't keep them carefully indented where they are supposed to be, they disappear and delete themselves. This deletion isn't permanent unless you click apply or save, so if it happens you can simply close and reopen the settings menu to recover. However, it means that you should always save whatever settings you've changed before doing this. 
 ## The Panel Creation Wizard
-As shown off in the [the quick-start tutorial](quick-start), the control settings tab has a built-in wizard which can instantly bootstrap a serviceable control panel from scratch, provided you've already defined your parameters. As an example using the [Ian Wright cross-dual disequilibrium model found in the examples](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright-cross-dual-3-commodity), I've temporarily deleted the entire `control_panel.yml` file, so we currently have nothing:
+As shown off in the [the quick-start tutorial](quick-start), the control settings tab has a built-in wizard which can instantly bootstrap a serviceable control panel from scratch, provided you've already defined your parameters. As an example using the [Ian Wright cross-dual disequilibrium model found in the examples](my-models/wright-cross-dual), I've temporarily deleted the entire `control_panel.yml` file, so we currently have nothing:
 
 ![](images/starting-from-scratch.png)
 
@@ -123,6 +123,8 @@ The relevant field here is the table, which allow the user to specify any number
 Beginngers are advised to leave the 'Names from' fields above the table blank. For more information on the purpose of these, see the [section below on metaparameters](#Metaparameters).
 ### Checkboxes
 Checkboxes are very simply control widgets that can allow for easy control of Boolean parameters, e.g. True/False values. There is really not much to say about these since the only fields (a parameter and a change effect) have already been mentioned for other control widget types. 
+(buttons)=
+
 ### Buttons
 Buttons are a bit different than other widgets, and it took a good while for the true purpose of the button widget to reveal itself over the course of development of Overseer. Unlike all other widgets, buttons are not directly wired to a specific parameter, or any parameter for that matter. Instead, they are wired to a user-defined function. 
 
@@ -132,7 +134,7 @@ In this example case, the function name is `random_parameters`. At creation time
 #### Replace parameters
 In the case of 'Replace params', Overseer will expect the function to return a new params dataclass, which it will load into the control panel. This can be useful for things like running your models with random parameter settings.
 #### Example
-For the [Ian Wright cross-dual disequilibrium model found in the examples](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright-cross-dual-3-commodity), I've created a button to generate random parameters. The settings in the control panel are the ones found above. The (abridged) random parameters function inside of the `extra_functions.py` file looks like this:
+For the [Ian Wright cross-dual disequilibrium model found in the examples](my-models/wright-cross-dual), I've created a button to generate random parameters. The settings in the control panel are the ones found above. The (abridged) random parameters function inside of the `extra_functions.py` file looks like this:
 
 ```python
 def random_parameters(params, env, epsilon=1e-1):
@@ -160,10 +162,10 @@ When clicked, the new parameter settings are loaded into the control panel and t
 </div>
 ```
 #### Sim event
-In the case of 'Sim event', Overseer will take whatever the output of your function is, and deposit it into the [simulation event queue](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating). It is then the responsibility of the user writing the simulation function to check and act on the data deposited into this queue. 
+In the case of 'Sim event', Overseer will take whatever the output of your function is, and deposit it into the [simulation event queue](event-queue-and-live-updating). It is then the responsibility of the user writing the simulation function to check and act on the data deposited into this queue. 
 
 ##### Example
-In the same [Ian Wright model](https://github.com/alexbcreiner0/Overseer/tree/main/src/overseer/defaults/models/wright-cross-dual-3-commodity), I've created buttons which the user can click in order to implement 'shocks' to the economy in the form of changes to the technological state of production. The settings look like this:
+In the same [Ian Wright model](my-models/wright-cross-dual), I've created buttons which the user can click in order to implement 'shocks' to the economy in the form of changes to the technological state of production. The settings look like this:
 
 ```{raw} html
 <div class="video-wrapper">
@@ -266,6 +268,7 @@ The result:
 
 #### Both?
 In the future, I would also like to add a 'both' option. This would be useful, in particular, for restricting the range of sliders for scalar variables based on the current parameters, or having events which trigger changes to parameters actually feed back into the control panel. However, this is currently not available.
+(metaparameters)=
 
 ## Metaparameters
 Sometimes, it is helpful for parameters to effect not just the simulation, but the control panel itself. For example, suppose we have an economic model which requires a fixed number of commodities to be specified, but which can be anything. Obviously the number of commodities is a parameter of the system (we'll call it $n$, but so is the [Leontief input-output matrix](https://en.wikipedia.org/wiki/Input%E2%80%93output_model) of requirements for those commodities, which has an associated matrix entry. It would be nice to have this matrix entry's dimension change automatically when the number of commodities changes. 
@@ -306,7 +309,7 @@ In fact, Overseer is completely blind to which parameters are and aren't metapar
 </div>
 ```
 
-You can see that plots from the new prices automatically appear as well. This is possible because the model returns the prices as a vector trajectory - see [the section on plots and categories](7%20-%20Plots%20and%20Categories#Vector%20Plots) for more info on this feature, which is designed to work in tandem with dimensional metaparameters. You might also have noticed that new names were made up for the additional commodity types. This makes use of a plot-postprocessing feature which is described in the [plots and categories section](7%20-%20Plots%20and%20Categories#Plot%20Post-Processing). 
+You can see that plots from the new prices automatically appear as well. This is possible because the model returns the prices as a vector trajectory - see [the section on plots and categories](vector-plots) for more info on this feature, which is designed to work in tandem with dimensional metaparameters. You might also have noticed that new names were made up for the additional commodity types. This makes use of a plot-postprocessing feature which is described [here](plot-preprocessing). 
 
 Matrices and vectors aren't the only widget types which depend on $n$. Above that, in the 'Relative Surplus Value' section of the control panel, we have a dropdown called 'Sector Receiving Change'. Obviously, we want these names to also be updated when $n$ changes. To do that, we use the following settings:
 
@@ -365,7 +368,8 @@ def random_parameters(params, env, epsilon=1e-1):
 
 This is why it's helpful to have all of these different meta-helper functions in the same file. 
 
-One final note about metaparameters and in relation to [live updating](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating). Obviously, having the dimension of a matrix change in the middle of a simulation is a recipe for unintended outcomes, and doesn't really make any sense to me in terms of when you might be motivated to do this. Thus **metaparameters are ineligable for live updating**. Regardless of the widget setting, and regardless of the parameter change response, **changing a metaparameter will always halt and restart the running simulation.**
+One final note about metaparameters and in relation to [live updating](event-queue-and-live-updating). Obviously, having the dimension of a matrix change in the middle of a simulation is a recipe for unintended outcomes, and doesn't really make any sense to me in terms of when you might be motivated to do this. Thus **metaparameters are ineligable for live updating**. Regardless of the widget setting, and regardless of the parameter change response, **changing a metaparameter will always halt and restart the running simulation.**
+(plot-preprocessing)=
 
 ## Plot Pre-Processing
 Although this feature might be argued to belong in the section on plots and categories, the current state of the feature makes it hard for me to imagine any use for it besides in conjunction with metaparameters. To recap our ongoing example, we have almost finished generalizing our simulation to allow the user to change the number of commodities 'on the fly'. New plots render automatically, and widgets of the control panel are automatically mutated to reflect whatever the current value of $n$ is. 

@@ -1,4 +1,6 @@
 # Saving Pictures, Presets and Data
+(pictures)=
+
 ## Pictures
 Once you've got a nice figure set up, you can save a screenshot by clicking the floppy disk button in the toolbar, or by using the default keyboard shortcut Ctrl+S,S:
 
@@ -61,7 +63,7 @@ If you've found a particularly noteworthy configuration of your parameters, you 
 </div>
 ```
 
-This is particularly useful if you are writing a paper and building a [release build of your model](11%20-%20Feature%20Model%20Releases%20(for%20Publication)) to accompany it, as you can save a preset for every figure, allowing readers to easily not only see your results, but also easily *reproduce them*!
+This is particularly useful if you are writing a paper and building a [release build of your model](feature-model-releases) to accompany it, as you can save a preset for every figure, allowing readers to easily not only see your results, but also easily *reproduce them*!
 
 ```{raw} html
 <div class="video-wrapper">

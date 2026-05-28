@@ -48,6 +48,8 @@ The way that Overseer goes about choosing values for each parameter when a simul
 It is considered best practice when using Overseer to specify a default value for every parameter, but this is not always reasonable. The Preset Settings menu will mark parameters that don't have default values with an asterisk, and remind you to set values for them.  If you fail to fill in a parameter field marked by an asterisk and click apply anyway, Overseer *will not save your file*. 
 
 One final note: parameters with default values set become optional arguments, and Python requires that optional arguments always are specified *after* the required arguments. Thus when defining parameters in the Parameter settings menu, you must always have the parameters without defaults appear in the list before the parameters without defaults. The $\uparrow$ and $\downarrow$ allow you to easily reorganize your parameters to conform to this, or you can click the 'Sift defaults down' button to automatically bring all parameters without defaults underneath those which have defaults. 
+(save-as-initial)=
+
 ## Save as Initial
 The main advantage of computer simulations is the ability to view dynamical phenomena within them that would be infeasibly difficult to derive through a purely analytical mathematical approach using equations. 
 

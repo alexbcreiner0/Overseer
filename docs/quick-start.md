@@ -1,6 +1,5 @@
+# Quick-Start Tutorial
 The best way to learn how to use Overseer is to make a few simple models on your own. This tutorial will walk you through doing just that. 
-# Building a Model
-
 ## Step 1: Create a Model
 To get started, navigate in the top menu bar to Settings -> Model Settings. Here you will see a list of models that have been created already - likely just some of my own models, which come packaged with Overseer as examples.
 

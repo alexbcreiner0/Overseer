@@ -1,7 +1,7 @@
 # Plots and Categories
 In this section we will go over all of the currently existing plotting features which Overseer has. Let's start by giving an overview of the graph panel in general. 
 ## Categories
-In Overseer, plots are to be organized into **categories**, which are collections of plots which you may want to view plotted with one another on the same axis. In the [plot controls tab](3%20-%20Anatomy%20of%20Overseer%20-%20The%20Control%20and%20Graph%20Panels.md#The%20Control%20Panel%20and%20Graph%20Panel) of the control panel, each [slot](3%20-%20Anatomy%20of%20Overseer%20-%20The%20Control%20and%20Graph%20Panels.md#Slots) contains a dropdown which allows you to choose which category the slot is set to:
+In Overseer, plots are to be organized into **categories**, which are collections of plots which you may want to view plotted with one another on the same axis. In the [plot controls tab](control-and-graph-panel) of the control panel, each [slot](slots) contains a dropdown which allows you to choose which category the slot is set to:
 
 ![](images/slot-controls.png)
 
@@ -43,7 +43,7 @@ Below that, we have the plot-type choice. The options below that depend on the p
 
 The options given for each plot type are a combination of settings which are specific to Overseer and settings which are just keyword arguments to matplotlib. The latter is curated, and discussion of these will be kept to a minimum, since the reader can either click the ?  box or consult matplotlib's own documentation to determine how they work (or simply experiment with them). 
 ### Curves
-Curves are plotted using matplotlib's `plot` function. As we can see from the above, the only truly necessary setting here is the trajectory key (technically the key for the y-axis specifically). The reader who doesn't know what is meant by trajectory key should look through the [quick-start tutorial](1%20-%20Quick-Start%20Tutorial%20--%20Building%20a%20Model%20From%20Scratch.md). Generally, matplotlib requires additionally an x-axis, but as explained in the section on [writing simulations](6%20-%20Writing%20Simulations.md), the user can specify a default which Overseer will default to using. The x-axis trajectory key entry can thus be left blank *assuming* that your simulation provides this default.
+Curves are plotted using matplotlib's `plot` function. As we can see from the above, the only truly necessary setting here is the trajectory key (technically the key for the y-axis specifically). The reader who doesn't know what is meant by trajectory key should look through the [quick-start tutorial](quick-start). Generally, matplotlib requires additionally an x-axis, but as explained in the section on [writing simulations](writing-simulations), the user can specify a default which Overseer will default to using. The x-axis trajectory key entry can thus be left blank *assuming* that your simulation provides this default.
 
 The settings in between the trajectory keys and the Curves (label+color) entry are matplotlib settings, and so I will skip over those (though they should be self-explanatory). The aforementioned Curves (label+color) specifies the label which identifies the curve in the legend, and the color of the curve, respectively. (Ignore the label template checkbox and the +Add series button for the time being.) Colors can be specified in hexadecimal or by typing out the name of the color. The entry box itself will color to assure you that you've picked something valid. There is also a color picker which can be accessed by clicking the button next to the field. 
 
@@ -87,6 +87,7 @@ Results in:
   </video>
 </div>
 ```
+(vector-plots)=
 
 #### Vector Plots
 Suppose we were working with an economic model in which we had a set of prices for $n$ different commodity types, all of which were evolving over time. As a very contrived example, consider this simulation function:
@@ -411,7 +412,7 @@ There is really nothing here that does not have a direct correspondence to the a
 3. RGBA Data. Same thing, but with a fourth alpha entry (transparency).
 4. A Pillow Image instance. 
 
-Overseer accepts all of these, but will reject anything besides 2D scalar data for certain applications. You must not use [the Append or Extend dataclasses](6%20-%20Writing%20Simulations.md#Extend%20Append%20and%20Replace) when you are serving this data to Overseer - the new image being yielded must always take the place of the old one in its entirety. 
+Overseer accepts all of these, but will reject anything besides 2D scalar data for certain applications. You must not use [the Append or Extend dataclasses](append-extend-replace) when you are serving this data to Overseer - the new image being yielded must always take the place of the old one in its entirety. 
 
 For 2D scalar data, the idea is to color the cells of an $(m,n)$ grid according to some mapping from the scalar numbers to colors. This gives you a heatmap. It is specifically here with the interpretation of scalar data that the distinction between discrete and continuous has relevance. With continuous chosen as the type, the expectation is that cell coloring is to be done automatically for these via one of matplotlib's color mapping algorithms. (See the example below.) The discrete menu is simply a single dropdown - just choose your colormap and forget about it.
 

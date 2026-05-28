@@ -1,5 +1,5 @@
 # Writing Simulations
-In this section we'll cover best practices for writing simulations for Overseer. It is expected that the reader has already familiarized themselves with how to handle parameters in Overseer. If not, visit [the quick-start tutorial](1%20-%20Quick-Start%20Tutorial%20--%20Building%20a%20Model%20From%20Scratch.md) and/or [the parameters section](5%20-%20Parameters%20and%20Presets.md). 
+In this section we'll cover best practices for writing simulations for Overseer. It is expected that the reader has already familiarized themselves with how to handle parameters in Overseer. If not, visit [the quick-start tutorial](quick-start) and/or [the parameters section](parameters-and-presets). 
 
 The Python code which the user is expected to interact with is found inside of a model's `simulation` directory. The only file that they are explicitly required to edit themselves inside of here is `simulation.py`. Overseer expects to find functions in here, and it expects those functions to be usable as entry points for your model. What do these expectations amount to?
 ## Requirements for a valid simulation function:
@@ -206,6 +206,8 @@ The next issue is more conceptual. The current simulation function is of the sam
 - Passing the entire Gini array, however, *is* redundant, because it is only being appended to every step. We are passing the same data over and over again. 
 - The $t$ array has the same problem as the Gini array. We are passing all of the old values repeatedly. 
 Overall, the amount of data being sent over is $O(nm)$, where $m$ is the size of the data and $n$ is the number of steps. We are passing more and more redundant information every time step. This data transfer is not free, because your simulation runs in a separate process from Overseer itself. This data must be serialized and sent over, which takes linear time in the data. The solution to these efficiency problems are to use the Extend, Append, and Replace dataclasses to instruct Overseer more explicitly how it should manage the data you feed it on a case-by-case basis. 
+(append-extend-replace)=
+
 ### Extend, Append, and Replace
 You may have noticed the following imports in the starter code when you create a model:
 ```python
@@ -330,7 +332,7 @@ class Model:
         return agent_wealths
 ```
 
-**Warning**: If you attempt to **Append** a list-like set of numbers rather than **Extend** them, Overseer will interpret that as you trying to plot a **vector** quantity, and interpret that set of numbers as a **single** piece of data. See [the curve plotting documentation](7%20-%20Plots%20and%20Categories.md#Vector%20Plots) for more information on this feature.
+**Warning**: If you attempt to **Append** a list-like set of numbers rather than **Extend** them, Overseer will interpret that as you trying to plot a **vector** quantity, and interpret that set of numbers as a **single** piece of data. See [the curve plotting documentation](vector-plots) for more information on this feature.
 
 One final note about building efficient simulations in Overseer is to avoid passing Numpy arrays whenever possible. Since Overseer expects to be managing its own datasets, and it wants to be ready to append the data quickly, it will always automatically convert any Numpy arrays that it's been handed into regular Python lists. This itself takes time $O(n)$. Numpy arrays are great, and no doubt have their use within your simulation. However, you should try to keep them inside of your simulation as much as possible, and avoid passing them in their raw form to Overseer. 
 
@@ -341,7 +343,7 @@ The second input to the trajectories function is an event queue, which Overseer 
 1. Live updating of parameters without the restarting of the simulation.
 2. Creating buttons in the control panel which can instruct the simulation to do something it otherwise wouldn't upon clicking.
 
-We'll focus on case 1 here. For case 2, see [the section on the control panel](8%20-%20Control%20Panel%20Widgets). To make the example simple, we will work with our simple sine/cosine model from the quick-start tutorial:
+We'll focus on case 1 here. For case 2, see [the section on the control panel](control-panel-widgets). To make the example simple, we will work with our simple sine/cosine model from the quick-start tutorial:
 
 ```python
 from .parameters import Params

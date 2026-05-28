@@ -41,7 +41,7 @@ All of these fields should be edited within the GUI itself, in the Demo Settings
 Finally, the default field will only ever be present on a single demo, and designates the demo which Overseer opens into. The demo which is highlighted green in the Demo Settings tab is the default demo.
 
 #### logs
-This folder contains your log files in `json` format. In particular, error messages will appear here when your models fail. However, you never need to actually open this file, since these logs are visible from within Overseer itself in the Logs tab. See [the section on logging](10%20-%20The%20Logger%20and%20You) for more info on how to use Overseer's logging system. 
+This folder contains your log files in `json` format. In particular, error messages will appear here when your models fail. However, you never need to actually open this file, since these logs are visible from within Overseer itself in the Logs tab. See [the section on logging](logger) for more info on how to use Overseer's logging system. 
 
 #### models
 This folder contains your user-defined models! Thus, let's shift towards what a model looks like in general.
@@ -85,16 +85,16 @@ Starting with a rough breakdown:
 - `__init__.py` - this is a completely empty file which initializes your model as its own [dotted namespace](https://docs.python.org/3/tutorial/modules.html), allowing for somewhat more convenient importing and sharing of resources while you build your model. Overseer also uses the presence of this file to distinguish which folders inside of your models directory are models and which aren't. If you don't see your model, it is probably because it is missing an `__init__.py` file.
 - `data` contains non-Python data related to your model, in human readable `yaml` format.
 - `simulation` contains the actual simulation code. Everything *you* need to is in this folder and this folder only.
-- `saved_results` is a directory containing saved data. See the section on [saving your results](9%20-%20Saving%20Pictures,%20Presets,%20and%20Data) for more information on doing this.
+- `saved_results` is a directory containing saved data. See the section on [saving your results](saving-pictures-presets-data) for more information on doing this.
 
 #### The Simulation Folder
 Going through the files here one at a time:
-- `simulation.py` is where Overseer looks for functions to use as entrypoints to start your simulation. Multiple simulation functions are allowed, and the specific one to use can be specified in the Demo Settings. However, it is recommended that you create separate Python files for any functions or classes which your simulation makes use of. These additional files can be created here in the simulation folder with no issues. For more details on what exactly is expected of the `simulation.py` function, see the dedicated section on [writing simulations](6%20-%20Writing%20Simulations.md).
-- `parameters.py` defines a [dataclass](https://docs.python.org/3/library/dataclasses.html) which contains all relevant starting parameters for your model. Any specific information you want the model to have during its simulation should be stored as a parameter within this dataclass. The [next section](5%20-%20Parameters%20and%20Presets) is dedicated to discussing parameters. However, you should never need to touch this file directly. It is meant to be only indirectly altered using the Overseer GUI settings.
+- `simulation.py` is where Overseer looks for functions to use as entrypoints to start your simulation. Multiple simulation functions are allowed, and the specific one to use can be specified in the Demo Settings. However, it is recommended that you create separate Python files for any functions or classes which your simulation makes use of. These additional files can be created here in the simulation folder with no issues. For more details on what exactly is expected of the `simulation.py` function, see the dedicated section on [writing simulations](writing-simulations).
+- `parameters.py` defines a [dataclass](https://docs.python.org/3/library/dataclasses.html) which contains all relevant starting parameters for your model. Any specific information you want the model to have during its simulation should be stored as a parameter within this dataclass. The [next section](parameters-and-presets) is dedicated to discussing parameters. However, you should never need to touch this file directly. It is meant to be only indirectly altered using the Overseer GUI settings.
 - `extra_functions.py` is an optional extra file that advanced users can create to define functions which give Overseer more sophisticated control of your model. These include:
-	- Defining [metaparameters](8%20-%20Control%20Panel%20Widgets#Metaparameters) which allow your parameters to alter the control panel itself. 
-	- Creating [functions for your control panel's buttons](8%20-%20Control%20Panel%20Widgets#Buttons) 
-	- Defining [plot-preprocessing functions](8%20-%20Control%20Panel%20Widgets#Buttons#Plot%20Pre-Processing) which allow your parameters to alter your plots dynamically based on your parameters.
+	- Defining [metaparameters](metaparameters) which allow your parameters to alter the control panel itself. 
+	- Creating [functions for your control panel's buttons](buttons) 
+	- Defining [plot-preprocessing functions](plot-preprocessing) which allow your parameters to alter your plots dynamically based on your parameters.
 
 Above all, it should be emphasized that this folder belongs to you, the user. You can create any number of extra files here to suit your project's needs. Overseer doesn't care, as long as 
 1. You always write your code in the simulations folder (or it's sub-folders)
@@ -118,7 +118,7 @@ In principle, a demo is something specific that you want to show *using* a model
 Additionally and optionally, demos can store the following extra data:
 3. Axis settings, which define the overall view upon loading the demo. This includes how many slots appear, which categories and plots appear on which slots, and so on. 
 4. A speed at which to run the simulation. To have any speed higher than 0 forces the thread looping over the simulation function to sleep for that amount of time. In the future, it will also send information to the simulation itself, suggesting that it slow itself down. 
-5. A specified plot preprocessing function which Overseer will use to modify the plot settings in between runs of your simulation, to obtain dynamic plot outputs. (This is obviously an advanced feature. For more details, see [section 8](8%20-%20Control%20Panel%20Widgets#Plot%20Pre-Processing).)
+5. A specified plot preprocessing function which Overseer will use to modify the plot settings in between runs of your simulation, to obtain dynamic plot outputs. (This is obviously an advanced feature. For more details, see [here for more details](plot-preprocessing).)
 
 Finally, Overseer must load into a demo when it first starts. One demo can be specified as a default, which Overseer will target when it loads. Demos are defined in the `demos.yml` file of the user data folder. This file does not need to be modified manually, and instead should be interacted with via the Demo Settings tab of the settings:
 
@@ -127,5 +127,3 @@ Finally, Overseer must load into a demo when it first starts. One demo can be sp
 With this tab, we can create new demos with the +Demo button, fill in the relevant details just described above, and specify a certain demo as the default for Overseer to load into. 
 
 The only aspect of a demo which the demo settings tab does not give you the ability to modify are the axis settings. The reason is that there is no point in trying to make a GUI interface for something like this. Instead, you are expected to create the demo without these settings first, load into it, configure the view however it suits you, and then *attach* these settings to your demo from the top menu via View -> Save current axis settings. Note that because these settings are saved to your demo, there can only be one set of axis settings specified this way. However, axis settings can also be attached to presets and results. You could easily have several variations of the same parameters settings with different axis settings, to give yourself the ability to shift between multiple complex arrangements. 
-
-[Continue to Section 5: Parameters and Presets](5%20-%20Parameters%20and%20Presets)
