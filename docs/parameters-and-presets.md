@@ -3,7 +3,7 @@
 A model **parameter** is any piece of data which the model relies on to define its operation. These can be any type of variable, and Overseer must have a designated value for all of them in order to run your model. 
 
 Parameters can be defined in the Parameter Settings menu:
-![[images/param-settings.png]]
+![](images/param-settings.png)
 
 When specifying default values, you should type the value exactly how you would define it if you were writing Python code. So an 2x2 Numpy matrix should be defined as \[\[a,b\],\[c,d\]\], and so on. 
 
@@ -25,7 +25,7 @@ You could easily make this yourself instead of using the GUI, but be mindful of 
 
 In order to determine what the actual values of these parameters are supposed to be during initialization, Overseer relies on a specified **preset**. Presets are stored in yaml format, in the `data/params.yml` file of your model folder. They can be managed in the Preset Settings menu:
 
-![[images/preset-menu.png]]
+![](images/preset-menu.png)
 
 However, this is mostly only useful for tweaking.  In practice, you will create new presets by arriving at them naturally through experimentation with your controls, and then saving them in the top menu bar by selecting Parameters -> Save parameter settings. The real use for the Preset Settings menu is useful for making small changes to *existing* presets. 
 
@@ -89,4 +89,4 @@ If you have all of this and it's still not working, open up an issue and let me 
 
 It's worth noting that this is a harmless button to press, since the parameters which do not have matching keys in the dictionary will not be changed. This fact is what allows for the feature to exist in a general sense. 
 ## Live Updating Parameters
-Parameters do not have to restart your simulation when changed. It is possible to make the effects apply during simulation. To see more information on how to do this, see [here](6%20-%20Writing%20Simulations#The%20Event%20Queue%20and%20Live%20Updating).
+Parameters do not have to restart your simulation when changed. It is possible to make the effects apply during simulation. To see more information on how to do this, see [here](event-queue-and-live-updating).
