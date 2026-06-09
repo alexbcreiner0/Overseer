@@ -865,6 +865,9 @@ class ControlPanel(qw.QWidget):
             if dim is None:
                 try:
                     dim = self._resolve_entry_dim(info)
+                    if isinstance(dim, int):
+                        num = dim
+                        dim = [num, 1]
                 except Exception as e:
                     logger.log(logging.ERROR, f"Failed to resolve matrix dim entry", exc_info= e)
                     self.status_bar.showMessage(f"Failed to resolve matrix dim entry", 3000)

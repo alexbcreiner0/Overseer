@@ -110,6 +110,8 @@ class GraphPanel(qw.QWidget):
         self._sim_run_id: int = 0
         self.plot_slot_from_scratch(0,0, {}, slot_config= None)
         self.dragging = False
+        self._snap_active = False
+        self._snap_last_display_xy = None
 
         self._mpl_cids = []
 
@@ -119,6 +121,7 @@ class GraphPanel(qw.QWidget):
         self._mpl_cids.append(self.canvas.mpl_connect("resize_event", self.on_motion))
         self._mpl_cids.append(self.canvas.mpl_connect("button_release_event", self.on_release))
         self._mpl_cids.append(self.canvas.mpl_connect("scroll_event", self._on_scroll))
+        self._mpl_cids.append(self.canvas.mpl_connect("figure_leave_event", self._on_figure_leave))
 
         self.camera_controls = qw.QWidget()
 
@@ -368,21 +371,27 @@ class GraphPanel(qw.QWidget):
 
     def _init_snap_artists(self):
         self.snap_artists = {}
-
         for ax in self.axes:
-            marker, = ax.plot([], [], "o", ms= 6)
-            marker.set_visible(False)
+            self._make_snap_artists_for_axis(ax)
 
-            annot = ax.annotate(
-                "",
-                xy=(0, 0),
-                xytext=(10, 10),
-                textcoords="offset points",
-                bbox=dict(boxstyle="round,pad=0.3", fc="w", ec="k", lw=0.5),
-            )
-            annot.set_visible(False)
+    def _make_snap_artists_for_axis(self, ax):
+        marker, = ax.plot([], [], "o", ms=6)
+        marker.set_visible(False)
+        marker.set_gid("__snap_marker__")
+        marker.set_zorder(10_000)
 
-            self.snap_artists[ax] = (marker, annot)
+        annot = ax.annotate(
+            "",
+            xy=(0, 0),
+            xytext=(10, 10),
+            textcoords="offset points",
+            bbox=dict(boxstyle="round,pad=0.3", fc="w", ec="k", lw=0.5),
+        )
+        annot.set_visible(False)
+        annot.set_gid("__snap_annotation__")
+        annot.set_zorder(10_001)
+
+        self.snap_artists[ax] = (marker, annot)
 
     def set_axes_layout(self, rows, cols):
         if rows < 1 or cols < 1:
@@ -1479,6 +1488,7 @@ class GraphPanel(qw.QWidget):
 
         self._rebuild_slot_artists_inventory(slot_index)
         self._init_snap_artists()
+        self._refresh_active_snap()
         self.canvas.draw_idle()
 
     def _get_legend_font(self) -> int:
@@ -1494,14 +1504,6 @@ class GraphPanel(qw.QWidget):
         ax = self.axes[slot_index]
         ax.clear()
 
-        # heatmap bookkeeping (legacy; keep until heatmap moves into _plot_on_axis)
-        # old_im = getattr(self, "_slot_images", {}).pop(slot_index, None)
-        # if old_im is not None:
-        #     try:
-        #         old_im.remove()
-        #     except Exception:
-        #         pass
-
         # if there is a colorbar, delete it
         old_cb = getattr(self, "_slot_cbar", {}).pop(slot_index, None)
         if old_cb is not None:
@@ -1512,6 +1514,9 @@ class GraphPanel(qw.QWidget):
 
         self._slot_artists.pop(slot_index, None)
         self._slot_artists_meta.pop(slot_index, None)
+
+        self.snap_artists.pop(ax, None)
+        self._make_snap_artists_for_axis(ax)
 
     def _apply_slot_config(self, ax, slot_index: int, dropdown_choice: int, slot_config: dict | None, default_font: int) -> None:
         ax.set_axis_on()
@@ -2634,21 +2639,14 @@ class GraphPanel(qw.QWidget):
     def update_slot_frame(self, slot_index: int, dropdown_choice: int, options: dict, slot_cfg: dict | None = None) -> None:
         """ This method is called when a SimWorker makes progress. It updates plots in order to animate progress """
 
-        # step 1: compare current artists with expected ones
         expected = self._expected_artist_gids(slot_index, dropdown_choice, options)
         current = list(self._slot_artists.get(slot_index, {}).keys())
 
 
-        # if anything expected is missing, (re)draw it (potentially for first time)
         if not expected or set(current) != set(expected):
             self.plot_slot_from_scratch(slot_index, dropdown_choice, options, slot_cfg)
             return
 
-        # otherwise, attempt to update the axes more conservatively without tearing everything down and redrawing it all
-        # using more specialized methods
-
-        # Update line data in-place 
-        # t = np.asarray(self.t)
         ax = self.axes[slot_index]
 
         is_3d = hasattr(ax, "get_zlim")
@@ -2661,8 +2659,6 @@ class GraphPanel(qw.QWidget):
         choice_dict = self._choice_dict_from_index(dropdown_choice)
         choice_name = self._choice_name_from_index(dropdown_choice)
 
-
-        # update settings as provided by the main window
         self._slot_choices[slot_index] = choice_name
         self._slot_settings[slot_index] = (dropdown_choice, options, slot_cfg)
 
@@ -2743,6 +2739,7 @@ class GraphPanel(qw.QWidget):
 
         # Legend text update (keep your existing code if desired)
         self._rebuild_slot_artists_inventory(slot_index)
+        self._refresh_active_snap()
         self.canvas.draw_idle()
 
     # def update_all_slots_frame(self, traj: dict, t, control_panel) -> None:
@@ -2784,9 +2781,15 @@ class GraphPanel(qw.QWidget):
         best_dist = np.inf
 
         trans = ax.transData
+        snap_marker, snap_annot = self.snap_artists.get(ax, (None, None))
 
         for line in ax.lines:
-            if not line.get_visible(): continue
+            if line is snap_marker:
+                continue
+            if line.get_gid() == "__snap_marker__":
+                continue
+            if not line.get_visible():
+                continue
 
             xdata = np.asarray(line.get_xdata(), dtype= float)
             ydata = np.asarray(line.get_ydata(), dtype= float)
@@ -2806,32 +2809,79 @@ class GraphPanel(qw.QWidget):
                 best_line = line
                 best_idx = idx
 
-        marker, annot = self.snap_artists.get(ax, (None, None))
-        if marker is None or annot is None:
+        if snap_marker is None or snap_annot is None:
             return
 
         if best_line is None:
-            marker.set_visible(False)
-            annot.set_visible(False)
+            snap_marker.set_visible(False)
+            snap_annot.set_visible(False)
             self.canvas.draw_idle()
             if hasattr(ax, "get_zlim3d"):
                 self._clamp_3d_view(ax)
             return
 
         color = best_line.get_color()
-        marker.set_color(color)
+        snap_marker.set_color(color)
 
         x_near = best_line.get_xdata()[best_idx]
         y_near = best_line.get_ydata()[best_idx]
 
-        marker.set_data([x_near], [y_near])
-        marker.set_visible(True)
+        snap_marker.set_data([x_near], [y_near])
+        snap_marker.set_visible(True)
 
-        annot.xy = (x_near, y_near)
-        annot.set_text(f"({x_near:g}, {y_near:g})")
-        annot.set_visible(True)
+        snap_annot.xy = (x_near, y_near)
+        snap_annot.set_text(f"({x_near:g}, {y_near:g})")
+        snap_annot.set_visible(True)
+
+        try:
+            self._snap_active = True
+            self._snap_slot_index = self.axes.index(ax)
+            self._snap_last_display_xy = (event.x, event.y)
+        except ValueError:
+            self._snap_active = False
+            self._snap_slot_index = None
+            self._snap_last_display_xy = None
 
         self.canvas.draw_idle()
+
+    def _refresh_active_snap(self) -> None:
+        if not self.dragging:
+            return
+        if not self._snap_active:
+            return
+        if self._snap_slot_index is None:
+            return
+        if self._snap_last_display_xy is None:
+            return
+        if self._snap_slot_index < 0 or self._snap_slot_index >= len(self.axes):
+            return
+
+        ax = self.axes[self._snap_slot_index]
+        x, y = self._snap_last_display_xy
+
+        if not ax.bbox.contains(x, y):
+            self._hide_snap_artists(clear_state=False, draw=False)
+            return
+
+        class SnapEvent:
+            pass
+
+        event = SnapEvent()
+        event.x = x
+        event.y = y
+        event.inaxes = ax
+
+        try:
+            event.xdata, event.ydata = ax.transData.inverted().transform((x, y))
+        except Exception:
+            return
+
+        if event.xdata is None or event.ydata is None:
+            return
+        if not np.isfinite(event.xdata) or not np.isfinite(event.ydata):
+            return
+
+        self._update_snap(event, ax)
 
     def on_motion(self, event):
         if not self.dragging:
@@ -2847,21 +2897,30 @@ class GraphPanel(qw.QWidget):
             self._on_axis_limits_changed(ax)
 
     def on_release(self, event):
-        # updating axis limits here because for some stupid reason the lim_changed callbacks are unresponsive
-        # for right-click magnifications. So instead it just updates the limits after they release their mouse
         ax = event.inaxes
         if ax is not None and ax in self.axes:
             self._on_axis_limits_changed(ax)
 
-        if event.button != 1:
-            return
-        self.dragging = False
-    
+        if self.dragging or event.button == 1:
+            self._hide_snap_artists(clear_state=True, draw=True)
+
+    def _hide_snap_artists(self, *, clear_state: bool = True, draw: bool = True) -> None:
+        if clear_state:
+            self.dragging = False
+            self._snap_active = False
+            self._snap_slot_index = None
+            self._snap_last_display_xy = None
+
         for marker, annot in self.snap_artists.values():
             marker.set_visible(False)
             annot.set_visible(False)
 
-        self.canvas.draw_idle()
+        if draw:
+            self.canvas.draw_idle()
+
+    def _on_figure_leave(self, event) -> None:
+        if self.dragging:
+            self._hide_snap_artists(clear_state=True, draw=True)
 
     def resizeEvent(self, a0):
         super().resizeEvent(a0)
