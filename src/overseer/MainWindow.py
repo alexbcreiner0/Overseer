@@ -1817,6 +1817,7 @@ class MainWindow(qw.QMainWindow):
         # self.bridge_worker.done.connect(self._on_sim_thread_finished)
         self.bridge_worker.done.connect(self._on_sim_done)
         self.bridge_worker.error.connect(self._on_sim_error)
+        self.bridge_worker.update.connect(self._receive_meta_update)
         self.bridge_worker.start()
 
         if self._live_animation:
@@ -1875,6 +1876,14 @@ class MainWindow(qw.QMainWindow):
         self._rerun_pending = False
         self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
         self._sim_state = "IDLE"
+
+    def _receive_meta_update(self, recipient, details):
+        match recipient:
+            case "ControlPanel":
+                self.control_panel.receive_meta_update(details)
+            case _:
+                self.status_bar.showMessage(f"Recipient {recipient} not recognizing, dropping update message.", 3000)
+                logger.warning(f"Recipient {recipient} not recognizing, dropping update message.")
 
     def show_results(self, traj, t, e):
         self._anim_timer.stop()

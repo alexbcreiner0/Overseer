@@ -11,3 +11,8 @@ class Append:
 @dataclass
 class Extend:
     values: object
+
+@dataclass
+class Update:
+    details: dict
+    recipient: str = "ControlPanel"

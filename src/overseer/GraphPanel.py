@@ -791,8 +791,8 @@ class GraphPanel(qw.QWidget):
 
     def _build_heatmap(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict, traj: dict):
         # frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
-        frame2d = traj.get(plot_dict.get("traj_key", {}))
-        if frame2d is None:
+        frame2d_vals = traj.get(plot_dict.get("traj_key", {}))
+        if frame2d_vals is None:
             return
 
         disc = plot_dict.get("discrete", False)
@@ -805,6 +805,7 @@ class GraphPanel(qw.QWidget):
             disc_values = traj.get(plot_dict.get("values"))
             disc_colors = traj.get(plot_dict.get("colors"))
             disc_labels = traj.get(plot_dict.get("labels", None), None)
+            frame2d_marker_vals = traj.get(plot_dict.get("marker_values")) if plot_dict.get("marker_values") is not None else frame2d_vals
 
             if disc_values is not None and disc_colors is not None:
                 disc_values = [float(v) for v in disc_values]
@@ -842,7 +843,7 @@ class GraphPanel(qw.QWidget):
             extent = (xmin, xmax, ymin, ymax) if not disc else None
 
         im = ax.imshow(
-            frame2d,
+            frame2d_vals,
             origin=plot_dict.get("origin", "lower"),
             interpolation=plot_dict.get("interpolation", "nearest"),
             aspect=plot_dict.get("aspect", "auto"),
@@ -854,9 +855,9 @@ class GraphPanel(qw.QWidget):
 
         ov = plot_dict.get("overlay_markers", {})
         if ov:
-            if not frame2d.ndim == 2:
+            if not frame2d_marker_vals.ndim == 2:
                 raise ValueError(f"Invalid frame2d shape for overlay markers. Data needs to be ")
-            u = np.asarray(frame2d)
+            u = np.asarray(frame2d_marker_vals)
             markers = ov.get("markers", [])
             sizes = ov.get("sizes", [])
             colors = ov.get("colors", [])

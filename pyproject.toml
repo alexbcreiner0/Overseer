@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = [
     # NEEDED BY APP
     "PyQt6",
-    "matplotlib",
+    "matplotlib==3.10.*",
     "numpy",
     "scienceplots",
     "pyyaml",
@@ -27,7 +27,7 @@ overseer = "overseer.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-include-package-data = true
+incdependencieslude-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

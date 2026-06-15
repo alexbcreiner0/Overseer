@@ -828,6 +828,7 @@ class PlotSettingsTab(qw.QWidget):
         self.heatmap_disc_cell_coloring.color_edit.setPlaceholderText("Associated Colors")
         self.heatmap_disc_cell_coloring.label_edit.setPlaceholderText("Labels")
 
+        self.heatmap_marker_traj_entry = qw.QLineEdit()
         self.heatmap_marker_editor = DynamicRowStack[OverlayMarkerLabel](
             row_widget= OverlayMarkerRow,
             make_row_kwargs= overlay_marker_make_kwargs,
@@ -837,6 +838,7 @@ class PlotSettingsTab(qw.QWidget):
             default_item= ("", "", "", "", "", "")
         )
         disc_layout.addRow("Cell Coloring: ", self.heatmap_disc_cell_coloring)
+        disc_layout.addRow("Cell Markers From: ", self.heatmap_marker_traj_entry)
         disc_layout.addRow("Cell Markers: ", self.heatmap_marker_editor)
 
         self.heatmap_cts_cmap = qw.QComboBox()
@@ -865,6 +867,7 @@ class PlotSettingsTab(qw.QWidget):
             self.heatmap_colorbar_labels, self.heatmap_aspect, self.heatmap_interp, self.heatmap_origin,
             self.heatmap_disc_cell_coloring.value_edit, self.heatmap_disc_cell_coloring.color_edit, 
             self.heatmap_disc_cell_coloring.label_edit, self.heatmap_marker_editor, self.heatmap_cts_cmap,
+            self.heatmap_marker_traj_entry
         ]
 
         return w
@@ -877,6 +880,7 @@ class PlotSettingsTab(qw.QWidget):
         values = plot.get("values", "") or ""
         colors = plot.get("colors", "") or ""
         labels = plot.get("labels", "") or ""
+        marker_values = plot.get("marker_values", "") or ""
 
         self.heatmap_traj_key.setText(plot.get("traj_key", "") or "")
         self.heatmap_colorbar.setChecked(plot.get("colorbar", False))
@@ -912,6 +916,7 @@ class PlotSettingsTab(qw.QWidget):
         self.heatmap_disc_cell_coloring.value_edit.setText(values)
         self.heatmap_disc_cell_coloring.color_edit.setText(colors)
         self.heatmap_disc_cell_coloring.label_edit.setText(labels)
+        self.heatmap_marker_traj_entry.setText(marker_values)
 
         overlay = plot.get("overlay_markers", {}) or {}
         if overlay:
@@ -961,6 +966,8 @@ class PlotSettingsTab(qw.QWidget):
             codes, sizes, labels, markers, colors, edgecolors = [], [], [], [], [], []
 
         if self.heatmap_type.currentText() == "Discrete":
+            marker_val_text = self.heatmap_marker_traj_entry.text()
+            new_data["marker_values"] = marker_val_text if marker_val_text else self.heatmap_disc_cell_coloring.value_edit.text() 
             if len(codes) > 0:
                 new_data["overlay_markers"] = {"codes": codes}
                 if sizes: new_data["overlay_markers"]["sizes"] = sizes

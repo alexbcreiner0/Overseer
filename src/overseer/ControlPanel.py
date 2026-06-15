@@ -1411,6 +1411,21 @@ class ControlPanel(qw.QWidget):
 
         return entry_widgets, dropdowns
 
+    def receive_meta_update(self, details):
+        param_name = details["param"]
+        value = details["value"]
+        action = details["action"] # for later, if something else is ever needed
+
+        entries, dropdowns = self._get_widgets_from_param_name(param_name)
+        for entry in entries:
+            entry.blockSignals(True)
+            entry.setText(str(value))
+            entry.blockSignals(False)
+        for dropdown in dropdowns:
+            dropdown.blockSignals(True)
+            dropdown.setText(str(value))
+            dropdown.blockSignals(False)
+
     def load_new_params(self, params= None):
         old_block = self.block_signals
         self.block_signals = True

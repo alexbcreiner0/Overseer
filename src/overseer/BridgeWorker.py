@@ -8,7 +8,7 @@ from PyQt6 import (
 import numpy as np
 import traceback
 import queue as py_queue
-from .tools.dataclasses import Extend, Replace, Append
+from .tools.dataclasses import Extend, Replace, Append, Update
 
 class BridgeWorker(qc.QObject):
     """
@@ -18,6 +18,7 @@ class BridgeWorker(qc.QObject):
     progress = qc.pyqtSignal(object, object)
     done = qc.pyqtSignal()
     error = qc.pyqtSignal(object)
+    update = qc.pyqtSignal(str, dict)
 
     def __init__(self, mp_queue, run_id, plotting_data, parent= None):
         super().__init__(parent)
@@ -69,6 +70,8 @@ class BridgeWorker(qc.QObject):
                 self.t = t
 
         for key, payload in traj.items():
+            if isinstance(payload, Update):
+                self.update.emit(payload.recipient, payload.details)
             if isinstance(payload, Append):
                 self.traj.setdefault(key, []).append(payload.value)
             elif isinstance(payload, Extend):
@@ -130,7 +133,6 @@ class BridgeWorker(qc.QObject):
                     else:
                         self._update_progress(traj, t)
                     saw_data = True
-                        # self.progress.emit(traj, t)
                 elif len(output) != 1:
                     self.error.emit("Outputs yielded by sim must either be a single dictionary or a dictionary along with a list/numpy array.")
                     return
