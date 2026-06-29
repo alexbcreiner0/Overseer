@@ -1416,6 +1416,8 @@ class ControlPanel(qw.QWidget):
         value = details["value"]
         action = details.get("action") # for later, if something else is ever needed
 
+        logger.info(f"Received {param_name=}, {value=}")
+
         if hasattr(self.params, param_name):
             setattr(self.params, param_name, value)
         else:

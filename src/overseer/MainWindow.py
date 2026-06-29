@@ -964,7 +964,6 @@ class MainWindow(qw.QMainWindow):
         return graph_panel, control_panel, dropdown_choices
 
     def _on_sim_event(self, event):
-        print(f"Received {event}")
         self.sim_event_queue.put(event)
 
     def _on_params_replaced(self, data):
@@ -1666,7 +1665,6 @@ class MainWindow(qw.QMainWindow):
 
     def receive_param_changed(self, name= None, new_val= None, change_effect= None, is_meta= False):
         print("on the mainwindow side")
-        print(f"{is_meta=}")
         if self._param_change_mode == "restart" or is_meta:
             self.start_sim(name, new_val)
         elif self._param_change_mode == "message" or change_effect == "send_message":
@@ -1675,6 +1673,8 @@ class MainWindow(qw.QMainWindow):
                 "param_name": name,
                 "new_val": new_val
             }
+            if hasattr(self.params, event["param_name"]):
+                setattr(self.params, event["param_name"], event["new_val"])
             self._on_sim_event(event)
         else:
             self.start_sim(name, new_val)

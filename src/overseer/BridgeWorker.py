@@ -70,6 +70,8 @@ class BridgeWorker(qc.QObject):
                 self.t = t
 
         for key, payload in traj.items():
+            if isinstance(payload, Update):
+                self.update.emit(payload.recipient, payload.details)
             if isinstance(payload, Append):
                 self.traj.setdefault(key, []).append(payload.value)
             elif isinstance(payload, Extend):

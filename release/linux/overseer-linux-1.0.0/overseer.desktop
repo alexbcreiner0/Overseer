@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Overseer
-Comment=Model visualization and exploration toolkit
-Exec=@EXEC_PATH@
-Icon=overseer
-Terminal=false
-Categories=Science;Education;
-StartupNotify=true
