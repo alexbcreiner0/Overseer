@@ -26,7 +26,7 @@ from .tools.loader import (
     open_with_default_app,
     get_user_data_dir
 )
-from multiprocessing import Queue, get_context
+from multiprocessing import get_context
 
 # from simulation.parameters import params_from_mapping, to_plain
 from .widgets.Dialogs import SaveDialog, DescDialog, NewModelDialog
@@ -110,10 +110,12 @@ class MainWindow(qw.QMainWindow):
 
         self.current_demo_name, self.current_demo = self._find_default(self.demos)
         self._sleep_time = self.current_demo.get("details", {}).get("simulation_speed", 0)
+
         self.sim_model = self.current_demo.get("details", {}).get("simulation_model", {})
-        self.sim_event_queue = Queue()
 
         self.ctx = get_context("spawn")
+        self.sim_event_queue = self.ctx.Queue()
+
         self.sim_controller = None
     
         (
@@ -1484,9 +1486,12 @@ class MainWindow(qw.QMainWindow):
         problem_keys = self._test_for_problem_keys()
         problem_dict = None
         if problem_keys != []:
-            problem_dict = {key: self.traj[key] for key in problem_keys}
-            for key in problem_keys:
-                del self.traj[key]
+            self.status_bar.showMessage(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.", 5000)
+            logger.error(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.")
+            return
+            # problem_dict = {key: self.traj[key] for key in problem_keys}
+            # for key in problem_keys:
+            #     del self.traj[key]
 
         model_name = self.current_demo["details"]["simulation_model"]
         results_path = self.env.models_dir / model_name / "saved_results"

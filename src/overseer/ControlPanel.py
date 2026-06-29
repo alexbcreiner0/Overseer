@@ -1414,17 +1414,27 @@ class ControlPanel(qw.QWidget):
     def receive_meta_update(self, details):
         param_name = details["param"]
         value = details["value"]
-        action = details["action"] # for later, if something else is ever needed
+        action = details.get("action") # for later, if something else is ever needed
+
+        if hasattr(self.params, param_name):
+            setattr(self.params, param_name, value)
+        else:
+            logger.error(f"Error, received meta update call for parameter {param_name}, but no such parameter found.")
+            self.status_bar.showMessage(f"Error, received meta update call for parameter {param_name}, but no such parameter found.", msecs= 4000)
 
         entries, dropdowns = self._get_widgets_from_param_name(param_name)
+        self.block_signals = True
         for entry in entries:
-            entry.blockSignals(True)
-            entry.setText(str(value))
-            entry.blockSignals(False)
+            if self.entry_blocks[entry]["is_matrix"]:
+                continue
+            self.entry_blocks[entry]["widget"].entry.blockSignals(True)
+            self.entry_blocks[entry]["widget"].entry.setText(str(value))
+            self.entry_blocks[entry]["widget"].entry.blockSignals(False)
         for dropdown in dropdowns:
-            dropdown.blockSignals(True)
-            dropdown.setText(str(value))
-            dropdown.blockSignals(False)
+            self.dropdowns[dropdown]["dropdown"].blockSignals(True)
+            self.dropdowns[dropdown]["dropdown"].setCurrentText(str(value))
+            self.dropdowns[dropdown]["dropdown"].blockSignals(False)
+        self.block_signals = False
 
     def load_new_params(self, params= None):
         old_block = self.block_signals

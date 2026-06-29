@@ -7,7 +7,7 @@ name = "overseer"
 version = "1.0.0"
 description = "Model visualization and simulation tool"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     # NEEDED BY APP
     "PyQt6",
@@ -27,7 +27,7 @@ overseer = "overseer.__main__:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-incdependencieslude-package-data = true
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
