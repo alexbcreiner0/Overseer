@@ -80,11 +80,11 @@ class MainWindow(qw.QMainWindow):
         if old_log_dir != self.env.log_dir:
             from .__main__ import reconfigure_logging
             reconfigure_logging(self.env, self.env.log_dir)
-            logger = logging.getLogger(__name__)
-            logger.info("Log directory changed at runtime", extra={
-                "old_log_dir": str(old_log_dir),
-                "new_log_dir": str(self.env.log_dir),
-            })
+            # logger = logging.getLogger(__name__)
+            # logger.info("Log directory changed at runtime", extra={
+            #     "old_log_dir": str(old_log_dir),
+            #     "new_log_dir": str(self.env.log_dir),
+            # })
 
         with open(env.demos_file, "r") as f:
             self.demos = yaml.safe_load(f).get("demos", {})
