@@ -1636,7 +1636,7 @@ class PlotSettingsTab(qw.QWidget):
                         widget.setChecked(default)
                     else:
                         widget.setChecked(False)
-                elif isinstance(widget, qw.QDoubleSpinBox):
+                elif isinstance(widget, (qw.QSpinBox, qw.QDoubleSpinBox)):
                     if default is not None:
                         widget.setValue(default)
                 elif isinstance(widget, qw.QComboBox):

@@ -74,7 +74,7 @@ class EditConfigDialog(qw.QDialog):
         self.page_plots = PlotSettingsTab(self.env, model, self)
         self.page_demos = DemoSettingsTab(self.env, self)
 
-        self.settings = self.page_global.get_settings_for_config()
+        # self.settings = self.page_global.get_working_data_for_save()
 
         self._syncing_model = False
 
@@ -186,7 +186,7 @@ class EditConfigDialog(qw.QDialog):
         tab = self.idx_to_page[self.stack.currentIndex()]
         tab.on_apply_clicked()
 
-        self.settings = self.page_global.get_settings_for_config()
+        # self.settings = self.page_global.get_settings_for_config()
         self.configApplied.emit()
 
     def _on_save_clicked(self) -> None:

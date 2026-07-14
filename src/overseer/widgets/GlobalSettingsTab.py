@@ -28,6 +28,9 @@ class GlobalSettingsTab(qw.QWidget):
             use_saved_cat_limits = global_settings.get("use_cat_limits", True)
             figure_mode = global_settings.get("figure_mode", "tight")
             preferred_editor = global_settings.get("preferred_editor", "Auto")
+            rendering_framerate = global_settings.get("rendering_framerate", 30)
+            scroll_zoom_enabled = global_settings.get("scroll_zoom_enabled", True)
+
             if sys.platform == "win32":
                 default_term = "powershell -NoExit "
             elif sys.platform == "darwin":
@@ -47,9 +50,18 @@ class GlobalSettingsTab(qw.QWidget):
         self.run_on_startup = qw.QCheckBox("Auto-run simulation on startup")
         self.autosave_axis_settings = qw.QCheckBox("Auto-save axis settings")
         self.use_cat_limits = qw.QCheckBox("Use saved limits when switching plot categories")
+
+        self.rendering_framerate_spin = qw.QSpinBox()
+        self.rendering_framerate_spin.setRange(0,120)
+        self.rendering_framerate_spin.setValue(rendering_framerate)
+        self.rendering_framerate_spin.setSingleStep(1)
+
+        self.scroll_zoom_check = qw.QCheckBox("Enable scroll zoom")
+
         self.run_on_startup.setChecked(run_on_startup)
         self.autosave_axis_settings.setChecked(autosave_axis_settings)
         self.use_cat_limits.setChecked(use_saved_cat_limits)
+        self.scroll_zoom_check.setChecked(scroll_zoom_enabled)
 
         self.preferred_editor = qw.QComboBox()
         preferred_editor_items = ["Auto", "Sublime Text", "VSCode", "VSCodium", "PyCharm", "IDLE", "Neovim", "Vim", "Nano", "Emacs", "Helix"]
@@ -90,6 +102,7 @@ class GlobalSettingsTab(qw.QWidget):
         self.checkbox_row_lay.addWidget(self.run_on_startup)
         self.checkbox_row_lay.addWidget(self.autosave_axis_settings)
         self.checkbox_row_lay.addWidget(self.use_cat_limits)
+        self.checkbox_row_lay.addWidget(self.scroll_zoom_check)
 
         sec.form.addRow("Default image save directory:", self.edit_default_save_dir)
         sec.form.addRow("User data directory", self.user_data_dir_entry, help_text= "This is where Overseer will write logs to, where it will look for and store models you make, and information on demos you define.")
@@ -110,6 +123,7 @@ class GlobalSettingsTab(qw.QWidget):
                         If it doesn't find anything, buttons attempting to use it will be unresponsive.")
         sec.form.addRow('', self.checkbox_row)
         sec.form.addRow("MatPlotLib figure mode:", figure_mode_radio_widget)
+        sec.form.addRow("Rendering framerate:", self.rendering_framerate_spin)
 
         self.settings = {
             "default_save_name": {
@@ -148,6 +162,14 @@ class GlobalSettingsTab(qw.QWidget):
             "preferred_editor": {
                 "default_value": None,
                 "widget": self.preferred_editor
+            },
+            "rendering_framerate": {
+                "default_value": 30,
+                "widget": self.rendering_framerate_spin
+            },
+            "scroll_zoom_enabled": {
+                "default_value": True,
+                "widget": self.scroll_zoom_check
             }
         }
 
@@ -182,14 +204,25 @@ class GlobalSettingsTab(qw.QWidget):
         new_data = self.get_working_data_for_save()
         if new_data is None:
             return
-        self._normalize_for_dump(new_data)
+
         path = self.env.config_file
+        with open(path, "r") as f:
+            complete_data = yaml.safe_load(f) or {}
+
+        existing_settings = complete_data.get("global_settings", {})
+        managed_names = set(self.settings)
+
+        for setting_name in managed_names:
+            existing_settings.pop(setting_name, None)
+
+        existing_settings.update(new_data["global_settings"])
+        complete_data["global_settings"] = existing_settings
+
+        self._normalize_for_dump(new_data)
         atomic_write(path, new_data)
 
-    def get_working_data_for_save(self):
-        working_data = {"global_settings": {}}
-        settings = working_data["global_settings"]
-
+    def get_settings_data(self):
+        settings = {}
         for setting_name, setting_dict in self.settings.items():
             widget = setting_dict["widget"]
             if isinstance(widget, (FilePicker, qw.QLineEdit)):
@@ -202,6 +235,8 @@ class GlobalSettingsTab(qw.QWidget):
                 value_map = setting_dict["value_map"]
                 fallback = value_map["else"]
                 value = value_map.get(widget.checkedId(), fallback)
+            elif isinstance(widget, (qw.QSpinBox, qw.QDoubleSpinBox)):
+                value = widget.value()
             else:
                 print(f"Error! I don't know how to get values from {widget}")
                 return
@@ -209,24 +244,28 @@ class GlobalSettingsTab(qw.QWidget):
             if value != setting_dict["default_value"]:
                 settings[setting_name] = value
 
-        return working_data
-
-    def get_settings_for_config(self):
-        settings = {
-            "save_name": self.save_name.text(),
-            "run_on_startup": self.run_on_startup.isChecked(),
-            "autosave_axis_settings": self.autosave_axis_settings.isChecked(),
-            "use_cat_limits": self.use_cat_limits.isChecked(),
-            "figure_mode": "tight" if self.radio_group.checkedId() == 1 else "constrained",
-            "preferred_terminal": self.preferred_terminal.currentText(),
-            "preferred_editor": self.preferred_editor.currentText()
-        }
-        if self.user_data_dir_entry.text() != self.env.user_data_dir and self.user_data_dir_entry.text():
-            settings["user_data_dir"] = self.user_data_dir_entry.text()
-        if self.edit_default_save_dir.text() != str(Path.home()) and self.edit_default_save_dir.text():
-            settings["default_save_dir"] = self.edit_default_save_dir.text()
-
         return settings
+
+    def get_working_data_for_save(self):
+        settings = self.get_settings_data()
+        return {"global_settings": settings}
+
+    # def get_settings_for_config(self):
+    #     settings = {
+    #         "default_save_name": self.save_name.text(),
+    #         "run_on_startup": self.run_on_startup.isChecked(),
+    #         "autosave_axis_settings": self.autosave_axis_settings.isChecked(),
+    #         "use_cat_limits": self.use_cat_limits.isChecked(),
+    #         "figure_mode": "tight" if self.radio_group.checkedId() == 1 else "constrained",
+    #         "preferred_terminal": self.preferred_terminal.currentText(),
+    #         "preferred_editor": self.preferred_editor.currentText(),
+    #     }
+    #     if self.user_data_dir_entry.text() != self.env.user_data_dir and self.user_data_dir_entry.text():
+    #         settings["user_data_dir"] = self.user_data_dir_entry.text()
+    #     if self.edit_default_save_dir.text() != str(Path.home()) and self.edit_default_save_dir.text():
+    #         settings["default_save_dir"] = self.edit_default_save_dir.text()
+
+    #     return settings
 
     def _normalize_for_dump(self, data: dict) -> dict:
         """ Does basically nothing right now, but this is where you would apply any special formatting to the settings dict """

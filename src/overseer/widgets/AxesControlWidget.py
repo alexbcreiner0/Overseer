@@ -249,6 +249,9 @@ class AxesControlWidget(qw.QWidget):
             )
 
         for edit, val in edits:
+            if edit.hasFocus():
+                continue
+
             edit.blockSignals(True)
             edit.setText(f"{val:g}")
             edit.blockSignals(False)

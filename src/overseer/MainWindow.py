@@ -128,7 +128,8 @@ class MainWindow(qw.QMainWindow):
         ) = self._get_data(self.current_demo)
         self._reset_global_settings()
 
-        self._anim_timer.setInterval(self.settings.get("rendering_framerate", 30))  # ~30fpsmain
+        desired_fps = self.settings.get("rendering_framerate", 30)
+        self._set_anim_timer(desired_fps)
 
         self.model_label = qw.QLabel(f"Model: {self.current_demo.get("name", "")}")
         self.status_bar.addPermanentWidget(self.model_label)
@@ -162,6 +163,8 @@ class MainWindow(qw.QMainWindow):
             self.current_demo
         )
 
+        
+        self.toolbar.set_graph_panel(self.graph_panel)
         self.graph_panel._block_axis_callback = True
         self._load_saved_axis_settings()
         self.graph_panel._block_axis_callback = False
@@ -209,6 +212,11 @@ class MainWindow(qw.QMainWindow):
 
         if self.settings.get("run_on_startup", True):
             self.start_sim()
+
+    def _set_anim_timer(self, fps: int):
+        safe_fps = max(1, fps)
+        msecs = max(1, round(1000/safe_fps))
+        self._anim_timer.setInterval(msecs)
 
     def _assign_keybinds(self, first_boot = False):
         """ Does what it says """
@@ -931,7 +939,7 @@ class MainWindow(qw.QMainWindow):
 
         graph_panel = GraphPanel(
             self.traj, self.t, dropdown_choices, plotting_data, self.canvas, 
-            self.figure, self.axis, self.toolbar, self.status_bar
+            self.figure, self.axis, self.toolbar, self.status_bar, self
         )
         # graph_panel.saved_lims_changed.connect(self.update_saved_lims)
         graph_panel.slot_axes_limits_changed.connect(self.on_slot_axes_limits_changed)
@@ -2041,6 +2049,8 @@ class MainWindow(qw.QMainWindow):
                 self.config = yaml.safe_load(f)
 
             self.settings = self.config["global_settings"]
+            desired_fps = self.settings.get("rendering_framerate", 30)
+            self._set_anim_timer(desired_fps)
 
             new_data_dir = get_user_data_dir(self.settings, self.env)
             # new_models_dir = get_user_models_dir(self.settings, self.env)
@@ -2346,6 +2356,7 @@ class MainWindow(qw.QMainWindow):
         self.presets_submenu, self.results_submenu = self._make_menu(self.presets, self.demos)
         self.refresh_control_panel_and_plots()
         # self.sim_actions[self.get_trajectories.__name__].setChecked(True)
+        print(f"{self.settings=}")
 
     def refresh_plots(self) -> None:
         """Reload plotting_data.yml for the current model and apply it to the live UI."""

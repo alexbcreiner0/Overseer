@@ -36,7 +36,7 @@ class GraphPanel(qw.QWidget):
     slot_title_changed = qc.pyqtSignal(int, str)
 
     def __init__(self, init_traj, init_t, dropdown_choices,
-                 plotting_data, canvas, figure, axis, toolbar, status_bar):
+                 plotting_data, canvas, figure, axis, toolbar, status_bar, mainwindow):
         super().__init__()
         self.start_up = True # might not be necessary anymore, iono
 
@@ -46,6 +46,7 @@ class GraphPanel(qw.QWidget):
         self.figure, self.axis = figure, axis
         self.toolbar = toolbar
         self.status_bar = status_bar
+        self.main_window = mainwindow
 
         self._slot_choices: dict[int, str] = {} # slot_index -> dropdown choices
         self.legend_label_overrides: dict[tuple[int, str], dict[str, str]] = {} # keeps track of legend info for each slot/category choice 
@@ -57,6 +58,7 @@ class GraphPanel(qw.QWidget):
 
         self._slot_artists: dict[int, dict[str, object]] = {} # slot_index -> {artist_gid -> artist}
         self._slot_artists_meta: dict[int, dict[str, dict]] = {}
+        self._artist_visibility_overrides: dict[tuple[int, str], bool] = {}
         self._hist_state: dict[tuple[int, str, str], dict] = {}
 
         self._slot_dimensions: dict[int, str] = {}
@@ -163,6 +165,9 @@ class GraphPanel(qw.QWidget):
 
     def _on_scroll(self, event) -> None:
         """ controls zooming and other scroll related stuff """
+        if not self.main_window.settings.get("scroll_zoom_enabled", True):
+            return
+
         ax = event.inaxes
         if ax is None:
             return
@@ -333,6 +338,289 @@ class GraphPanel(qw.QWidget):
 
         self._slot_artists[slot_index] = bucket
         self._slot_artists_meta[slot_index] = meta
+        self._apply_artist_visibility_overrides(slot_index)
+
+
+    # ------------------------------------------------------------------
+    # Curve visibility support
+    # ------------------------------------------------------------------
+
+    def _artist_visibility_key(self, slot_index: int, gid: str) -> tuple[int, str]:
+        return (int(slot_index), str(gid))
+
+    def _normalize_artist_visibility_key(self, key) -> tuple[int, str] | None:
+        if isinstance(key, tuple) and len(key) == 2:
+            try:
+                return (int(key[0]), str(key[1]))
+            except Exception:
+                return None
+
+        if isinstance(key, str):
+            # Compatibility with the toolbar-only key format:
+            # axis:<slot_index>:gid:<gid>
+            prefix = "axis:"
+            marker = ":gid:"
+            if key.startswith(prefix) and marker in key:
+                axis_s, gid = key[len(prefix):].split(marker, 1)
+                try:
+                    return (int(axis_s), str(gid))
+                except Exception:
+                    return None
+
+        return None
+
+    def _should_skip_visibility_artist(self, gid: str, artist) -> bool:
+        if isinstance(gid, str) and gid.startswith("__snap_"):
+            return True
+
+        try:
+            label = artist.get_label()
+            # Skip anonymous Matplotlib helper lines unless we have a real GID.
+            if (not gid) and isinstance(label, str) and label.startswith("_"):
+                return True
+        except Exception:
+            pass
+
+        try:
+            xdata = artist.get_xdata(orig=False)
+            ydata = artist.get_ydata(orig=False)
+            if len(xdata) == 0 and len(ydata) == 0:
+                return True
+        except Exception:
+            pass
+
+        return False
+
+    def _visibility_artist_label(self, gid: str, artist, fallback_index: int) -> str:
+        try:
+            label = artist.get_label()
+            if label and not str(label).startswith("_"):
+                return str(label)
+        except Exception:
+            pass
+
+        if gid:
+            return str(gid)
+
+        return f"Line {fallback_index + 1}"
+
+    def curve_visibility_items(self) -> list[dict]:
+        """Return checkbox-ready info for line artists in the current slots."""
+        items = []
+
+        for slot_index, ax in enumerate(self.axes):
+            # Keep the inventory current before showing the dialog.
+            try:
+                self._rebuild_slot_artists_inventory(slot_index)
+            except Exception:
+                pass
+
+            axis_title = ax.get_title() or ax.get_ylabel() or ax.get_xlabel() or "Untitled"
+            bucket = self._slot_artists.get(slot_index, {})
+            meta_bucket = self._slot_artists_meta.get(slot_index, {})
+
+            line_index = 0
+            for gid, artist in bucket.items():
+                meta = meta_bucket.get(gid, {})
+                if meta.get("kind") != "line":
+                    continue
+                if self._should_skip_visibility_artist(gid, artist):
+                    continue
+
+                key = self._artist_visibility_key(slot_index, gid)
+                desired = self._artist_visibility_overrides.get(key)
+                if desired is not None:
+                    try:
+                        artist.set_visible(bool(desired))
+                    except Exception:
+                        pass
+
+                items.append(
+                    {
+                        "axis_index": slot_index,
+                        "axis_title": axis_title,
+                        "line_index": line_index,
+                        "key": key,
+                        "label": self._visibility_artist_label(gid, artist, line_index),
+                        "tooltip": f"slot={slot_index}, gid={gid}",
+                        "visible": bool(artist.get_visible()),
+                    }
+                )
+                line_index += 1
+
+        return items
+
+    def set_artist_visible(self, key, visible: bool) -> None:
+        normalized = self._normalize_artist_visibility_key(key)
+        if normalized is None:
+            return
+
+        slot_index, gid = normalized
+        visible = bool(visible)
+        self._artist_visibility_overrides[(slot_index, gid)] = visible
+
+        artist = self._slot_artists.get(slot_index, {}).get(gid)
+        if artist is None and 0 <= slot_index < len(self.axes):
+            ax = self.axes[slot_index]
+            for candidate in getattr(ax, "lines", []):
+                try:
+                    if candidate.get_gid() == gid:
+                        artist = candidate
+                        break
+                except Exception:
+                    pass
+
+        if artist is not None:
+            try:
+                artist.set_visible(visible)
+            except Exception:
+                pass
+
+        self._refresh_slot_legend(slot_index)
+        self._refresh_active_snap()
+        self.canvas.draw_idle()
+
+    def set_all_curves_visible(self, visible: bool) -> None:
+        visible = bool(visible)
+        items = self.curve_visibility_items()
+        for item in items:
+            normalized = self._normalize_artist_visibility_key(item["key"])
+            if normalized is None:
+                continue
+            slot_index, gid = normalized
+            self._artist_visibility_overrides[(slot_index, gid)] = visible
+            artist = self._slot_artists.get(slot_index, {}).get(gid)
+            if artist is not None:
+                try:
+                    artist.set_visible(visible)
+                except Exception:
+                    pass
+
+        touched_slots = {item["axis_index"] for item in items}
+        for slot_index in touched_slots:
+            self._refresh_slot_legend(slot_index)
+
+        self._refresh_active_snap()
+        self.canvas.draw_idle()
+
+    def clear_artist_visibility_overrides(self) -> None:
+        self._artist_visibility_overrides.clear()
+
+        touched_slots = set()
+        for item in self.curve_visibility_items():
+            normalized = self._normalize_artist_visibility_key(item["key"])
+            if normalized is None:
+                continue
+            slot_index, gid = normalized
+            touched_slots.add(slot_index)
+            artist = self._slot_artists.get(slot_index, {}).get(gid)
+            if artist is not None:
+                try:
+                    artist.set_visible(True)
+                except Exception:
+                    pass
+
+        for slot_index in touched_slots:
+            self._refresh_slot_legend(slot_index)
+
+        self._refresh_active_snap()
+        self.canvas.draw_idle()
+
+    def _apply_artist_visibility_overrides(self, slot_index: int) -> None:
+        if not getattr(self, "_artist_visibility_overrides", None):
+            return
+
+        bucket = self._slot_artists.get(slot_index, {})
+        for gid, artist in bucket.items():
+            key = self._artist_visibility_key(slot_index, gid)
+            if key not in self._artist_visibility_overrides:
+                continue
+            try:
+                artist.set_visible(bool(self._artist_visibility_overrides[key]))
+            except Exception:
+                pass
+
+    def _refresh_slot_legend(self, slot_index: int) -> None:
+        if slot_index < 0 or slot_index >= len(self.axes):
+            return
+
+        ax = self.axes[slot_index]
+        state = self._slot_settings.get(slot_index)
+        slot_config = None
+        dropdown_choice = None
+        if state is not None:
+            try:
+                dropdown_choice, _options, slot_config = state
+            except Exception:
+                slot_config = None
+
+        if slot_config is None:
+            slot_config = {}
+
+        legend_visible = slot_config.get("legend_visible", True)
+        old_legend = ax.get_legend()
+
+        if not legend_visible:
+            if old_legend is not None:
+                old_legend.remove()
+            return
+
+        loc = slot_config.get("legend_loc", None)
+        if loc is None and old_legend is not None:
+            loc = getattr(old_legend, "_loc", "upper right")
+        if loc is None:
+            loc = "upper right"
+
+        try:
+            fontsize = slot_config.get("legend_fontsize", self._get_legend_font())
+        except Exception:
+            fontsize = None
+
+        title = slot_config.get("legend_title", None)
+        if title is None and old_legend is not None:
+            try:
+                title = old_legend.get_title().get_text() or None
+            except Exception:
+                title = None
+
+        handles, labels = ax.get_legend_handles_labels()
+        visible_handles = []
+        visible_labels = []
+
+        overrides = slot_config.get("legend_label_overrides", slot_config.get("legend_labels", None))
+
+        for i, (handle, label) in enumerate(zip(handles, labels)):
+            if not label or str(label).startswith("_"):
+                continue
+            try:
+                if not handle.get_visible():
+                    continue
+            except Exception:
+                pass
+
+            display_label = label
+            if overrides:
+                if isinstance(overrides, dict):
+                    display_label = str(overrides.get(label, label))
+                elif isinstance(overrides, (list, tuple)) and i < len(overrides):
+                    display_label = str(overrides[i])
+
+            visible_handles.append(handle)
+            visible_labels.append(display_label)
+
+        if old_legend is not None:
+            old_legend.remove()
+
+        if not visible_handles:
+            return
+
+        kwargs = {"loc": loc}
+        if fontsize is not None:
+            kwargs["fontsize"] = fontsize
+        if title:
+            kwargs["title"] = title
+
+        ax.legend(visible_handles, visible_labels, **kwargs)
 
     def _on_axis_limits_changed(self, ax):
         if getattr(self, "_block_axis_callback", False):
@@ -1488,6 +1776,8 @@ class GraphPanel(qw.QWidget):
         self._apply_slot_config(ax, slot_index, dropdown_choice, slot_config, legend_font_size)
 
         self._rebuild_slot_artists_inventory(slot_index)
+        if getattr(self, "_artist_visibility_overrides", None):
+            self._refresh_slot_legend(slot_index)
         self._init_snap_artists()
         self._refresh_active_snap()
         self.canvas.draw_idle()
@@ -2740,6 +3030,8 @@ class GraphPanel(qw.QWidget):
 
         # Legend text update (keep your existing code if desired)
         self._rebuild_slot_artists_inventory(slot_index)
+        if getattr(self, "_artist_visibility_overrides", None):
+            self._refresh_slot_legend(slot_index)
         self._refresh_active_snap()
         self.canvas.draw_idle()
 
