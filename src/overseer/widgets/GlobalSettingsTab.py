@@ -123,7 +123,7 @@ class GlobalSettingsTab(qw.QWidget):
                         If it doesn't find anything, buttons attempting to use it will be unresponsive.")
         sec.form.addRow('', self.checkbox_row)
         sec.form.addRow("MatPlotLib figure mode:", figure_mode_radio_widget)
-        sec.form.addRow("Rendering framerate:", self.rendering_framerate_spin)
+        sec.form.addRow("Rendering framerate:", self.rendering_framerate_spin, help_text= "Controls frequency of requests for MatPlotLib to render the current results. Adjusting this number downward should help performance, at the cost of making the animation look choppier. Notably, it also does NOT slow down the speed of your simulation.")
 
         self.settings = {
             "default_save_name": {

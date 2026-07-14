@@ -115,7 +115,6 @@ class BridgeWorker(qc.QObject):
                     continue
 
                 if len(msg) >= 2 and msg[1] == "DONE":
-                    print(f"Done!")
                     saw_done = True
                     continue
 

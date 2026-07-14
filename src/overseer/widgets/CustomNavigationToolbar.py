@@ -4,7 +4,11 @@ from pathlib import Path
 from dataclasses import is_dataclass, asdict
 
 from matplotlib.backends.backend_qt import NavigationToolbar2QT
-from PyQt6 import QtWidgets as qw
+from PyQt6 import (
+    QtWidgets as qw,
+    QtCore as qc,
+    QtGui as qg
+)
 from PyQt6 import QtCore as qc
 
 from .CurveVisibilityDialog import CurveVisibilityDialog
@@ -16,6 +20,7 @@ class CustomNavigationToolbar(NavigationToolbar2QT):
     def __init__(
         self,
         canvas,
+        env,
         parent=None,
         default_dir=None,
         default_save_name="figure",
@@ -26,13 +31,16 @@ class CustomNavigationToolbar(NavigationToolbar2QT):
         self.set_default_dir(default_dir)
         self.default_save_name = default_save_name
         self.params = params
+        self.env = env
+        self.graph_panel = None
 
         self.graph_panel = None
         self._curve_visibility_dialog: CurveVisibilityDialog | None = None
         self._curve_visibility_overrides: dict[str, bool] = {}
 
         self.addSeparator()
-        self.curve_visibility_action = self.addAction("Curves")
+        icon_path = self.env.app_dir / "assets" / "curve_visibility.png"
+        self.curve_visibility_action = self.addAction(qg.QIcon(str(icon_path)), "Curves")
         self.curve_visibility_action.setToolTip("Show/hide individual curves")
         self.curve_visibility_action.triggered.connect(self.open_curve_visibility_dialog)
 
@@ -108,7 +116,7 @@ class CustomNavigationToolbar(NavigationToolbar2QT):
 
     def open_curve_visibility_dialog(self):
         if self._curve_visibility_dialog is None:
-            self._curve_visibility_dialog = CurveVisibilityDialog(self, self.parent())
+            self._curve_visibility_dialog = CurveVisibilityDialog(self, self.graph_panel, self.parent())
         else:
             self._curve_visibility_dialog.rebuild()
 

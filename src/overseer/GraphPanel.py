@@ -34,6 +34,7 @@ class GraphPanel(qw.QWidget):
     slot_axes_limits_changed = qc.pyqtSignal(int, tuple, tuple)
     slot_axes_limits_changed_3d = qc.pyqtSignal(int, tuple, tuple, tuple)
     slot_title_changed = qc.pyqtSignal(int, str)
+    curve_artists_changed = qc.pyqtSignal()
 
     def __init__(self, init_traj, init_t, dropdown_choices,
                  plotting_data, canvas, figure, axis, toolbar, status_bar, mainwindow):
@@ -1781,6 +1782,8 @@ class GraphPanel(qw.QWidget):
         self._init_snap_artists()
         self._refresh_active_snap()
         self.canvas.draw_idle()
+
+        self.curve_artists_changed.emit()
 
     def _get_legend_font(self) -> int:
         try:

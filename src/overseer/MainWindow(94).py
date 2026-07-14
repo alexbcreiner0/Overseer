@@ -66,6 +66,7 @@ class MainWindow(qw.QMainWindow):
 
         self.status_bar = self.statusBar()
         self.settings = self.config.get("global_settings", {})
+        print(f"{self.settings=}")
 
         self.setWindowTitle("Overseer")
 
@@ -797,10 +798,8 @@ class MainWindow(qw.QMainWindow):
             return False
 
         self._sim_state = "IDLE"
-
         if rerun:
             self._start_sim_now()
-
         return True
 
     def _halt_sim_stack(
@@ -846,6 +845,8 @@ class MainWindow(qw.QMainWindow):
                 )
                 stopped = False
 
+        # Do not destroy the queue/bridge while a process is still alive. Doing
+        # so prevents the normal DONE path from completing a later teardown.
         if stopped:
             self.sim_controller = None
             self._clear_sim_cache(
@@ -1766,6 +1767,8 @@ class MainWindow(qw.QMainWindow):
         except Exception:
             pass
 
+        # Clear stale render data, but keep the bridge and result queue alive so
+        # the normal DONE message can complete the stop transition.
         self._clear_sim_cache(
             clear_pending=True,
             clear_queue=False,
@@ -1797,6 +1800,7 @@ class MainWindow(qw.QMainWindow):
         return True
 
     def receive_param_changed(self, name= None, new_val= None, change_effect= None, is_meta= False):
+        print("on the mainwindow side")
         if self._param_change_mode == "restart" or is_meta:
             self.start_sim(name, new_val)
         elif self._param_change_mode == "message" or change_effect == "send_message":
@@ -2018,6 +2022,7 @@ class MainWindow(qw.QMainWindow):
         self.status_bar.showMessage("Sim completed successfully", 4000)
 
     def _on_sim_thread_finished(self):
+        # Retained for compatibility with older signal wiring.
         self._on_sim_done()
 
     def _on_sim_error(self, msg):
@@ -2144,6 +2149,7 @@ class MainWindow(qw.QMainWindow):
         Reload simulation.py / parameters.py for the current demo
         without changing which demo is active.
         """
+        # self._halt_sim_stack(force= False, clear_pending= True, clear_queue= True)
         try:
             demo = self.current_demo
 
@@ -2162,17 +2168,19 @@ class MainWindow(qw.QMainWindow):
             self._reload_config()
             self._reset_global_settings()
 
+            # Re-apply model-specific formatting
             model_settings = self.config.get("model_specific_settings", {}).get(self.sim_model)
             if model_settings and "commodity_names" in model_settings:
                 plotting_data = format_plot_config(
                     plotting_data, model_settings["commodity_names"]
                 )
 
+            # Push updated data into existing panels
             self.graph_panel.traj = None
             self.graph_panel.t = None
             self.graph_panel.data = plotting_data
             self.control_panel.plotting_data = plotting_data
-            # self.control_panel.load_new_params(self.params)
+            self.control_panel.load_new_params(self.params)
         except Exception as e:
             self.status_bar.showMessage(f"Failed to reload current demo: {e}", msecs= 5000)
             extra = {
@@ -2506,6 +2514,7 @@ class MainWindow(qw.QMainWindow):
         self.presets_submenu, self.results_submenu = self._make_menu(self.presets, self.demos)
         self.refresh_control_panel_and_plots()
         # self.sim_actions[self.get_trajectories.__name__].setChecked(True)
+        print(f"{self.settings=}")
 
     def refresh_plots(self) -> None:
         """Reload plotting_data.yml for the current model and apply it to the live UI."""

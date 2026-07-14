@@ -11,7 +11,6 @@ class LogViewer(qw.QWidget):
     def __init__(self, log_file: Path, parent=None):
         super().__init__(parent)
         self.log_file = Path(log_file)
-        print(f"LogViewer logfile: {self.log_file=}")
 
         layout = qw.QVBoxLayout(self)
 

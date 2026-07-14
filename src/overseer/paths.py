@@ -63,7 +63,6 @@ LOG_DIR = USER_APP_DIR / "logs" if not release_mode else DATA_DIR / "logs"
 
 def ensure_dirs():
     """ create any missing directory """
-    print(f"{CONFIG_DIR=}, {DATA_DIR=}, {CACHE_DIR=}, {MODELS_DIR=}, {LOG_DIR=}")
     for d in [CONFIG_DIR, DATA_DIR, CACHE_DIR, LOG_DIR, MODELS_DIR]:
         d.mkdir(parents= True, exist_ok = True)
 
