@@ -506,6 +506,7 @@ class ControlPanel(qw.QWidget):
         dropdown_name = dropdown_list[dropdown_index]
         
         self.plotting_data[dropdown_name]["default_lims"] = lims
+        self.main_window.graph_panel.data[dropdown_name]["default_lims"] = lims
         self.slotAxesCatChanged.emit(slot_index)
 
     def _get_inter_name_from_name(self, name):
