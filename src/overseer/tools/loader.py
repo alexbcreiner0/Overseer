@@ -471,9 +471,13 @@ def try_instantiate_with_defaults(Params: Type[Any]) -> Tuple[Optional[Any], lis
     return Params(), []
 
 def load_presets(env, path):
-    with open(env.models_dir / path / "data" / "params.yml", 'r') as f:
-        doc = yaml.safe_load(f)
-    return doc["presets"]
+    try:
+        with open(env.models_dir / path / "data" / "params.yml", 'r') as f:
+            doc = yaml.safe_load(f)
+        return doc["presets"]
+    except OSError as e:
+        logger.warning(f"Error loading presets: {e}")
+        return {}
 
 def _dump_to_yaml(env, presets, path):
     class FlowDumper(yaml.SafeDumper):

@@ -82,6 +82,10 @@ class ControlSettingsTab(qw.QWidget):
                 "param_name",
                 "change_effect"
             },
+            "file_picker": {
+                "param_name",
+                "change_effect"
+            }
         }
 
         root = qw.QVBoxLayout(self)
@@ -255,7 +259,13 @@ class ControlSettingsTab(qw.QWidget):
         self.change_effect_combos = {}
 
         self.combo_control_type = qw.QComboBox()
-        self.combo_control_type.addItems(["entry_block", "dropdown", "checkbox", "button"])
+        self.combo_control_type.addItems([
+            "entry_block",
+            "dropdown",
+            "checkbox",
+            "button",
+            "file_picker",
+        ])
         self.combo_control_type.currentTextChanged.connect(self._control_type_changed)
 
         self.edit_label = qw.QLineEdit()
@@ -473,6 +483,16 @@ class ControlSettingsTab(qw.QWidget):
         check_form.addRow("Change effect:", self.combo_checkbox_change_effect, help_text= "Whether the simulation is to restart or send a message when the widget is altered. If you don't know what you are doing, stick to restart.")
         return check_page
 
+    def _build_file_picker_page(self) -> qw.QWidget:
+        picker_page = qw.QWidget()
+        picker_form = HelpFormLayout(picker_page)
+        picker_form.setLabelAlignment(qc.Qt.AlignmentFlag.AlignRight)
+        self.picker_param_name = self._new_param_combo("file_picker")
+        self.picker_change_effect = self._new_change_effect_combo("file_picker")
+        picker_form.addRow("Param:", self.picker_param_name, help_text= "The parameter that the widget will effect.")
+        picker_form.addRow("Change effect:", self.picker_change_effect, help_text= "Whether the simulation is to restart or send a message when the widget is altered. If you don't know what you are doing, stick to restart.")
+        return picker_page
+
     def _build_button_page(self) -> qw.QWidget:
         button_page = qw.QWidget()
         button_form = HelpFormLayout(button_page)
@@ -507,6 +527,8 @@ class ControlSettingsTab(qw.QWidget):
         self.control_stack.addWidget(check_page)
         button_page = self._build_button_page()
         self.control_stack.addWidget(button_page)
+        picker_page = self._build_file_picker_page()
+        self.control_stack.addWidget(picker_page)
 
         outer_lay.addStretch(0)
         return widget
@@ -1179,7 +1201,13 @@ class ControlSettingsTab(qw.QWidget):
 
     def _load_control_into_editor(self, spec) -> None:
         ctype = str(spec.get("control_type", "entry_block"))
-        if ctype not in {"entry_block", "dropdown", "checkbox", "button"}:
+        if ctype not in {
+            "entry_block",
+            "dropdown",
+            "checkbox",
+            "button",
+            "file_picker",
+        }:
             ctype = "entry_block"
 
         self.combo_control_type.blockSignals(True)
@@ -1210,6 +1238,9 @@ class ControlSettingsTab(qw.QWidget):
         elif ctype == "button":
             self.control_stack.setCurrentIndex(3)
             self._load_button_fields(spec)
+        elif ctype == "file_picker":
+            self.control_stack.setCurrentIndex(4)
+            self._load_file_picker_fields(spec)
         else:
             self.control_stack.setCurrentIndex(0)
             self._load_entry_fields(spec)
@@ -1408,6 +1439,10 @@ class ControlSettingsTab(qw.QWidget):
             control_spec.setdefault("action_type", "Replace params")
             self.control_stack.setCurrentIndex(3)
             self._load_button_fields(control_spec)
+        elif ctype == "file_picker":
+            control_spec.setdefault("change_effect", "restart")
+            self.control_stack.setCurrentIndex(4)
+            self._load_file_picker_fields(control_spec)
         else:
             control_spec.setdefault("type", "scalar")
             control_spec.setdefault("scalar_type", "float")
@@ -1429,6 +1464,16 @@ class ControlSettingsTab(qw.QWidget):
         elif action_type == "sim_event":
             self.button_action_type.setCurrentText("Sim event")
         self.button_action_type.blockSignals(False)
+
+    def _load_file_picker_fields(self, spec: ControlSpec) -> None:
+        change_effect = str(spec.get("change_effect", "restart"))
+
+        self.picker_change_effect.blockSignals(True)
+        try:
+            idx = self.picker_change_effect.findData(change_effect)
+            self.picker_change_effect.setCurrentIndex(idx if idx >= 0 else 0)
+        finally:
+            self.picker_change_effect.blockSignals(False)
 
     def _button_function_changed(self, txt: str) -> None:
         control_spec = self._get_control_spec()
