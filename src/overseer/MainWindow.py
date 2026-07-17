@@ -1659,7 +1659,7 @@ class MainWindow(qw.QMainWindow):
                 )
                 self.load_new_params(axis_settings, start_sim_after= False)
 
-        with np.load(filename, allow_pickle= False) as data:
+        with np.load(filename, allow_pickle= True) as data:
             t = data["t"]
             traj = {k: data[k] for k in data.files if k != "t"}
 
