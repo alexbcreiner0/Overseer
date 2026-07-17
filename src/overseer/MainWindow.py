@@ -1569,8 +1569,12 @@ class MainWindow(qw.QMainWindow):
 
         for key, val in self.traj.items():
             try:
-                np.asarray(val)
-            except ValueError as e:
+                array = np.asarray(val)
+            except (TypeError, ValueError):
+                problem_keys.append(key)
+                continue
+
+            if array.dtype.hasobject:
                 problem_keys.append(key)
 
         return problem_keys
