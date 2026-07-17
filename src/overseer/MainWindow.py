@@ -2078,8 +2078,20 @@ class MainWindow(qw.QMainWindow):
             self.graph_panel.plot_slot_from_scratch(slot_index, dropdown_index, options, legend_cfg)
 
     def closeEvent(self, event):
+        window_settings = qc.QSettings()
+        window_settings.setValue(
+            "main_window/geometry",
+            self.saveGeometry(),
+        )
+        window_settings.sync()
+
         try:
-            self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
+            self._halt_sim_stack(
+                force= True,
+                clear_pending= True,
+                clear_queue= False
+            )
+
             if self.settings.get("autosave_axis_settings", False):
                 self._save_slot_settings()
         finally:

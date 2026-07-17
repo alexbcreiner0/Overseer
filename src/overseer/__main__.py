@@ -5,7 +5,7 @@ from PyQt6 import (
 ) 
 import yaml
 from .tools.loader import get_user_models_dir, get_user_logs_dir, configure_matplotlib_cache
-import sys, os, shutil
+import sys
 from .paths import APP_DIR, assets_path, anonymous_submission_mode_active, release_mode_active
 from .bootstrap import bootstrap_user_environment
 import logging, atexit
@@ -152,7 +152,14 @@ def main():
         icon_path = assets_path("icon.ico" if sys.platform.startswith("win") else "icon.png")
         window.setWindowIcon(qg.QIcon(str(icon_path)))
 
-    window.showMaximized()
+    window_settings = qc.QSettings()
+    saved_geometry = window_settings.value("main_window/geometry")
+
+    if saved_geometry is not None and window.restoreGeometry(saved_geometry):
+        window.show()
+    else:
+        window.showMaximized()
+
     app.exec()
 
 if __name__ == "__main__":
