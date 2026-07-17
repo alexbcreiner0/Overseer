@@ -18,6 +18,7 @@ from .widgets.DropdownChoices import DropdownChoices
 from .widgets.MatrixEntry import MatrixEntry
 from .widgets.AxesControlWidget import AxesControlWidget
 from .widgets.SlotControlsWidget import SlotControlsWidget
+from .widgets.FilePicker import FilePicker
 from dataclasses import asdict
 import importlib, inspect
 
@@ -82,6 +83,7 @@ class ControlPanel(qw.QWidget):
         self.entry_blocks = {}
         self.dropdowns = {}
         self.checkboxes = {}
+        self.file_pickers = {}
         self.buttons = {}
         self.row_wrappers = []
 
@@ -634,6 +636,10 @@ class ControlPanel(qw.QWidget):
             w = self._build_entry_block(entry_name, info, params)
             return w
 
+        elif control_type == "file_picker":
+            w = self._build_file_path_entry(entry_name, info, params)
+            return w
+
         elif control_type[0:10] == "vsub_panel":
             w = self._build_sub_panel(entry_name, info, params, orientation= "v")
             return w
@@ -645,6 +651,38 @@ class ControlPanel(qw.QWidget):
         else:
             print("Unrecognized control type.")
             return qw.QWidget()
+
+    def _build_file_path_entry(self, entry_name, info, params) -> qw.QWidget:
+        param_name, label, tooltip_plain = (
+            info["param_name"], info['label'], info['tooltip']
+        )
+        mode = info.get("mode", "folder")
+        tooltip = f"""{tooltip_plain}"""
+        change_effect = info.get("change_effect", "restart")
+
+        row_widget = qw.QWidget()
+        row_layout = qw.QHBoxLayout(row_widget)
+        widget = FilePicker(mode= mode)
+
+        if hasattr(params, param_name):
+            init_val = getattr(params, param_name)
+            widget.setText(init_val)
+
+        widget.pathChanged.connect(
+            lambda path, pm= param_name, en= entry_name:
+                self.update_plot(pm, path, widget_changed= en)
+        )
+
+        row_layout.addWidget(qw.QLabel(label))
+        row_layout.addWidget(widget)
+        row_layout.addWidget(HelpButton("?", tooltip), stretch= 0)
+        self.file_pickers[entry_name] = {
+            "widget": widget,
+            "param_name": param_name,
+            "change_effect": change_effect
+        }
+
+        return row_widget
 
     def _build_checkbox(self, entry_name, info, params) -> qw.QWidget:
         param_name, label, tooltip_plain = (
@@ -1131,6 +1169,8 @@ class ControlPanel(qw.QWidget):
                 info = self.dropdowns[widget_changed]
             elif widget_changed in self.checkboxes:
                 info = self.checkboxes[widget_changed]
+            elif widget_changed in self.file_pickers:
+                info = self.file_pickers[widget_changed]
             else:
                 info = {}
         else:
