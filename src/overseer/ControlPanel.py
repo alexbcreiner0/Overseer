@@ -671,6 +671,7 @@ class ControlPanel(qw.QWidget):
         widget.pathChanged.connect(
             lambda path, pm= param_name, en= entry_name:
                 self.update_plot(pm, path, widget_changed= en)
+
         )
 
         row_layout.addWidget(qw.QLabel(label))
@@ -681,6 +682,7 @@ class ControlPanel(qw.QWidget):
             "param_name": param_name,
             "change_effect": change_effect
         }
+
 
         return row_widget
 
