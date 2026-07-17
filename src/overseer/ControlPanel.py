@@ -656,24 +656,33 @@ class ControlPanel(qw.QWidget):
         param_name, label, tooltip_plain = (
             info["param_name"], info['label'], info['tooltip']
         )
+        mode = info.get("mode", "folder")
         tooltip = f"""{tooltip_plain}"""
         change_effect = info.get("change_effect", "restart")
 
         row_widget = qw.QWidget()
         row_layout = qw.QHBoxLayout(row_widget)
-        widget = FilePicker()
+        widget = FilePicker(mode= mode)
+
         if hasattr(params, param_name):
             init_val = getattr(params, param_name)
             widget.setText(init_val)
-        widget.line_edit.textChanged.connect(
-            lambda state, pm= param_name, en= entry_name:
-                self.update_plot(pm, state == qc.Qt.CheckState.Checked, widget_changed= en)
+
+        widget.pathChanged.connect(
+            lambda path, pm= param_name, en= entry_name:
+                self.update_plot(pm, path, widget_changed= en)
+
         )
 
         row_layout.addWidget(qw.QLabel(label))
         row_layout.addWidget(widget)
         row_layout.addWidget(HelpButton("?", tooltip), stretch= 0)
-        self.file_pickers[entry_name] = {"widget": widget, "change_effect": change_effect}
+        self.file_pickers[entry_name] = {
+            "widget": widget,
+            "param_name": param_name,
+            "change_effect": change_effect
+        }
+
 
         return row_widget
 
@@ -1162,6 +1171,8 @@ class ControlPanel(qw.QWidget):
                 info = self.dropdowns[widget_changed]
             elif widget_changed in self.checkboxes:
                 info = self.checkboxes[widget_changed]
+            elif widget_changed in self.file_pickers:
+                info = self.file_pickers[widget_changed]
             else:
                 info = {}
         else:
