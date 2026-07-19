@@ -1587,12 +1587,12 @@ class MainWindow(qw.QMainWindow):
         problem_keys = self._test_for_problem_keys()
         problem_dict = None
         if problem_keys != []:
-            self.status_bar.showMessage(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.", 5000)
-            logger.error(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.")
-            return
+            # self.status_bar.showMessage(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.", 5000)
+            # logger.error(f"Error recording data associated with keys {problem_keys}, make sure you aren't creating ragged data.")
+            # return
             # problem_dict = {key: self.traj[key] for key in problem_keys}
-            # for key in problem_keys:
-            #     del self.traj[key]
+            for key in problem_keys:
+                del self.traj[key]
 
         model_name = self.current_demo["details"]["simulation_model"]
         results_path = self.env.models_dir / model_name / "saved_results"
