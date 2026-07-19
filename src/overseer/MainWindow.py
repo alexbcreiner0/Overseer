@@ -20,6 +20,8 @@ from .LogViewer import LogViewer
 from .SimWorker import SimController
 from .BridgeWorker import BridgeWorker
 from .tools.loader import (
+    discover_model_demos,
+    load_demo_document,
     load_presets, to_plain, 
     params_from_mapping,
     reload_package_folder, 
@@ -86,10 +88,11 @@ class MainWindow(qw.QMainWindow):
             #     "new_log_dir": str(self.env.log_dir),
             # })
 
-        with open(env.demos_file, "r") as f:
-            self.demos = yaml.safe_load(f).get("demos", {})
+        # with open(env.demos_file, "r") as f:
+        #     self.demos = yaml.safe_load(f).get("demos", {})
 
         ensure_models_on_path(self.env.models_dir)
+        self._reload_demo_catalog()
 
         self._live_animation = True
         self._run_id = 0
@@ -165,7 +168,6 @@ class MainWindow(qw.QMainWindow):
 
         self.toolbar.graph_panel = self.graph_panel
 
-        
         self.toolbar.set_graph_panel(self.graph_panel)
         self.graph_panel._block_axis_callback = True
         self._load_saved_axis_settings()
@@ -219,6 +221,24 @@ class MainWindow(qw.QMainWindow):
         safe_fps = max(1, fps)
         msecs = max(1, round(1000/safe_fps))
         self._anim_timer.setInterval(msecs)
+
+    def _reload_demo_catalog(self) -> None:
+        catalog = discover_model_demos(self.env.models_dir)
+
+        for message in catalog.warnings:
+            logger.warning(message)
+
+        for message in catalog.errors:
+            logger.error(message)
+
+        self.demo_catalog = catalog
+        self.demos = catalog.demos
+        self.demo_sources = catalog.sources
+
+        if not self.demos:
+            raise RuntimeError(
+                f"No valid demos were found under {self.env.models_dir}."
+            )
 
     def _assign_keybinds(self, first_boot = False):
         """ Does what it says """
@@ -678,11 +698,43 @@ class MainWindow(qw.QMainWindow):
         return axis_settings
 
     def _save_slot_settings(self):
-        self.current_demo["details"]["axis_settings"] = self._get_current_axis_settings()
-        new_demo_data = {"demos": self.demos}
-        flow_seqify(new_demo_data)
+        source = self.demo_sources.get(self.current_demo_name)
+        if source is None:
+            self.status_bar.showMessage(
+                "Could not determine which model owns the current demo?",
+                msecs= 5000
+            )
+            return
 
-        atomic_write(self.env.demos_file, new_demo_data)
+        try:
+            document = load_demo_document(source.path)
+        except (OSError, yaml.YAMLError, ValueError) as error:
+            logger.exception("Could not reload demo file before saving.")
+            self.status_bar.showMessage(
+                f"Could not save demo view: {error}",
+                msecs= 5000
+            )
+            return
+
+        stored_demo = document["demos"].get(source.local_key)
+        if not isinstance(stored_demo, dict):
+            self.status_bar.showMessage(
+                f"Demo {source.local_key!r} no longer exists in {source.path}",
+                msecs= 5000
+            )
+            return
+
+        axis_settings = self._get_current_axis_settings()
+        stored_demo.setdefault("details", {})["axis_settings"] = axis_settings
+
+        output = copy.deepcopy(document)
+        flow_seqify(output)
+        atomic_write(source.path, output)
+
+        self.current_demo.setdefault("details", {})["axis_settings"] = (
+            copy.deepcopy(axis_settings)
+        )
+
         self.status_bar.showMessage("Current overall view saved as demo default.", msecs= 4000)
 
     def _reset_global_settings(self):
@@ -1174,10 +1226,29 @@ class MainWindow(qw.QMainWindow):
         # qc.QTimer.singleShot(0, self.tight_layout)
 
     def _find_default(self, demos):
-        for demo in demos:
-            if "default" in demos[demo]:
-                if demos[demo]["default"]: return demo, demos[demo]
-        return next(iter(demos)), demos[next(iter(demos))]
+        defaults = [
+            (demo_id, demo)
+            for demo_id, demo in demos.items()
+            if isinstance(demo, dict) and demo.get("default")
+        ]
+
+        if len(defaults) > 1:
+            logger.warning(
+                "Multiple default demos were found: %s. Using %s.",
+                [demo_id for demo_id, _ in defaults],
+                defaults[0][0],
+            )
+
+        if defaults:
+            return defaults[0]
+
+        return next(iter(demos.items()))
+
+    # def _find_default(self, demos):
+    #     for demo in demos:
+    #         if "default" in demos[demo]:
+    #             if demos[demo]["default"]: return demo, demos[demo]
+    #     return next(iter(demos)), demos[next(iter(demos))]
 
     def _get_dropdown_choices(self, plotting_data):
 
@@ -2216,27 +2287,35 @@ class MainWindow(qw.QMainWindow):
             self._set_anim_timer(desired_fps)
 
             new_data_dir = get_user_data_dir(self.settings, self.env)
-            # new_models_dir = get_user_models_dir(self.settings, self.env)
-            # new_log_dir = get_user_logs_dir(self.settings, self.env)
 
             self.env.user_data_dir = new_data_dir
             
             self.env.models_dir = new_data_dir / "models"
             self.env.log_dir = new_data_dir / "logs" 
-            self.env.demos_file = new_data_dir / "demos.yml"
 
-            with open(self.env.demos_file, "r") as f:
-                self.demos = yaml.safe_load(f).get("demos", {})
+            if old_models_dir != self.env.models_dir:
+                refresh_models_path(old_models_dir, self.env.models_dir)
 
-            if self.current_demo_name in self.demos:
-                self.current_demo = self.demos[self.current_demo_name]
+            prev_demo_id = getattr(self, "current_demo_name", None)
+            self._reload_demo_catalog()
+
+            if prev_demo_id in self.demos:
+                self.current_demo_name = prev_demo_id
+                self.current_demo = self.demos[prev_demo_id]
             else:
                 self.current_demo_name, self.current_demo = self._find_default(self.demos)
 
             self.sim_model = self.current_demo.get("details", {}).get("simulation_model", "")
 
-            if old_models_dir != self.env.models_dir:
-                refresh_models_path(old_models_dir, self.env.models_dir)
+            # self.env.demos_file = new_data_dir / "demos.yml"
+
+            # with open(self.env.demos_file, "r") as f:
+            #     self.demos = yaml.safe_load(f).get("demos", {})
+            self._sleep_time = float(
+                self.current_demo.get(
+                    "details", {}
+                ).get("simulation_speed", 0)
+            )
 
             if old_log_dir != self.env.log_dir:
                 from .__main__ import reconfigure_logging
