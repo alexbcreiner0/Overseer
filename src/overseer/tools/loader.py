@@ -561,7 +561,7 @@ def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
     return Parameters
 
 def get_user_data_dir(settings: dict, env) -> Path:
-    if settings.get("paper_release_mode", False):
+    if getattr(env, "releae_mode", False):
         from overseer.paths import USER_APP_DIR
         return USER_APP_DIR
 
@@ -570,7 +570,7 @@ def get_user_data_dir(settings: dict, env) -> Path:
         return env.user_data_dir
 
     try:
-        raw_text = settings.get("user_data_dir")
+        raw_text = settings.get("user_data_dir", "")
         candidate = Path(raw_text).expanduser().resolve(strict= False)
     except Exception:
         return env.user_data_dir

@@ -62,6 +62,8 @@ class MainWindow(qw.QMainWindow):
     def __init__(self, env):
         super().__init__()
         self.env = env
+        logger.info("Hello?")
+        logger.info(f"{self.env.release_mode=}")
 
         with open(env.config_file, "r") as f:
             self.config = yaml.safe_load(f)
@@ -77,7 +79,7 @@ class MainWindow(qw.QMainWindow):
         setattr(self.env, "user_data_dir", data_dir)
         setattr(self.env, "models_dir", self.env.user_data_dir / "models")
         setattr(self.env, "log_dir", self.env.user_data_dir / "logs")
-        setattr(self.env, "demos_file", self.env.user_data_dir / "demos.yml")
+        # setattr(self.env, "demos_file", self.env.user_data_dir / "demos.yml")
 
         if old_log_dir != self.env.log_dir:
             from .__main__ import reconfigure_logging
@@ -244,7 +246,8 @@ class MainWindow(qw.QMainWindow):
         """ Does what it says """
 
         release_mode_exclusions = {
-            "next_main_panel"
+            "next_main_panel",
+            "open_control_panel_settings",
         }
 
         try:
@@ -488,7 +491,7 @@ class MainWindow(qw.QMainWindow):
         }
 
         for name, short_dict in self.shortcuts.items():
-            if self.settings.get("paper_release_mode", False) and name in release_mode_exclusions:
+            if not self.env.release_mode and name in release_mode_exclusions:
                 continue
             key_seq = short_dict["shortcut"]
             if key_seq == "Alt+Grave":
@@ -1317,7 +1320,7 @@ class MainWindow(qw.QMainWindow):
         self.right_panel_view.addButton(graph_button, 0)
         self.right_panel_view.addButton(log_button, 1)
 
-        if not self.settings.get("paper_release_mode", False):
+        if not self.env.release_mode:
             nav_toolbar.addWidget(qw.QLabel("Viewing:"))
             nav_toolbar.addWidget(graph_button)
             nav_toolbar.addWidget(log_button)
@@ -1517,8 +1520,9 @@ class MainWindow(qw.QMainWindow):
         edit_plots_action.triggered.connect(lambda _checked= False, tab= 5: self.open_settings(tab))
 
         edit_demos_action = qg.QAction("Demo Settings", self)
-        settings_menu.addAction(edit_demos_action)
-        edit_demos_action.triggered.connect(lambda _checked= False, tab= 6: self.open_settings(tab))
+        if not self.env.release_mode:
+            settings_menu.addAction(edit_demos_action)
+            edit_demos_action.triggered.connect(lambda _checked= False, tab= 6: self.open_settings(tab))
 
         edit_keybindings_action = qg.QAction("Edit keybindings", self)
         settings_menu.addAction(edit_keybindings_action)

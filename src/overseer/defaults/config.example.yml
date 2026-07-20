@@ -3,5 +3,5 @@ global_settings:
   default_save_name: figure
   run_on_startup: true
   autosave_axis_settings: false
-  paper_release_mode: false
+  paper_release_mode: true
   anonymous_submission_mode: false

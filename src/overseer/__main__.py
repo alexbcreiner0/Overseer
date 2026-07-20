@@ -6,7 +6,7 @@ from PyQt6 import (
 import yaml
 from .tools.loader import get_user_models_dir, get_user_logs_dir, configure_matplotlib_cache
 import sys
-from .paths import APP_DIR, assets_path, anonymous_submission_mode_active, release_mode_active
+from .paths import APP_DIR, assets_path, anonymous_submission_mode_active
 from .bootstrap import bootstrap_user_environment
 import logging, atexit
 import logging.config
@@ -125,14 +125,14 @@ def main():
     args = parse_args()
     env = bootstrap_user_environment(config_override= args.config)
 
-    if not release_mode_active(APP_DIR):
+    if not env.release_mode:
         with open(env.config_file, "r") as f:
             settings = yaml.safe_load(f).get("global_settings", {})
     else:
         with open(env.config_dir / "config.example.yml", "r") as f:
             settings = yaml.safe_load(f).get("global_settings", {})
 
-    if not release_mode_active(APP_DIR):
+    if not env.release_mode:
         env.models_dir = get_user_models_dir(settings, env)
         env.log_dir = get_user_logs_dir(settings, env)
         env.log_dir.mkdir(parents=True, exist_ok=True)
