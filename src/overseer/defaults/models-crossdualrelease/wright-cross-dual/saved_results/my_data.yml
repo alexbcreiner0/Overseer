@@ -1,0 +1,114 @@
+name: My data
+desc: ''
+params:
+  A:
+  - - 0.0
+    - 0.14282945860910282
+    - 0.0
+  - - 0.5713178344364113
+    - 0.4284883758273085
+    - 0.21424418791365424
+  - - 0.0
+    - 0.28565891721820563
+    - 0.0
+  l:
+  - 0.05479292424657957
+  - 0.31701750064049955
+  - 0.07881665776476635
+  b_bar:
+  - 0.0
+  - 0.7946208862707207
+  - 0.8031047390332579
+  c_bar:
+  - 0.17006309105616155
+  - 0.7834517076793155
+  - 0.3026222947855445
+  alpha_w: 0.9283323261943515
+  alpha_c: 0.08618945644291327
+  alpha_L: 0.0
+  kappa:
+  - 1.0
+  - 1.0
+  - 1.0
+  eta:
+  - 2.0
+  - 2.0
+  - 2.0
+  eta_w: 0.25
+  eta_r: 2
+  L: 0.1181335493434797
+  w: 0.9846435941504983
+  r: 0.3742012581630873
+  q:
+  - 0.918568813419607
+  - 0.18506378287185488
+  - 0.02711761089441589
+  p:
+  - 0.21108781052226447
+  - 0.05218727677852968
+  - 0.11487001235412377
+  s:
+  - 0.2765698053194596
+  - 2.254688976889387
+  - 1.2099157981837072
+  m_w: 0.14404513087290785
+  M: 1.0
+  M_change_type: none
+  money_injection_target: capitalists
+  M_change_interval: 20
+  M_change_duration: 1
+  delta_M: 1
+  shock_type: culs
+  change_type: discrete
+  economy_type: unrestricted
+  wage_deflation: 0.0
+  gamma_L: 0.3
+  atrophy_with_unemployment: always
+  supply_shock_mag: 0.5
+  supply_shock_interval: 50
+  supply_shock_setting: none
+  change_interval: 5
+  shock_mag: 0.03
+  cost_tradeoff: 0.01
+  stop_cts_changes_halfway: false
+  fix_sector_receiving_change: -1
+  init_tssi_melt: 1
+  output_equation: absolute
+  employment_guardrails: false
+  s_floor: 1.0e-05
+  mu_L: 0.5
+  eps_u: 1.0e-08
+  eps_m: 1.0e-08
+  T: 100
+  res: 3
+  n: 3
+axis_settings:
+  limits:
+    a1:
+    - - -4.10502
+      - 105.236
+    - - -1.21304
+      - 2.56884
+  dimension:
+  - 1
+  - 1
+  saved_limits:
+    a1:
+    - - -0.00556859
+      - 10.9558
+    - - -2.95211
+      - 17.5523
+  dropdown_indices:
+  - 3
+  checked_plots:
+    a1:
+    - Equilibrium Rate of Profit
+    - Sectoral Rates of Profit
+  settings:
+    a1:
+      legend_visible: true
+      legend_fontsize: 10
+      legend_loc: upper right
+      title: true
+      xlabel: false
+      ylabel: false

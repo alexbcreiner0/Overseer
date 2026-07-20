@@ -123,9 +123,13 @@ row5:
     control_type: dropdown
     param_name: fix_sector_receiving_change
     label: Sector Receiving Change
-    names: [Random, Corn, Iron, Sugar]
-    values: [-1, 0, 1, 2]
+    names_from: sector_names_for_dropdown
+    values_from: sector_vals_for_dropdown
     tooltip: Which sector receives technical changes.
+    names: [Corn, Iron, Sugar, Random]
+    values: ['0', '1', '2', '-1']
+    use_names_func: true
+    use_vals_func: true
 row6:
   shock_mag:
     control_type: entry_block
@@ -230,14 +234,26 @@ divider5:
   title: Main Parameters
 row10:
   generation:
-    control_type: button_group
-    names: [Random Parameters]
-    tooltips:
-    - Generate random parameters.
-    display: horizontal
-    functions:
-    - random_parameters
+    control_type: button
+    name: Random Parameters
+    function: random_parameters
     param_name: generation
+    action_type: replace_params
+    tooltip: Generate random parameters. Also randomizes the commodity names for flavor.
+  n:
+    param_name: n
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [1, 10]
+    label: $n=$
+    tooltip: "The number of commodities. Most of the new entry blocks which appear will just default to some safe seeming value like 0.1, so make sure to change."
+  event_test:
+    control_type: button
+    name: Do Thing
+    function: pass_event_test
+    action_type: sim_event
+    tooltip: Testing a sim event
 row11:
   A:
     control_type: entry_block
@@ -249,9 +265,7 @@ row11:
       the number of units of commodity i needed to produce a unit of commodity j.
       So the bottom right entry is the amount of 'sugar' needed to make 'sugar'.
     type: matrix
-    dim_from:
-    - n
-    - n
+    dim_from: new_dim_mat
     safe_default: 0.1
   l:
     control_type: entry_block
@@ -260,7 +274,7 @@ row11:
     tooltip: The living labor vector. The ith entry of this is the number of hours
       of labor required to produce a unit of the ith commodity.
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
 row12:
   composite1:
@@ -274,7 +288,8 @@ row12:
           means of subsistence bundle amounting to a scalar multiple of this vector.
           By default, we have workers consuming corn and sugar, but mostly corn.
         type: vector
-        dim_from: n
+        dim_from: new_dim_vec
+        change_effect: send_message
         safe_default: 0.1
         vsize_policy: expanding
       c:
@@ -285,7 +300,7 @@ row12:
           consumption bundle amounting to a scalar multiple of this vector. By default,
           we have capitalists consuming corn and sugar, but mostly sugar.
         type: vector
-        dim_from: n
+        dim_from: new_dim_vec
         safe_default: 0.1
         vsize_policy: expanding
     param_name: composite1
@@ -297,6 +312,7 @@ row12:
         param_name: alpha_w
         label: $\alpha_w= $
         type: scalar
+        change_effect: send_message
         range:
         - 0
         - 1
@@ -323,7 +339,7 @@ row13:
     tooltip: Initial output vector. This one is much less consequential than the initial
       supply vector found next to this.
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
   s:
     control_type: entry_block
@@ -332,7 +348,7 @@ row13:
     tooltip: Initial supply vector. Default example has an initial shortage of 'iron'.
       Try increasing this amount (the second entry) and see what changes.
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
   p:
     control_type: entry_block
@@ -341,7 +357,7 @@ row13:
     tooltip: The initial unit price vector. Entry i is the price of a unit of i at
       the start of the simulation.
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
 row14:
   L:
@@ -423,7 +439,7 @@ row17:
     param_name: eta
     label: $\mathbf{\eta}= $
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
     tooltip: Elasticity constants representing how dramatically each price fluctuate
       in response to changes in supply.
@@ -432,7 +448,7 @@ row17:
     param_name: kappa
     label: $\mathbf{\kappa}= $
     type: vector
-    dim_from: n
+    dim_from: new_dim_vec
     safe_default: 0.1
     tooltip: Elasticity constants representing how dramatically outputs fluctuate
       in resonse to profitability

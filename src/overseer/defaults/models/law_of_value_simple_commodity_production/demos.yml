@@ -1,0 +1,31 @@
+demos:
+  cockshott_s_law_of_value_agent_based_model:
+    name: Cockshott's Law of Value Agent-Based Model
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[0.0, 1200.0], [-15.4323, 201.782]]
+          a2: [[0.0, 1000.0], [0.0, 500.0]]
+        dropdown_indices: [0, 2]
+        checked_plots:
+          a1: [Average Prices, Average Labor Values]
+          a2: [Sector Employments, Efficient Distribution of Labor]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true

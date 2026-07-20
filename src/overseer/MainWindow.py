@@ -62,8 +62,6 @@ class MainWindow(qw.QMainWindow):
     def __init__(self, env):
         super().__init__()
         self.env = env
-        logger.info("Hello?")
-        logger.info(f"{self.env.release_mode=}")
 
         with open(env.config_file, "r") as f:
             self.config = yaml.safe_load(f)
@@ -84,11 +82,8 @@ class MainWindow(qw.QMainWindow):
         if old_log_dir != self.env.log_dir:
             from .__main__ import reconfigure_logging
             reconfigure_logging(self.env, self.env.log_dir)
-            # logger = logging.getLogger(__name__)
-            # logger.info("Log directory changed at runtime", extra={
-            #     "old_log_dir": str(old_log_dir),
-            #     "new_log_dir": str(self.env.log_dir),
-            # })
+
+        logger.info("Logging from mainwindow")
 
         # with open(env.demos_file, "r") as f:
         #     self.demos = yaml.safe_load(f).get("demos", {})

@@ -44,12 +44,30 @@ presets:
       init_tssi_melt: 1
       output_equation: absolute
       employment_guardrails: false
-      s_floor: 1e-05
+      s_floor: 1.0e-05
       mu_L: 0.5
-      eps_u: 1e-08
-      eps_m: 1e-08
+      eps_u: 1.0e-08
+      eps_m: 1.0e-08
       T: 100
       res: 3
+      n: 3
+    axis_settings:
+      limits:
+        a1: [[0.0, 30.0], [-1.39891, 15.5381]]
+      dimension: [1, 1]
+      saved_limits:
+        a1: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+      dropdown_indices: [0]
+      checked_plots:
+        a1: [Unit Prices, Unit Values]
+      settings:
+        a1:
+          legend_visible: true
+          legend_fontsize: 10
+          legend_loc: upper right
+          title: true
+          xlabel: false
+          ylabel: false
   figure_1:
     name: Figure 1
     desc: ''
@@ -323,8 +341,8 @@ presets:
       dimension: [2, 3]
       dropdown_indices: [3, 4, 2, 0, 5, 6]
       checked_plots:
-        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Okishio Predicted Profit
-            Rates]
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Okishio Predicted
+            Profit Rates]
         a2: [Employment, Unemployment, Hourly Wage]
         a3: [Outputs, Supplies, Demand]
         a4: [Unit Prices, Unit Values]
@@ -1395,9 +1413,11 @@ presets:
         a4: [Employment, Unemployment, Hourly Wage]
         a5: [Capitalist Savings, Hourly Wage, Worker Savings]
         a6: [Capital Intensities, Composition of Capital Advanced]
-        a7: [Value of Constant Capital, Value of Means of Subsistence, Total Surplus Value]
+        a7: [Value of Constant Capital, Value of Means of Subsistence, Total Surplus
+            Value]
         a8: [Unit Labor Values]
-        a9: [Value of Hourly Real Wage, Value of Hourly Capitalist Income, Rate of Exploitation]
+        a9: [Value of Hourly Real Wage, Value of Hourly Capitalist Income, Rate of
+            Exploitation]
       settings:
         a1:
           legend_visible: true
@@ -1521,7 +1541,8 @@ presets:
       dimension: [1, 2]
       dropdown_indices: [3, 4]
       checked_plots:
-        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest rate]
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest
+            rate]
         a2: [Slope of Employment]
       settings:
         a1:
@@ -1597,7 +1618,8 @@ presets:
       dimension: [1, 2]
       dropdown_indices: [3, 4]
       checked_plots:
-        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest rate]
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit (Enterprise), Interest
+            rate]
         a2: [Slope of Employment]
       settings:
         a1:
@@ -2129,8 +2151,8 @@ presets:
       dimension: [2, 2]
       dropdown_indices: [3, 9, 5, 4]
       checked_plots:
-        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Interest rate, Max. Rate
-            of Profit]
+        a1: [Equilibrium Rate of Profit, Sectoral Rates of Profit, Interest rate,
+          Max. Rate of Profit]
         a2: ['Materials Costs of {c1}', Labor Costs]
         a3: [Relative Sectoral Money Investment]
         a4: [Employment, Hourly Wage]

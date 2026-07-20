@@ -11,6 +11,81 @@ except Exception:
 from dataclasses import fields, is_dataclass, asdict
 from typing import get_origin, get_args
 import random
+from pathlib import Path
+
+CURRENT_NAMES = ["Corn", "Iron", "Sugar"]
+CURRENT_N = 3
+COMMODITIES = []
+root = Path(__file__).parent.parent
+with open( root / "data" / "commodities.txt", "r") as f:
+    for line in f:
+        COMMODITIES.append(line.strip())
+
+def format_plot_config(params: dict, plotting_data: dict) -> dict:
+    data = deepcopy(plotting_data)
+    global CURRENT_NAMES
+
+    for _, cat_dict in data.items():
+        for _, plot_dict in cat_dict.get("plots", {}).items():
+            if plot_dict.get("labels"):
+                if len(plot_dict["labels"]) > 1:
+                    del plot_dict["labels"]
+            if plot_dict.get("label_template"):
+                template = plot_dict.get("label_template")
+                if not template:
+                    continue
+
+                plot_dict["labels"] = [
+                    template.format(*CURRENT_NAMES, i=name)
+                    for name in CURRENT_NAMES
+                ]
+        
+    real_costs_plots = data["real_costs"]["plots"]
+    plots_list = [plot_name for plot_name in real_costs_plots.keys() if plot_name not in {"labor_costs", "spectral_radii"}]
+    while len(plots_list) > len(CURRENT_NAMES):
+        name = plots_list[-1]
+        del real_costs_plots[name]
+    
+    while len(CURRENT_NAMES) > len(plots_list):
+        next_idx = len(plots_list)
+        next_name = CURRENT_NAMES[next_idx]
+        plots_list.append(f"{next_name.lower()}_costs")
+        real_costs_plots[f"{next_name}_costs"] = {
+            "checkbox_name": f"Materials Costs of {next_name}",
+            "toggled": False,
+            "linestyle": "solid",
+            "linewidth": 1.5,
+            "labels": [f"{name} cost of {next_name}" for name in CURRENT_NAMES],
+            "colors": ["red", "green", "blue"],
+            "traj_key": f"a_{next_idx}"
+        }
+
+    return data
+
+def implement_culs_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "culs"
+    }
+
+def implement_cslu_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "cslu"
+    }
+
+def implement_cs_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "cs"
+    }
+
+def implement_ls_shock(params, env):
+    return {
+        "event": "shock_requested",
+        "shock_type": "ls"
+    }
+
 
 def params_from_mapping(map: dict):
     params_fields = fields(Params)
@@ -217,7 +292,7 @@ def random_vector(dim, unif_range= (0,1), random_nonzeros= False):
 
     return vec
 
-def random_parameters(params, epsilon=1e-1):
+def random_parameters(params, env, epsilon=1e-1):
     new_params = deepcopy(params)
     dim = int(params.A.shape[0])
     M = params.M
@@ -227,15 +302,15 @@ def random_parameters(params, epsilon=1e-1):
     l, p, q = random_vector(dim), random_vector(dim), random_vector(dim) # strictly positive
     b, c = random_vector(dim, random_nonzeros= True), random_vector(dim, random_nonzeros= True) # can have non-negative entries
     eps1, eps2, eps3 = np.random.uniform(1e-3,0.1), np.random.uniform(1e-3,0.1, dim), np.random.uniform(1e-3, 0.1) # random noise/difference factors
-    alpha_w, alpha_c = np.random.uniform(1e-3,1), np.random.uniform(1e-3,0.1) # random scalars
+    alpha_w, alpha_c = np.random.uniform(1e-3,1), np.random.uniform(1e-3,1) # random scalars
     m_w = np.random.uniform(1e-3, M)
 
-    w, r = np.random.uniform(1e-3,1), np.random.uniform(1e-3,1) # might need to adjust to ensure initial output changes are reasonable
+    w, r = np.random.uniform(1e-3,1), np.random.uniform(1e-3,0.1) # might need to adjust to ensure initial output changes are reasonable
 
     scalar = p.dot(b) / (m_w * alpha_w)
     p /= scalar
 
-    scalar = (M-m_w)*alpha_c / p.dot(c)
+    scalar = p.dot(c) / (M-m_w)*alpha_c
     c /= scalar
 
     scalar = (p.dot(b) / (m_w*alpha_w))
@@ -271,21 +346,43 @@ def random_parameters(params, epsilon=1e-1):
     new_params.w = w
     new_params.r = r
 
-    params_dict = {
-        "A": A, "l": l, "b_bar": b_bar, "c_bar": c_bar, "alpha_w": alpha_w, "alpha_c": alpha_c,
-        "alpha_L": params.alpha_L, "kappa": params.kappa, "eta": params.eta, "eta_w": params.eta_w, "eta_r": params.eta_r, "L": L, "w": w,
-        "r": r, "p": p, "q": q, "s": s, "m_w": m_w, "shock_type": params.shock_type
-    }
+    global CURRENT_NAMES
+    global CURRENT_N
+    CURRENT_NAMES = get_new_commodities(CURRENT_N)
 
-    params = params_from_mapping(params_dict)
+    return new_params
 
-    commodities = []
-    with open("assets/commodities.txt", "r") as f:
-        for line in f:
-            commodities.append(line.strip())
-    sector_names = random.sample(commodities, dim)
+def get_new_commodities(n):
+    return random.sample(COMMODITIES, n)
 
-    return new_params, sector_names
+def new_dim_vec(params):
+    return (params.n, 1)
+
+def new_dim_mat(params):
+    return (params.n, params.n)
+
+def sector_names_for_dropdown(params):
+    global CURRENT_NAMES
+    global CURRENT_N
+    if params.n != CURRENT_N:
+        old_n = CURRENT_N
+        CURRENT_N = params.n
+        if old_n > CURRENT_N:
+            CURRENT_NAMES = CURRENT_NAMES[:CURRENT_N]
+            return ["Random"] + CURRENT_NAMES[:CURRENT_N]
+        else:
+            n_new = CURRENT_N - old_n
+            new_names = get_new_commodities(n_new)
+            CURRENT_NAMES += new_names
+            return ["Random"] + CURRENT_NAMES
+    else:
+        return ["Random"] + CURRENT_NAMES
+
+def sector_vals_for_dropdown(params):
+    out = [-1]
+    for i in range(params.n):
+        out.append(i)
+    return out
 
 if __name__ == "__main__":
     print(repr(random_irreducible_productive_matrix(5)))

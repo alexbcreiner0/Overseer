@@ -1,0 +1,9 @@
+demos:
+  lotka_volterra_abm:
+    name: Predator-Pray Standard ABM
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      plot_preprocess: null
+      simulation_speed: '0.0'

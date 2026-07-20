@@ -1,0 +1,119 @@
+divider1:
+  title: Parameters
+row1:
+  T:
+    param_name: T
+    tooltip: Total resources available
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 10000]
+    label: $T=$
+  b:
+    param_name: b
+    tooltip: Subsistence requirements per peasant.
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [1, 100]
+    label: $b_1=$
+  b_2:
+    param_name: b_2
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $b_2=$
+    tooltip: Subsistence requirement per elite
+row2:
+  m:
+    param_name: m
+    tooltip: Surplus resources required for peasant reproduction
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 50]
+    label: $m_1=$
+  m_2:
+    param_name: m_2
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 50]
+    label: $m_2=$
+    tooltip: Surplus resources required for elite reproduction
+  a:
+    param_name: a
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 20]
+    label: $a=$
+    tooltip: Taxation rate ($1$ unit taxed for each $a$ units produced)
+row3:
+  mode:
+    control_type: dropdown
+    label: Mode
+    tooltip: ''
+    param_name: mode
+    names: [Stateless and Classless, State and Classless, State and Classes]
+    values: [stateless_classless, state_classless, state_class]
+row4:
+  P_0:
+    param_name: P_0
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [1, 100]
+    label: $P_0= $
+    tooltip: Initial number of peasants
+  E_0:
+    param_name: E_0
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 50]
+    label: $E_0=$
+    tooltip: Initial number of elites
+  e:
+    param_name: e
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 10]
+    label: $e=$
+    tooltip: State expense rate ($1$ unit of expenses for every $e$ many peasants/elites).
+row5:
+  epsilon:
+    param_name: epsilon
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $c=$
+    tooltip: Elite extraction rate ($c$ resources extracted per elite).
+  h:
+    param_name: h
+    tooltip: Max resources harvested per agent.
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $h=$
+row6:
+  elite_conflict_mag:
+    param_name: elite_conflict_mag
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $e_k=$
+    tooltip: Maximal elite death rate
+  elite_conflict_rolls:
+    param_name: elite_conflict_rolls
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $e_R=$
+    tooltip: 'Number of chances for two elites to get into a fight each time step. '

@@ -14,3 +14,4 @@ all:
       colors: [purple]
       traj_key: w
       toggled: true
+  default_lims: [[-10.0701, 10.0021], [-3.50544, 5.2371]]

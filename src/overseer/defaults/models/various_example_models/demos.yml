@@ -1,0 +1,8 @@
+demos:
+  various_examples:
+    name: Example Model
+    desc: null
+    details:
+      simulation_function: cts_heatmap_demo
+      default_preset: default_preset
+      simulation_speed: '0.01'

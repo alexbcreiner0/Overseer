@@ -78,7 +78,7 @@ prices_and_values:
       toggled: false
       labels: [Equilibrium Price of Corn, Equilibrium Price of Iron, Equilibrium Price
           of Sugar]
-  default_lims: [[-0.00556859, 10.9558], [-2.95211, 17.5523]]
+  default_lims: [[0.0, 100.0], [0.0, 15.0]]
 values_and_prices:
   name: Values and Prices
   tooltip: '- This is the same as the prices and values category except that everything
@@ -527,6 +527,7 @@ income_distn:
     relative_sectoral_costs:
       checkbox_name: Relative Sectoral Money Investment
       colors: [red, green, blue]
+      label_template: '{i} Sector Relative Investment'
       labels: [Corn Sector Relative Investment, Iron Sector Relative Investment, Sugar
           Sector Relative Investment]
       linestyle: solid
@@ -779,21 +780,33 @@ real_costs:
   tooltip: For more information see the GitHub Wiki page for the model.
   plots:
     corn_costs:
-      checkbox_name: Materials Costs of {c0}
+      checkbox_name: Materials Costs of Corn
       toggled: true
       linestyle: solid
       linewidth: 1.5
       markersize: 6.0
       labels: [Corn Cost of Corn, Iron Cost of Corn, Sugar Cost of Corn]
+      label_template: "{i} Cost of {0}"
       colors: [red, green, blue]
       traj_key: a_0
       traj_key_x: ''
     iron_costs:
-      checkbox_name: Materials Costs of {c1}
+      checkbox_name: Materials Costs of Iron
       colors: ['#fa6055', '#38ed2b', '#2b78ed']
       labels: [Corn Cost of Iron, Iron Cost of Iron, Sugar Cost of Iron]
+      label_template: "{i} Cost of {1}"
       toggled: true
       traj_key: a_1
+    sugar_costs:
+      checkbox_name: Materials Costs of Sugar
+      colors: ['#570400', '#02380c', '#090238']
+      labels: [Corn Cost of Sugar, Iron Cost of Sugar, Sugar Cost of Sugar]
+      label_template: "{i} Cost of {2}"
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      toggled: true
+      traj_key: a_2
     labor_costs:
       checkbox_name: Labor Costs
       toggled: true
@@ -805,6 +818,7 @@ real_costs:
       traj_key: l
       traj_key_x: ''
       labels: [Labor Cost of Corn, Labor Cost of Iron, Labor Cost of Sugar]
+      label_template: "{i} Cost of {2}"
     spectral_radii:
       checkbox_name: Spectral Radii
       colors: [black]
@@ -812,12 +826,6 @@ real_costs:
       linestyle: dashed
       toggled: false
       traj_key: spectral_radius_A
-    sugar_costs:
-      checkbox_name: Materials Costs of {c2}
-      colors: ['#570400', '#02380c', '#090238']
-      labels: [Corn Cost of Sugar, Iron Cost of Sugar, Sugar Cost of Sugar]
-      toggled: true
-      traj_key: a_2
 melts:
   name: MELTS
   tooltip: For more information on these see the GitHub Wiki page for the model.

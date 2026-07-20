@@ -1,0 +1,24 @@
+demos:
+  reynolds_flocking_model:
+    name: Reynolds Flocking Model
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      simulation_speed: '0.01'
+      plot_postprocess: null
+      axis_settings:
+        dimension: [1, 1]
+        limits:
+          a1: [[0.0, 100.0], [0.0, 100.0]]
+        dropdown_indices: [0]
+        checked_plots:
+          a1: [Boids]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true

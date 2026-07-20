@@ -1,7 +1,7 @@
 historical_aggregate_data:
   name: Historical Aggregate Data
   x_label: Counts
-  projection: 3d
+  projection: 2d
   axis_visible: true
   grid_visible: true
   ticks_visible: true
@@ -12,7 +12,7 @@ historical_aggregate_data:
       checkbox_name: Number of Capitalists
       toggled: true
       dist: N_capitalists
-      density: false
+      density: true
       gradient: None
       labels: [Distn of Capitalists]
       colors: [green]
@@ -24,7 +24,7 @@ historical_aggregate_data:
       checkbox_name: Number of Workers
       toggled: true
       dist: N_workers
-      density: false
+      density: true
       gradient: None
       labels: [Distn of Workers]
       colors: [red]
@@ -36,7 +36,7 @@ historical_aggregate_data:
       checkbox_name: Number of Unemployed
       toggled: false
       dist: N_unemployed
-      density: false
+      density: true
       gradient: None
       labels: [Distn of Unemployed]
       colors: [blue]
@@ -76,6 +76,7 @@ historical_aggregate_data:
       density: false
       histtype: step
       label: Duration of Recessions
+  default_lims: [[-90.6741, 974.102], [-0.0265773, 10.108]]
 time_series:
   name: Time-Series Data
   x_label: Time [Months]

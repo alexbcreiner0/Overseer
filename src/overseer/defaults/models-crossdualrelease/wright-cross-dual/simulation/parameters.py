@@ -15,7 +15,7 @@ class Params:
     eta: ndarray = field(default_factory=lambda: array([2.0, 2.0, 2.0]))
     eta_w: float = 0.25
     eta_r: int = 2
-    L: int = 1
+    L: float = 1.0
     w: float = 0.5
     r: float = 0.03
     q: ndarray = field(default_factory=lambda: array([0.01, 0.1, 0.1]))

@@ -1,0 +1,100 @@
+population:
+  name: Population
+  tooltip: null
+  plots:
+    population:
+      checkbox_name: Population
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Peasant Population]
+      colors: [red]
+      traj_key: population
+    surplus:
+      checkbox_name: Surplus
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Post-Harvest Surplus]
+      colors: [blue]
+      traj_key: post_harvest_surplus
+    population_continuous:
+      checkbox_name: Population (Continuous)
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Population (Cts Version)]
+      colors: [red]
+      traj_key: population_cts
+      traj_key_x: t_cts
+    elite_population:
+      checkbox_name: Elite Population
+      toggled: false
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Elite Population]
+      colors: [green]
+      traj_key: elite_population
+    elite_surplus:
+      checkbox_name: Elite Surplus
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Post-Harvest Elite Surplus]
+      colors: ['#2aedff']
+      traj_key: post_harvest_surplus_elites
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+state:
+  name: State
+  tooltip: null
+  plots:
+    state_resources:
+      checkbox_name: State Resources
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [State Resources]
+      colors: [red]
+      traj_key: state_resources
+    state_expenses:
+      checkbox_name: State Expenses
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [State Expenses]
+      colors: [blue]
+      traj_key: state_expenses
+    state_revenue:
+      checkbox_name: State Revenue
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [State Revenue]
+      colors: [green]
+      traj_key: state_revenue
+    state_resources_continuous:
+      checkbox_name: State Resources (Continuous)
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [State Resources]
+      colors: [red]
+      traj_key: state_resources_cts
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true

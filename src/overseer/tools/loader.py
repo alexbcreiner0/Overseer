@@ -561,7 +561,7 @@ def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
     return Parameters
 
 def get_user_data_dir(settings: dict, env) -> Path:
-    if getattr(env, "releae_mode", False):
+    if getattr(env, "release_mode", False):
         from overseer.paths import USER_APP_DIR
         return USER_APP_DIR
 

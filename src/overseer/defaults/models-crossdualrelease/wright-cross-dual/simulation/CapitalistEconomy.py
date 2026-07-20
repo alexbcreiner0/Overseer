@@ -1,24 +1,22 @@
 import logging
-try:
-    logger = logging.getLogger(__name__)
-except Exception:
-    logger = None
-
+logger = logging.getLogger(__name__)
 import numpy as np
 from scipy.linalg import eig
 from scipy.integrate import solve_ivp
 import random
-import sys
+import queue
+from overseer.tools.dataclasses import Append, Extend, Replace
 
 class CapitalistEconomy:
     """Basic capitalist economy"""
-    def __init__(self, params, restrictions = []):
+    def __init__(self, params, restrictions = [], event_queue= None):
         self.params = params 
         self.n = self.params.A.shape[0]
         self.current_t = 0
         self.t = [0.0]
         self.M_timer = 0
         self.current_i = random.randint(0,self.n-1)
+        self.event_queue = event_queue
         
         self.y = self._repack(params.q, params.p, params.s, params.l, params.m_w, params.L, params.w, params.M, params.A)
 
@@ -35,104 +33,103 @@ class CapitalistEconomy:
 
         # initialize the table of trajectories
         self.traj = {
-            "p": np.array([params.p]),
-            "q": np.array([params.q]), 
-            "s": np.array([params.s]),
-            "m_w": np.array([params.m_w]), 
-            "L": np.array([params.L]), 
-            "r": np.array([params.r]),
-            "l": np.array([params.l]),
-            "M": np.array([params.M]),
-            "A": np.array([params.A])
+            "p": Append(params.p),
+            "q": Append(params.q), 
+            "s": Append(params.s),
+            "m_w": Append(params.m_w), 
+            "L": Append(params.L), 
+            "r": Append(params.r),
+            "l": Append(params.l),
+            "M": Append(params.M),
+            "A": Append(params.A)
         }
 
         for i in range(self.n):
             key = f"a_{i}"
-            self.traj[key] = np.array([self.params.A[:,i]])
+            self.traj[key] = Append(self.params.A[:,i])
 
         if self.fixed_real_wage:
-            self.traj["w"] = np.array([params.p.dot(params.b_bar)])
+            self.traj["w"] = Append(params.p.dot(params.b_bar))
         else:
-            self.traj["w"] = np.array([params.w])
+            self.traj["w"] = Append(params.w)
 
-        self.traj["labor_commanded"] = np.array([params.p / params.w])
-        self.traj["okishio_pts_x"], self.traj["okishio_pts_y"] = np.array([]), np.array([])
+        self.traj["labor_commanded"] = Append(params.p / np.maximum(params.w, 1e-5))
         employment = self._get_employment(params.q, params.l)
-        self.traj["total_labor_employed"] = np.array([employment])
+        self.traj["total_labor_employed"] = Append(employment)
         b, c = self._get_consumption(params.M, params.m_w, params.p)
-        self.traj["b"], self.traj["c"] = np.array([b]), np.array([c])
+        self.traj["b"], self.traj["c"] = Append(b), Append(c)
         values = self._get_values(self.params.A, self.params.l)
-        self.traj["total_val_c"] = np.array([values.dot(c)])
-        self.traj["values"] = np.array([values])
-        self.traj["wage_values"] = np.array([params.w * values])
-        self.traj["reserve_army_size"] = np.array([self.params.L - self.traj["total_labor_employed"]])
-        self.traj["m_c"] = np.array([1-params.m_w])
-        self.traj["total_demand"] = np.array([self._get_total_demand(self.y)])
+        self.traj["total_val_c"] = Append(values.dot(c))
+        self.traj["values"] = Append(values)
+        self.traj["wage_values"] = Append(params.w * values)
+        self.traj["reserve_army_size"] = Append(self.params.L - employment)
+        self.traj["m_c"] = Append(1-params.m_w)
+        self.traj["total_demand"] = Append(self._get_total_demand(self.y))
         val_ms, val_cc, surplus_val, e, value_rop = self._get_value_split(values, b, self.params.q, self.params.A)
-        self.traj["values_ms"], self.traj["cc_vals"], self.traj["surplus_vals"], self.traj["e"], self.traj["value_rops"] = np.array([val_ms]), np.array([val_cc]), np.array([surplus_val]), np.array([e]), np.array([value_rop])
-        self.traj["M"] = np.array([params.M])
+        self.traj["values_ms"], self.traj["cc_vals"], self.traj["surplus_vals"], self.traj["e"], self.traj["value_rops"] = Append(val_ms), Append(val_cc), Append(surplus_val), Append(e), Append(value_rop)
+        self.traj["M"] = Append(params.M)
 
         total_value_out = params.q.dot(values)
         total_price_out = params.q.dot(params.p)
-        self.traj["total_value_out"] = np.array([total_value_out])
-        self.traj["total_price_out"] = np.array([total_price_out])
+        self.traj["total_value_out"] = Append(total_value_out)
+        self.traj["total_price_out"] = Append(total_price_out)
 
         sectoral_out_vals = params.q * values
         sectoral_out_prices = params.q * params.p
-        self.traj["sectoral_out_vals"] = np.array([sectoral_out_vals])
-        self.traj["sectoral_out_prices"] = np.array([sectoral_out_prices])
+        self.traj["sectoral_out_vals"] = Append(sectoral_out_vals)
+        self.traj["sectoral_out_prices"] = Append(sectoral_out_prices)
 
-        self.traj["relative_value_out"] = np.array([sectoral_out_vals / total_value_out])
-        self.traj["relative_price_out"] = np.array([sectoral_out_prices / total_price_out])
+        self.traj["relative_value_out"] = Append(sectoral_out_vals / total_value_out)
+        self.traj["relative_price_out"] = Append(sectoral_out_prices / total_price_out)
 
         (evals, evecs) = eig(self.params.A)
         r = np.max([np.abs(eval) for eval in evals])
-        self.traj["spectral_radius_A"] = np.array([r])
-        self.traj["A_rop"] = np.array([1/r-1])
+        self.traj["spectral_radius_A"] = Append(r)
+        self.traj["A_rop"] = Append(1/r-1)
 
         epr, eq_p = self._get_equilibrium_info(params.p, params.w, params.A, params.l)
         hourly_b, ms_vals, c_vals, v_vals, s_vals = self._get_composition_info(self.params.p, self.params.w, values, self.params.A, self.params.l, e)
-        self.traj["hourly_b"], self.traj["val_ms"], self.traj["c_vals"], self.traj["v_vals"], self.traj["s_vals"] = np.array([hourly_b]), np.array([ms_vals]), np.array([c_vals]), np.array([v_vals]), np.array([s_vals])
-        self.traj["hourly_b_val"] = np.array([hourly_b.dot(values)])
-        self.traj["sectoral_comps"] = np.array([c_vals / v_vals])
-        self.traj["capital_intensities"] = np.array([c_vals / self.params.l])
+        self.traj["hourly_b"], self.traj["val_ms"], self.traj["c_vals"], self.traj["v_vals"], self.traj["s_vals"] = Append(hourly_b), Append(ms_vals), Append(c_vals), Append(v_vals), np.array(s_vals)
+        self.traj["hourly_b_val"] = Append(hourly_b.dot(values))
+        self.traj["sectoral_comps"] = Append(c_vals / v_vals)
+        self.traj["capital_intensities"] = Append(c_vals / self.params.l)
         c_vals_money = (self.params.A.T@self.params.p) * params.q
         v_vals_money = (self.params.w*self.params.l) * params.q
-        self.traj["money_compositions"] = np.array([c_vals_money / v_vals_money])
-        self.traj["overall_money_composition"] = np.array([np.sum(c_vals_money) / np.sum(v_vals_money)])
-        self.traj["money_rate_of_exploitation"] = np.array([(params.alpha_c * (params.M-params.m_w))/(params.alpha_w * params.m_w)])
+        self.traj["money_compositions"] = Append(c_vals_money / v_vals_money)
+        self.traj["overall_money_composition"] = Append(np.sum(c_vals_money) / np.sum(v_vals_money))
+        self.traj["money_rate_of_exploitation"] = Append((params.alpha_c * (params.M-params.m_w))/(params.alpha_w * params.m_w))
 
-        self.traj["epr"], self.traj["epr_prices"] = np.array([epr]), np.array([eq_p])
-        self.traj["compos_of_capital"] = np.array([val_cc / val_ms])
+        self.traj["epr"], self.traj["epr_prices"] = Append(epr), Append(eq_p)
+        self.traj["compos_of_capital"] = Append(val_cc / val_ms)
         profit_rates, profit_of_enterprise_rates = self._get_profit_rates(params.A, params.p, params.w, params.l, params.r)
         self.traj["profit_rates"] = np.array([profit_rates])
-        self.traj["profit_of_enterprise_rates"] = np.array([profit_of_enterprise_rates])
-        self.traj["value_of_hourly_cap_income"] = np.array([c.dot(values) / self._get_employment(params.q, params.l)])
+        self.traj["profit_of_enterprise_rates"] = Append(profit_of_enterprise_rates)
+        self.traj["value_of_hourly_cap_income"] = Append(c.dot(values) / self._get_employment(params.q, params.l))
 
         sectoral_shares = self._get_unit_shares(params.A, params.p, params.w, params.l)
-        self.traj["sectoral_shares"] = np.array([sectoral_shares])
+        self.traj["sectoral_shares"] = Append(sectoral_shares)
     
         profit, interest, cost, total_capital_advanced, revenue, theoretical_profit, composition_of_capital_advanced = self._get_profit_split(self.y)
-        self.traj["total_sectoral_costs"] = np.array([cost])
-        self.traj["total_capital_advanced"] = np.array([total_capital_advanced])
-        self.traj["composition_of_capital_advanced"] = np.array([composition_of_capital_advanced])
-        self.traj["relative_costs"] = np.array([cost / np.sum(cost)])
-        self.traj["profit"], self.traj["interest"], self.traj["total_cost"], self.traj["revenue"], self.traj["theoretical_profit"] = np.array([np.sum(profit)]), np.array([np.sum(interest)]), np.array([np.sum(cost)]), np.array([np.sum(revenue)]), np.array([theoretical_profit])
+        self.traj["total_sectoral_costs"] = Append(cost)
+        self.traj["total_capital_advanced"] = Append(total_capital_advanced)
+        self.traj["composition_of_capital_advanced"] = Append(composition_of_capital_advanced)
+        self.traj["relative_costs"] = Append(cost / np.sum(cost))
+        self.traj["profit"], self.traj["interest"], self.traj["total_cost"], self.traj["revenue"], self.traj["theoretical_profit"] = Append(np.sum(profit)), Append(np.sum(interest)), Append(np.sum(cost)), Append(np.sum(revenue)), Append(theoretical_profit)
 
         total_profit = np.sum(profit) + np.sum(interest)
-        self.traj["total_profit"] = np.array([total_profit])
-        self.traj["total_capitalist_spending"] = np.array([self.params.alpha_c * (self.params.M - self.params.m_w)])
+        self.traj["total_profit"] = Append(total_profit)
+        self.traj["total_capitalist_spending"] = Append(self.params.alpha_c * (self.params.M - self.params.m_w))
         hourly_profit = total_profit / self._get_employment(params.q, params.l)
-        self.traj["hourly_cap_income"] = np.array([hourly_profit])
-        self.traj["hourly_real_cap_income"] = np.array([hourly_profit / (self.params.p.dot(self.params.c_bar))*self.params.c_bar])
+        self.traj["hourly_cap_income"] = Append(hourly_profit)
+        self.traj["hourly_real_cap_income"] = Append(hourly_profit / (self.params.p.dot(self.params.c_bar))*self.params.c_bar)
 
         num = params.l.dot(params.q) - 1/self.params.init_tssi_melt * (eq_p@hourly_b)*(params.l.dot(params.q))
         M = params.A+np.linalg.outer(hourly_b,params.l)
         den = eq_p.dot(M@params.q)
         kliman_profit_rate = num/den
-        self.traj["kliman_prices"] = np.array([params.p])
-        self.traj["kliman_values"] = np.array([values])
-        self.traj["kliman_actual_values"] = np.array([values])
+        self.traj["kliman_prices"] = Append(params.p)
+        self.traj["kliman_values"] = Append(values)
+        self.traj["kliman_actual_values"] = Append(values)
 
         LQ = float(params.l.dot(params.q))
         M_mat = params.A + np.outer(hourly_b, params.l)
@@ -148,19 +145,19 @@ class CapitalistEconomy:
 
         denom_for_M0 = 1.0 - factor
         if abs(denom_for_M0) < eps:
-            init_tssi_melt = params.p.dot(params.q) / max(self.traj["values"][0].dot(params.q), eps)
+            init_tssi_melt = params.p.dot(params.q) / max(self.traj["values"].value.dot(params.q), eps)
         else:
             init_tssi_melt = H / denom_for_M0
 
         # self.params.init_tssi_melt = init_tssi_melt
 
-        self.traj["kliman_profit_rate"] = np.array([epr])
+        self.traj["kliman_profit_rate"] = Append(epr)
 
-        values = self.traj["values"][0]
+        values = self.traj["values"].value
         # MELT = params.p.dot(params.q) / values.dot(params.q)
         MELT = (params.p.dot(params.q) - params.p.dot(params.A@params.q)) / params.l.dot(params.q)
-        self.traj["TSSI_MELT"] = np.array([params.init_tssi_melt])
-        self.traj["ACTUAL_TSSI_MELT"] = np.array([params.init_tssi_melt])
+        self.traj["TSSI_MELT"] = Append(params.init_tssi_melt)
+        self.traj["ACTUAL_TSSI_MELT"] = Append(params.init_tssi_melt)
 
         tssi_v_n = params.w / max(params.init_tssi_melt, 1e-12)
         tssi_v = tssi_v_n * params.l
@@ -169,15 +166,15 @@ class CapitalistEconomy:
         tssi_C = (1/params.init_tssi_melt)*(params.A.T@params.p).dot(params.q)
         tssi_S = tssi_s.dot(params.q)
 
-        self.traj["tssi_C"] = np.array([tssi_C])
-        self.traj["tssi_V"] = np.array([tssi_V])
-        self.traj["tssi_S"] = np.array([tssi_S])
-        self.traj["tssi_e"] = np.array([tssi_S / max(tssi_V, 1e-7)])
-        self.traj["MELT"] = np.array([MELT])
-        self.traj["MELT_values"] = np.array([MELT*values])
-        self.traj["MELT_prices"] = np.array([params.p / MELT])
-        self.traj["MELT_adjusted_m_w"] = np.array([params.m_w / MELT])
-        self.traj["MELT_adjusted_m_c"] = np.array([(1 - params.m_w) / MELT])
+        self.traj["tssi_C"] = Append(tssi_C)
+        self.traj["tssi_V"] = Append(tssi_V)
+        self.traj["tssi_S"] = Append(tssi_S)
+        self.traj["tssi_e"] = Append(tssi_S / max(tssi_V, 1e-7))
+        self.traj["MELT"] = Append(MELT)
+        self.traj["MELT_values"] = Append(MELT*values)
+        self.traj["MELT_prices"] = Append(params.p / MELT)
+        self.traj["MELT_adjusted_m_w"] = Append(params.m_w / MELT)
+        self.traj["MELT_adjusted_m_c"] = Append((1 - params.m_w) / MELT)
 
         m = params.A.T@params.p + params.w*params.l
         total_employment = params.q.dot(params.l)
@@ -186,42 +183,63 @@ class CapitalistEconomy:
         ni_v = v_n * params.l
         ni_s = params.l - ni_v
         ni_surplus = ni_s.dot(params.q)
-        self.traj["NI_variable"] = np.array([ni_variable])
-        self.traj["NI_surplus"] = np.array([ni_surplus])
-        self.traj["NI_exploitation"] = np.array([ni_surplus / ni_variable])
-        self.traj["MELT_converted_profit"] = np.array([ni_surplus * MELT])
-        self.traj["TSSI_MELT_converted_profit"] = np.array([tssi_S * params.init_tssi_melt])
-        self.traj["TSSI_MELT_converted_profit_plus_melt_diff"] = np.array([tssi_S * params.init_tssi_melt])
+        self.traj["NI_variable"] = Append(ni_variable)
+        self.traj["NI_surplus"] = Append(ni_surplus)
+        self.traj["NI_exploitation"] = Append(ni_surplus / ni_variable)
+        self.traj["MELT_converted_profit"] = Append(ni_surplus * MELT)
+        self.traj["TSSI_MELT_converted_profit"] = Append(tssi_S * params.init_tssi_melt)
+        self.traj["TSSI_MELT_converted_profit_plus_melt_diff"] = Append(tssi_S * params.init_tssi_melt)
         sssi_C = (params.A.T@params.p).dot(params.q) / MELT
-        self.traj["sssi_C"] = np.array([sssi_C])
+        self.traj["sssi_C"] = Append(sssi_C)
         sssi_c = params.A.T@params.p / MELT
         sssi_values = sssi_c + params.l
-        self.traj["SSSI_vals"] = np.array([sssi_values])
-        self.traj["SSSI_rop"] = np.array([ni_surplus / (ni_variable + sssi_C)])
+        self.traj["SSSI_vals"] = Append(sssi_values)
+        self.traj["SSSI_rop"] = Append(ni_surplus / (ni_variable + sssi_C))
 
-        self.old_tssi_junk = {"p": self.traj["kliman_prices"][-1], "w": self.traj["w"][-1], "MELT": self.params.init_tssi_melt, "values": values, "A": params.A, "l": params.l}
+        # self.old_tssi_junk = {"p": self.traj["kliman_prices"][-1], "w": self.traj["w"][-1], "MELT": self.params.init_tssi_melt, "values": values, "A": params.A, "l": params.l}
 
         max_rop_epr, max_rop_eq_p = self._get_equilibrium_info(params.p, 0, params.A, params.l)
-        self.traj["max_rop"] = np.array([max_rop_epr])
+        self.traj["max_rop"] = Append(max_rop_epr)
 
         initial_commodity_shares = c / np.maximum(b, 1e-3)
 
         initial_supply_vec = b + params.A.T @ params.q
         initial_commodity_surplus = c / np.maximum(initial_supply_vec, 1e-3)
 
-        self.traj["commodity_shares"] = np.array([initial_commodity_shares])   # shape (1, n)
-        self.traj["commodity_surplus"] = np.array([initial_commodity_surplus]) # shape (1, n)
+        self.traj["commodity_shares"] = Append(initial_commodity_shares)   # shape (1, n)
+        self.traj["commodity_surplus"] = Append(initial_commodity_surplus) # shape (1, n)
 
         # C_tilde, V_tilde, S_tilde, SI_exploitation, SI_composition, SI_profit_rate = self._get_super_integrated_value_split(self.y)
         super_vals, A_tilde = self._get_super_integrated_value_split2(self.y)
         # self.traj["super_integrated_vals"] = np.array([params.p / np.maximum(params.w, 1e-8)])
-        self.traj["super_integrated_vals"] = np.array([super_vals])
-        self.traj["super_integrated_wage_vals"] = np.array([params.w * super_vals])
+        self.traj["super_integrated_vals"] = Append(super_vals)
+        self.traj["super_integrated_wage_vals"] = Append(params.w * super_vals)
 
         self.dydt = self._get_dydt(self.params)
 
     def step(self):
         """ Simulates a single (system time) step of the simulation. Updates the independent parameters y, as well as all trajectories. """
+        if self.event_queue is not None:
+            try:
+                info = self.event_queue.get_nowait()
+                if info["event"] == "param_changed":
+                    param = info["param_name"]
+                    new_val = info["new_val"]
+                    if hasattr(self.params, param):
+                        setattr(self.params, param, new_val)
+                elif info["event"] == "shock_requested":
+                    shock_type = info["shock_type"]
+                    match shock_type:
+                        case "culs":
+                            self.implement_culs_shock(self.params.shock_mag, epsilon= self.params.cost_tradeoff)
+                        case "cslu":
+                            self.implement_cslu_shock(self.params.shock_mag, epsilon= self.params.cost_tradeoff)
+                        case "cs":
+                            self.implement_cslu_shock(self.params.shock_mag, lu= False, epsilon= self.params.cost_tradeoff)
+                        case "ls":
+                            self.implement_culs_shock(self.params.shock_mag, cu= False, epsilon= self.params.cost_tradeoff)
+            except queue.Empty:
+                pass
 
         # Check for perturbation stuff
         if self.params.M_change_type != "none":
@@ -320,21 +338,32 @@ class CapitalistEconomy:
             self._step_traj(self.y)
             self.current_t = sol.t[i]
             self.t.append(float(self.current_t))
+            yield self.traj, Append(self.current_t)
 
         # Tried doing the updates by time step rather than simulation step, it didn't really change anything. This line is currently useless
-        self.old_tssi_junk = {"p": self.traj["kliman_prices"][-1], "MELT": self.traj["TSSI_MELT"][-1], "l": self.traj["l"][-1], "A": self.traj["A"][-1], "w": self.traj["w"][-1]}
+        # self.old_tssi_junk = {"p": self.traj["kliman_prices"][-1], "MELT": self.traj["TSSI_MELT"][-1], "l": self.traj["l"][-1], "A": self.traj["A"][-1], "w": self.traj["w"][-1]}
 
         self.dydt = self._get_dydt(self.params) # I think this is pointless, but could be used to conditionally redefine the differential equations (I ended up just adding in conditions to the equation functions themselves)
 
-        if self.params.fix_sector_receiving_change in [0,1,2]:
-            self.current_i = self.params.fix_sector_receiving_change
-        else:
-            self.current_i = random.randint(0,self.n-1)
+        self.current_i = self._choose_sector_receiving_change()
 
         if self.M_timer > 0:
             self.M_timer -= 1
             if self.M_timer == 0:
                 self.exo_delta_M = 0
+
+    def _choose_sector_receiving_change(self) -> int:
+        i = getattr(self.params, "fix_sector_receiving_change", -1)
+
+        try:
+            i = int(i)
+        except (TypeError, ValueError):
+            i = -1
+
+        if 0 <= i < self.n:
+            return i
+
+        return random.randint(0, self.n - 1)
 
     def cleanup(self):
         """ Stuff to do at the end of the simulation, such as taking derivative plots (would be inefficient to recompute every step) """
@@ -352,10 +381,7 @@ class CapitalistEconomy:
 
     def implement_culs_shock(self, beta, cu= True, epsilon= None):
         """Implements a sudden new labor saving, capital using, super-profit generating innovation. beta is the proportion by which to reduce the living labor input by"""
-        if self.params.fix_sector_receiving_change in [0,1,2]:
-            i = self.params.fix_sector_receiving_change
-        else:
-            i = random.randint(0,self.n-1)
+        i = self._choose_sector_receiving_change()
         # i=1
         # print(f"Improving sector {i}")
 
@@ -365,7 +391,7 @@ class CapitalistEconomy:
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
         
 
         a_i = A[:,i].copy()
@@ -398,8 +424,8 @@ class CapitalistEconomy:
         # print(f"New cost of commodity {i}: {new_cost}")
 
         new_epr, new_eqp = self._get_equilibrium_info(p, w, new_A, new_l)
-        self.traj["okishio_pts_x"] = np.append(self.traj["okishio_pts_x"], self.current_t)
-        self.traj["okishio_pts_y"] = np.append(self.traj["okishio_pts_y"], new_epr)
+        self.traj["okishio_pts_x"] = Append(self.current_t)
+        self.traj["okishio_pts_y"] = Append(new_epr)
 
         self.exo_delta_l = new_l - l
         self.exo_delta_A = new_A - A
@@ -408,15 +434,12 @@ class CapitalistEconomy:
 
     def implement_cslu_shock(self, alpha, lu= True, epsilon= 1e-2):
         """Implements a sudden new labor saving, capital using, super-profit generating innovation. beta is the proportion by which to reduce the living labor input by"""
-        if self.params.fix_sector_receiving_change in [0,1,2]:
-            i = self.params.fix_sector_receiving_change
-        else:
-            i = random.randint(0,self.n-1)
+        i = self._choose_sector_receiving_change()
         q, p, s, l, m_w, L, w, M, A = self._unpack(self.y)
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
 
         a_cols = [A[:,j].copy() for j in range(self.n)]
         new_l = l.copy()
@@ -442,8 +465,8 @@ class CapitalistEconomy:
         new_cost = a_i.dot(p) + w*l[i]
         # print(f"New cost of commodity {i}: {new_cost}")
         new_epr, new_eqp = self._get_equilibrium_info(p, w, new_A, new_l)
-        self.traj["okishio_pts_x"] = np.append(self.traj["okishio_pts_x"], self.current_t)
-        self.traj["okishio_pts_y"] = np.append(self.traj["okishio_pts_y"], new_epr)
+        self.traj["okishio_pts_x"] = Append(self.current_t)
+        self.traj["okishio_pts_y"] = Append(new_epr)
 
 
         self.exo_delta_l = new_l - l
@@ -489,141 +512,139 @@ class CapitalistEconomy:
 
     def _step_traj(self, y):
         """ Updates ALL trajectories according to a presumably new y vector """
+        old_actual_p = self.traj["p"].value
+        old_w = self.traj["w"].value
         q, p, s, l, m_w, L, w, M, A = self._unpack(y)
-        self.traj["M"] = np.append(self.traj["M"], M)
-        self.traj["q"] = np.append(self.traj["q"], [q], axis=0)
-        self.traj["p"] = np.append(self.traj["p"], [p], axis=0)
-        self.traj["s"] = np.append(self.traj["s"], [s], axis=0)
-        self.traj["m_w"] = np.append(self.traj["m_w"], m_w)
-        self.traj["L"] = np.append(self.traj["L"], L)
-        self.traj["l"] = np.append(self.traj["l"], [l], axis=0)
-        self.traj["A"] = np.append(self.traj["A"], [A], axis= 0)
-
+        self.traj["M"] = Append(M)
+        self.traj["q"] = Append(q)
+        self.traj["p"] = Append(p)
+        self.traj["s"] = Append(s)
+        self.traj["m_w"] = Append(m_w)
+        self.traj["L"] = Append(L)
+        self.traj["l"] = Append(l)
+        self.traj["A"] = Append(A)
 
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar) 
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
-        self.traj["w"] = np.append(self.traj["w"], w)
+            w = self.traj["w"].value
+        self.traj["w"] = Append(w)
 
         for i in range(self.n):
             key = f"a_{i}"
-            self.traj[key] = np.append(self.traj[key], [A[:,i]], axis=0)
+            self.traj[key] = Append(A[:,i])
 
         r = self._get_interest_rate(m_w)
-        self.traj["r"] = np.append(self.traj["r"], r)
+        self.traj["r"] = Append(r)
         employment = self._get_employment(q, l)
-        self.traj["total_labor_employed"] = np.append(self.traj["total_labor_employed"], employment)
+        self.traj["total_labor_employed"] = Append(employment)
         b, c = self._get_consumption(M, m_w, p)
-        self.traj["b"] = np.append(self.traj["b"], [b], axis=0)
-        self.traj["c"] = np.append(self.traj["c"], [c], axis=0)
-        self.traj["total_demand"] = np.append(self.traj["total_demand"], [self._get_total_demand(y)], axis= 0)
+        self.traj["b"] = Append(b)
+        self.traj["c"] = Append(c)
+        self.traj["total_demand"] = Append(self._get_total_demand(y))
 
         (evals, evecs) = eig(A)
         r = np.max([np.abs(eval) for eval in evals])
-        self.traj["spectral_radius_A"] = np.append(self.traj["spectral_radius_A"], r)
-        self.traj["A_rop"] = np.append(self.traj["A_rop"], 1/r-1)
+        self.traj["spectral_radius_A"] = Append(r)
+        self.traj["A_rop"] = Append(1/r-1)
 
         values = self._get_values(A, l)
-        self.traj["values"] = np.append(self.traj["values"], [values], axis=0)
-        self.traj["wage_values"] = np.append(self.traj["wage_values"], [w * values], axis=0)
-        self.traj["reserve_army_size"] = np.append(self.traj["reserve_army_size"], L - employment)
-        self.traj["m_c"] = np.append(self.traj["m_c"], M-m_w)
-        self.traj["total_capitalist_spending"] = np.append(self.traj["total_capitalist_spending"], self.params.alpha_c * (M - m_w))
+        self.traj["values"] = Append(values)
+        self.traj["wage_values"] = Append(w * values)
+        self.traj["reserve_army_size"] = Append(L - employment)
+        self.traj["m_c"] = Append(M-m_w)
+        self.traj["total_capitalist_spending"] = Append(self.params.alpha_c * (M - m_w))
+        self.traj["labor_commanded"] = Append(p / np.maximum(w, 1e-5))
 
-        self.traj["labor_commanded"] = np.append(self.traj["labor_commanded"], [p / w], axis= 0)
-
-        self.traj["money_rate_of_exploitation"] = np.append(self.traj["money_rate_of_exploitation"], (self.params.alpha_c * (M-m_w)) / (self.params.alpha_w * m_w))
-        self.traj["total_val_c"] = np.append(self.traj["total_val_c"], values.dot(c))
-        self.traj["value_of_hourly_cap_income"] = np.append(self.traj["value_of_hourly_cap_income"], [values.dot(c) / self._get_employment(q, l)], axis=0) 
+        self.traj["money_rate_of_exploitation"] = Append(self.params.alpha_c * (M-m_w) / (self.params.alpha_w * m_w))
+        self.traj["total_val_c"] = Append(values.dot(c))
+        self.traj["value_of_hourly_cap_income"] = Append(values.dot(c) / self._get_employment(q, l))
 
         val_ms, val_cc, surplus_val, e, value_rop = self._get_value_split(values, b, q, A)
-        self.traj["values_ms"] = np.append(self.traj["values_ms"], val_ms)
-        self.traj["cc_vals"] = np.append(self.traj["cc_vals"], val_cc)
-        self.traj["surplus_vals"] = np.append(self.traj["surplus_vals"], surplus_val)
-        self.traj["e"] = np.append(self.traj["e"], e)
-        self.traj["value_rops"] = np.append(self.traj["value_rops"], value_rop)
-        self.traj["compos_of_capital"] = np.append(self.traj["compos_of_capital"], val_cc / val_ms)
+        self.traj["values_ms"] = Append(val_ms)
+        self.traj["cc_vals"] = Append(val_cc)
+        self.traj["surplus_vals"] = Append(surplus_val)
+        self.traj["e"] = Append(e)
+        self.traj["value_rops"] = Append(value_rop)
+        self.traj["compos_of_capital"] = Append(val_cc / val_ms)
         c_vals_money = (A.T@p)*q
         v_vals_money = (w*l)*q
-        self.traj["money_compositions"] = np.append(self.traj["money_compositions"], [c_vals_money / v_vals_money], axis= 0) 
-        self.traj["overall_money_composition"] = np.append(self.traj["overall_money_composition"], np.sum(c_vals_money) / np.sum(v_vals_money))
+        self.traj["money_compositions"] = Append(c_vals_money / np.maximum(v_vals_money, 1e-5))
+        self.traj["overall_money_composition"] = Append(np.sum(c_vals_money) / np.maximum(np.sum(v_vals_money), 1e-5))
 
         total_value_out = q.dot(values)
         total_price_out = q.dot(p)
-        self.traj["total_value_out"] = np.append(self.traj["total_value_out"], total_value_out)
-        self.traj["total_price_out"] = np.append(self.traj["total_price_out"], total_price_out)
-        self.traj["sectoral_out_vals"] = np.append(self.traj["sectoral_out_vals"], [q * values], axis= 0)
-        self.traj["sectoral_out_prices"] = np.append(self.traj["sectoral_out_prices"], [q*p], axis= 0)
+        self.traj["total_value_out"] = Append(total_value_out)
+        self.traj["total_price_out"] = Append(total_price_out)
+        self.traj["sectoral_out_vals"] = Append(q * values)
+        self.traj["sectoral_out_prices"] = Append(q*p)
 
         sectoral_out_vals = q * values
         sectoral_out_prices = q * p
         # out_ratios = np.array([sectoral_out_vals[0]/sectoral_out_vals[1], sectoral_out_vals[0]/sectoral_out_vals[2], sectoral_out_vals[1]/sectoral_out_vals[2]])
         # self.traj["sectoral_out_ratios"] = np.append(self.traj["sectoral_out_ratios"], [out_ratios], axis= 0)
-        self.traj["relative_value_out"] = np.append(self.traj["relative_value_out"], [sectoral_out_vals / total_value_out], axis= 0)
-        self.traj["relative_price_out"] = np.append(self.traj["relative_price_out"], [sectoral_out_prices / total_price_out], axis= 0)
+        self.traj["relative_value_out"] = Append(sectoral_out_vals / total_value_out)
+        self.traj["relative_price_out"] = Append(sectoral_out_prices / total_price_out)
 
         # out_ratios = np.array([sectoral_out_vals[0]/sectoral_out_vals[1], sectoral_out_vals[0]/sectoral_out_vals[2], sectoral_out_vals[1]/sectoral_out_vals[2]])
         # self.traj["sectoral_out_ratios"] = np.append(self.traj["sectoral_out_ratios"], [out_ratios], axis= 0)
 
         epr, eq_p = self._get_equilibrium_info(p, w, A, l)
-        self.traj["epr"] = np.append(self.traj["epr"], epr)
-        self.traj["epr_prices"] = np.append(self.traj["epr_prices"], [eq_p], axis=0)
+        self.traj["epr"] = Append(epr)
+        self.traj["epr_prices"] = Append(eq_p)
 
         epr, eq_p = self._get_equilibrium_info(p, w, A, l)
 
         profit_of_enterprise, interest, cost, total_capital_advanced, revenue, theoretical_profit, composition_of_capital_advanced = self._get_profit_split(y)
-        self.traj["profit"] = np.append(self.traj["profit"], [np.sum(profit_of_enterprise)], axis= 0)
-        self.traj["interest"] = np.append(self.traj["interest"], [np.sum(interest)], axis= 0)
-        self.traj["total_cost"] = np.append(self.traj["total_cost"], [np.sum(cost)], axis= 0)
-        self.traj["relative_costs"] = np.append(self.traj["relative_costs"], [cost / np.sum(cost)], axis= 0)
-        self.traj["total_sectoral_costs"] = np.append(self.traj["total_sectoral_costs"], [cost], axis= 0)
-        self.traj["total_capital_advanced"] = np.append(self.traj["total_capital_advanced"], [total_capital_advanced], axis= 0)
-        self.traj["composition_of_capital_advanced"] = np.append(self.traj["composition_of_capital_advanced"], composition_of_capital_advanced)
-        self.traj["revenue"] = np.append(self.traj["revenue"], [np.sum(revenue)], axis= 0)
-        self.traj["theoretical_profit"] = np.append(self.traj["theoretical_profit"], [theoretical_profit], axis= 0)
+        self.traj["profit"] = Append(np.sum(profit_of_enterprise))
+        self.traj["interest"] = Append(np.sum(interest))
+        self.traj["total_cost"] = Append(np.sum(cost))
+        self.traj["relative_costs"] = Append(cost / np.sum(cost))
+        self.traj["total_sectoral_costs"] = Append(cost)
+        self.traj["total_capital_advanced"] = Append(total_capital_advanced)
+        self.traj["composition_of_capital_advanced"] = Append(composition_of_capital_advanced)
+        self.traj["revenue"] = Append(np.sum(revenue))
+        self.traj["theoretical_profit"] = Append(theoretical_profit)
 
         total_profit = np.sum(profit_of_enterprise) + np.sum(interest)
-        self.traj["total_profit"] = np.append(self.traj["total_profit"], total_profit)
+        self.traj["total_profit"] = Append(total_profit)
         hourly_profit = total_profit / self._get_employment(q, l)
 
-        self.traj["hourly_cap_income"] = np.append(self.traj["hourly_cap_income"], hourly_profit)
-        self.traj["hourly_real_cap_income"] = np.append(self.traj["hourly_real_cap_income"], [hourly_profit / (p.dot(self.params.c_bar))*self.params.c_bar], axis= 0)
+        self.traj["hourly_cap_income"] = Append(hourly_profit)
+        self.traj["hourly_real_cap_income"] = Append(hourly_profit / (p.dot(self.params.c_bar))*self.params.c_bar)
 
         hourly_b, ms_val, c_vals, v_vals, s_vals = self._get_composition_info(p, w, values, A, l, e)
-        self.traj["hourly_b"] = np.append(self.traj["hourly_b"], [hourly_b], axis= 0)
-        self.traj["hourly_b_val"] = np.append(self.traj["hourly_b_val"], hourly_b.dot(values))
-        self.traj["val_ms"] = np.append(self.traj["val_ms"], ms_val)
-        self.traj["c_vals"] = np.append(self.traj["c_vals"], [c_vals], axis= 0)
-        self.traj["v_vals"] = np.append(self.traj["v_vals"], [v_vals], axis= 0)
-        self.traj["s_vals"] = np.append(self.traj["s_vals"], [s_vals], axis= 0)
-        self.traj["sectoral_comps"] = np.append(self.traj["sectoral_comps"], [c_vals / v_vals], axis= 0)
-        self.traj["capital_intensities"] = np.append(self.traj["capital_intensities"], [c_vals / l], axis= 0)
+        self.traj["hourly_b"] = Append(hourly_b)
+        self.traj["hourly_b_val"] = Append(hourly_b.dot(values))
+        self.traj["val_ms"] = Append(ms_val)
+        self.traj["c_vals"] = Append(c_vals)
+        self.traj["v_vals"] = Append(v_vals)
+        self.traj["s_vals"] = Append(s_vals)
+        self.traj["sectoral_comps"] = Append(c_vals / np.maximum(v_vals, 1e-5))
+        self.traj["capital_intensities"] = Append(c_vals / l)
 
-        profit_rates, profit_of_enterprise_rates = self._get_profit_rates(A, p, w, l, self.traj["r"][-1])
+        profit_rates, profit_of_enterprise_rates = self._get_profit_rates(A, p, w, l, self.traj["r"].value)
         sectoral_shares = self._get_unit_shares(A, p, w, l)
-        self.traj["sectoral_shares"] = np.append(self.traj["sectoral_shares"], [sectoral_shares], axis= 0)
-        self.traj["profit_rates"] = np.append(self.traj["profit_rates"], [profit_rates], axis=0)
-        self.traj["profit_of_enterprise_rates"] = np.append(self.traj["profit_of_enterprise_rates"], [profit_of_enterprise_rates], axis= 0)
+        self.traj["sectoral_shares"] = Append(sectoral_shares)
+        self.traj["profit_rates"] = Append(profit_rates)
+        self.traj["profit_of_enterprise_rates"] = Append(profit_of_enterprise_rates)
 
         # MELT = p.dot(q) / values.dot(q)
         MELT = (p.dot(q) - p.dot(A@q)) / l.dot(q)
-        self.traj["MELT_values"] = np.append(self.traj["MELT_values"], [MELT*values], axis= 0)
-        self.traj["MELT"] = np.append(self.traj["MELT"], MELT)
-        self.traj["MELT_prices"] = np.append(self.traj["MELT_prices"], [p / MELT], axis= 0)
+        self.traj["MELT_values"] = Append(MELT*values)
+        self.traj["MELT"] = Append(MELT)
+        self.traj["MELT_prices"] = Append(p / MELT)
         # old_epr, old_eqp = self._get_pf_info(A, old_l, self.params.b_bar)
         # epr, eqp = self._get_pf_info(A, l, self.params.b_bar)
         max_rop_epr, max_rop_eqp = self._get_equilibrium_info(p, 0, A, l)
-        self.traj["max_rop"] = np.append(self.traj["max_rop"], max_rop_epr)
-        self.traj["MELT_adjusted_m_w"] = np.append(self.traj["MELT_adjusted_m_w"], m_w / MELT)
-        self.traj["MELT_adjusted_m_c"] = np.append(self.traj["MELT_adjusted_m_c"], (1-m_w) / MELT)
+        self.traj["max_rop"] = Append(max_rop_epr)
+        self.traj["MELT_adjusted_m_w"] = Append(m_w / MELT)
+        self.traj["MELT_adjusted_m_c"] = Append((1-m_w) / MELT)
 
-        old_p = self.traj["kliman_prices"][-1]
-        old_actual_p = self.traj["p"][-2]
-        old_w = self.traj["w"][-2]
+        old_p = self.traj["kliman_prices"].value
 
-        OLD_TSSI_MELT = self.traj["TSSI_MELT"][-1]
-        ACTUAL_OLD_TSSI_MELT = self.traj["ACTUAL_TSSI_MELT"][-1]
+        OLD_TSSI_MELT = self.traj["TSSI_MELT"].value
+        ACTUAL_OLD_TSSI_MELT = self.traj["ACTUAL_TSSI_MELT"].value
 
         old_hourly_b = old_w / (old_p.dot(self.params.b_bar)) * self.params.b_bar
 
@@ -632,8 +653,8 @@ class CapitalistEconomy:
         tssi_V = tssi_v_n * employment
         actual_tssi_V = actual_tssi_v_n * employment
         actual_tssi_C = (A.T@old_actual_p).dot(q) / ACTUAL_OLD_TSSI_MELT
-        self.traj["tssi_C"] = np.append(self.traj["tssi_C"], actual_tssi_C)
-        self.traj["tssi_V"] = np.append(self.traj["tssi_V"], actual_tssi_V)
+        self.traj["tssi_C"] = Append(actual_tssi_C)
+        self.traj["tssi_V"] = Append(actual_tssi_V)
         tssi_C = (A.T@old_p).dot(q) / OLD_TSSI_MELT
         tssi_v = tssi_v_n * l
         actual_tssi_v = actual_tssi_v_n * l
@@ -641,8 +662,8 @@ class CapitalistEconomy:
         actual_tssi_s = l - actual_tssi_v
         tssi_S = tssi_s.dot(q)
         actual_tssi_S = actual_tssi_s.dot(q)
-        self.traj["tssi_S"] = np.append(self.traj["tssi_S"], actual_tssi_S)
-        self.traj["tssi_e"] = np.append(self.traj["tssi_e"], tssi_S / max(tssi_V, 1e-7))
+        self.traj["tssi_S"] = Append(actual_tssi_S)
+        self.traj["tssi_e"] = Append(tssi_S / max(tssi_V, 1e-7))
 
         kliman_profit_rate = tssi_S / (tssi_C + tssi_V)
         M = A + np.linalg.outer(old_hourly_b, l)
@@ -650,31 +671,31 @@ class CapitalistEconomy:
         scalar = np.linalg.norm(p) / np.linalg.norm(new_kliman_prices)
         new_kliman_prices *= scalar 
 
-        self.traj["kliman_profit_rate"] = np.append(self.traj["kliman_profit_rate"], kliman_profit_rate)
-        self.traj["kliman_prices"] = np.append(self.traj["kliman_prices"], [new_kliman_prices], axis= 0)
+        self.traj["kliman_profit_rate"] = Append(kliman_profit_rate)
+        self.traj["kliman_prices"] = Append(new_kliman_prices)
         TSSI_MELT = new_kliman_prices.dot(q) / (tssi_C + employment)
         ACTUAL_TSSI_MELT = p.dot(q) / (actual_tssi_C + employment)
         tssi_cost_adj = (ACTUAL_TSSI_MELT - ACTUAL_OLD_TSSI_MELT)*(actual_tssi_C + actual_tssi_V)
 
-        self.traj["TSSI_MELT"] = np.append(self.traj["TSSI_MELT"], TSSI_MELT)
-        self.traj["ACTUAL_TSSI_MELT"] = np.append(self.traj["ACTUAL_TSSI_MELT"], ACTUAL_TSSI_MELT)
+        self.traj["TSSI_MELT"] = Append(TSSI_MELT)
+        self.traj["ACTUAL_TSSI_MELT"] = Append(ACTUAL_TSSI_MELT)
 
         new_kliman_eqb_values = 1/OLD_TSSI_MELT * (A.T@old_p) + l
         new_kliman_values = 1/ACTUAL_OLD_TSSI_MELT * (A.T@old_actual_p) + l
-        self.traj["kliman_values"] = np.append(self.traj["kliman_values"], [new_kliman_eqb_values], axis= 0)
-        self.traj["kliman_actual_values"] = np.append(self.traj["kliman_actual_values"], [new_kliman_values], axis= 0)
+        self.traj["kliman_values"] = Append(new_kliman_eqb_values)
+        self.traj["kliman_actual_values"] = Append(new_kliman_values)
 
         commodity_shares = c / np.maximum(b, 1e-3)
-        self.traj["commodity_shares"] = np.append(self.traj["commodity_shares"], [commodity_shares], axis=0)
+        self.traj["commodity_shares"] = Append(commodity_shares)
 
         cost_vec = b + A.T @ q
         commodity_surplus = c / np.maximum(cost_vec, 1e-3)
-        self.traj["commodity_surplus"] = np.append(self.traj["commodity_surplus"], [commodity_surplus], axis=0)
+        self.traj["commodity_surplus"] = Append(commodity_surplus)
 
         # C_tilde, V_tilde, S_tilde, SI_exploitation, SI_composition, SI_profit_rate = self._get_super_integrated_value_split(y)
         super_vals, A_tilde = self._get_super_integrated_value_split2(y)
-        self.traj["super_integrated_vals"] = np.append(self.traj["super_integrated_vals"], [super_vals], axis= 0)
-        self.traj["super_integrated_wage_vals"] = np.append(self.traj["super_integrated_wage_vals"], [w * super_vals], axis= 0)
+        self.traj["super_integrated_vals"] = Append(super_vals)
+        self.traj["super_integrated_wage_vals"] = Append(w * super_vals)
 
         m = A.T@p+w*l
         v_n = w / MELT
@@ -683,19 +704,19 @@ class CapitalistEconomy:
         ni_s = l - ni_v
         ni_variable = ni_v.dot(q)
         ni_surplus = ni_s.dot(q)
-        self.traj["NI_variable"] = np.append(self.traj["NI_variable"], ni_variable)
-        self.traj["NI_surplus"] = np.append(self.traj["NI_surplus"], ni_surplus)
-        self.traj["NI_exploitation"] = np.append(self.traj["NI_exploitation"], ni_surplus / ni_variable)
+        self.traj["NI_variable"] = Append(ni_variable)
+        self.traj["NI_surplus"] = Append(ni_surplus)
+        self.traj["NI_exploitation"] = Append(ni_surplus / np.maximum(ni_variable, 1e-5))
 
-        self.traj["MELT_converted_profit"] = np.append(self.traj["MELT_converted_profit"], ni_surplus * MELT)
-        self.traj["TSSI_MELT_converted_profit"] = np.append(self.traj["TSSI_MELT_converted_profit"], actual_tssi_S * ACTUAL_TSSI_MELT)
-        self.traj["TSSI_MELT_converted_profit_plus_melt_diff"] = np.append(self.traj["TSSI_MELT_converted_profit_plus_melt_diff"], tssi_cost_adj + actual_tssi_S * ACTUAL_TSSI_MELT)
+        self.traj["MELT_converted_profit"] = Append(ni_surplus * MELT)
+        self.traj["TSSI_MELT_converted_profit"] = Append(actual_tssi_S * ACTUAL_TSSI_MELT)
+        self.traj["TSSI_MELT_converted_profit_plus_melt_diff"] = Append(tssi_cost_adj + actual_tssi_S * ACTUAL_TSSI_MELT)
         sssi_C = (A.T@p).dot(q) / MELT
-        self.traj["sssi_C"] = np.append(self.traj["sssi_C"], sssi_C)
+        self.traj["sssi_C"] = Append(sssi_C)
         sssi_c = A.T@p / MELT
         sssi_values = sssi_c + l
-        self.traj["SSSI_vals"] = np.append(self.traj["SSSI_vals"], [sssi_values], axis= 0)
-        self.traj["SSSI_rop"] = np.append(self.traj["SSSI_rop"], ni_surplus / (ni_variable + sssi_C))
+        self.traj["SSSI_vals"] = Append(sssi_values)
+        self.traj["SSSI_rop"] = Append(ni_surplus / (ni_variable + sssi_C))
 
     def _get_employment(self, q, l):
         return q@l
@@ -708,7 +729,7 @@ class CapitalistEconomy:
             if self.fixed_real_wage:
                 w = p.dot(self.params.b_bar) 
             elif self.fixed_money_wage:
-                w = self.traj["w"][-1]
+                w = self.traj["w"].value
 
             delta_M = self._get_delta_M(y)
             delta_L = self._get_delta_L(y)
@@ -741,7 +762,7 @@ class CapitalistEconomy:
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
 
         change_type = self.params.change_type
         shock_type = self.params.shock_type
@@ -819,7 +840,7 @@ class CapitalistEconomy:
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
         total_labor = l.dot(q)
         delta_m_w = total_labor * w - alpha_w * m_w
 
@@ -958,25 +979,21 @@ class CapitalistEconomy:
     #     return self.params.w * (num / denom) ** self.params.eta_w
 
     def _get_interest_rate(self, m_w: float) -> float:
-
         """Returns the current interest rate given the current capitalist savings"""
-        M = self.traj["M"][-1]
+        M = self.traj["M"].value
         denom = max(M - float(m_w), self.params.eps_m)
         num = max(self.params.M - self.params.m_w, self.params.eps_m)
         return self.params.r * (num / denom) ** self.params.eta_r
 
     def _get_consumption(self, M, m_w, p):
-
         b = (self.params.alpha_w * m_w)/(p.dot(self.params.b_bar))*self.params.b_bar
         c = (self.params.alpha_c * (M-m_w))/(p.dot(self.params.c_bar))*self.params.c_bar
         return b, c
 
     def _get_values(self, A, l):
-
         return np.linalg.inv(np.eye(self.n) - A.T)@l
 
     def _get_value_split(self, values, b, q, A):
-
         total_value = q.dot(values)
         val_ms = b.dot(values)
         val_cc = values.dot(A@q)
@@ -1030,7 +1047,7 @@ class CapitalistEconomy:
         unit_costs = A.T@p + w*l
         unit_profits = p - unit_costs
 
-        return unit_profits / (w*l)
+        return unit_profits / np.maximum(w*l, 1e-5)
 
     def _get_super_integrated_value_split(self,y):
 
@@ -1039,7 +1056,7 @@ class CapitalistEconomy:
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
         C_tilde = (A.T@p).dot(q)/w
         V_tilde = l.dot(q)
         S_tilde = self.params.alpha_c * (M-m_w) / w
@@ -1057,7 +1074,7 @@ class CapitalistEconomy:
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
 
         m = A.T@p + w*l
         c_vec = self.params.alpha_c * (M-m_w) / (p.dot(self.params.c_bar)) * self.params.c_bar # Total capitalist consumption vector
@@ -1070,19 +1087,19 @@ class CapitalistEconomy:
     def _get_profit_split(self, y):
 
         """ Get total profit related stuff """
-        total_demand, r = self._get_total_demand(y), self.traj["r"][-1]
+        total_demand, r = self._get_total_demand(y), self.traj["r"].value
         q, p, _, l, _, _, w, M, A = self._unpack(y)
         if self.fixed_real_wage:
             w = p.dot(self.params.b_bar)
         elif self.fixed_money_wage:
-            w = self.traj["w"][-1]
+            w = self.traj["w"].value
         unit_cost = A.T@p+w*l
         unit_cost_constant = A.T@p
         unit_cost_variable = w*l
         revenue = p * total_demand # sectoral revenue vector (not a dot product)
         total_cost = unit_cost * (1.0 + r) * q 
         total_capital_advanced = unit_cost * q
-        composition_of_capital_advanced = (unit_cost_constant.dot(q)) / (unit_cost_variable.dot(q))
+        composition_of_capital_advanced = (unit_cost_constant.dot(q)) / np.maximum(unit_cost_variable.dot(q), 1e-5)
         profit_of_enterprise = revenue - total_cost # sectoral profit vector
         theoretical_profit = (p - unit_cost).dot(q)
         interest = unit_cost*r*q
