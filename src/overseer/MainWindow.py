@@ -2230,14 +2230,17 @@ class MainWindow(qw.QMainWindow):
         Reload simulation.py / parameters.py for the current demo
         without changing which demo is active.
         """
+        old_values = to_plain(self.params)
+
         try:
             demo = self.current_demo
+            sim_model = demo["details"]["simulation_model"]
 
             (
-                self.params,
+                default_params,
                 self.current_sim_func,
                 self.presets,
-                panel_data,
+                _,
                 plotting_data,
                 self.functions,
             ) = self._get_data(demo)
@@ -2245,20 +2248,32 @@ class MainWindow(qw.QMainWindow):
             if plotting_data is None:
                 plotting_data = {}
 
+
+            new_values = to_plain(default_params)
+            for name in new_values.keys() & old_values.keys():
+                new_values[name] = old_values[name]
+
+            params_path = (
+                self.env.models_dir
+                / sim_model
+                / "simulation"
+                / "parameters.py"
+            )
+
+            self.params = params_from_mapping(
+                new_values,
+                params_path,
+            )
+
             self._reload_config()
             self._reset_global_settings()
 
-            model_settings = self.config.get("model_specific_settings", {}).get(self.sim_model)
-            if model_settings and "commodity_names" in model_settings:
-                plotting_data = format_plot_config(
-                    plotting_data, model_settings["commodity_names"]
-                )
-
+            self.control_panel.load_new_params(self.params)
             self.graph_panel.traj = None
             self.graph_panel.t = None
             self.graph_panel.data = plotting_data
             self.control_panel.plotting_data = plotting_data
-            # self.control_panel.load_new_params(self.params)
+
         except Exception as e:
             self.status_bar.showMessage(f"Failed to reload current demo: {e}", msecs= 5000)
             extra = {
