@@ -53,6 +53,9 @@ def coerce_value(val, anno):
 
     return val  # default: no change
 
+def get_num_commodities(params):
+    return params.L
+
 def random_parameters(params):
     if not params.use_custom_l or not params.use_custom_c:
         return params

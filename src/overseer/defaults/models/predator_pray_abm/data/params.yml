@@ -1,0 +1,7 @@
+# Initial conditions parameters. Every model must start with at least one preset. Fill it in with your initial conditions. Other presets also will get saved here from the GUI
+presets:
+  default_preset: # Internal name
+    name: Default # Name as it appears in the GUI
+    desc: '' # A description if there's something special about these
+    params:
+

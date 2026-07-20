@@ -6,7 +6,7 @@ import shlex
 import shutil
 import os
 from copy import deepcopy
-from dataclasses import fields, is_dataclass, asdict, MISSING
+from dataclasses import dataclass, fields, is_dataclass, asdict, MISSING
 from typing import get_origin, get_args, Any, Optional, Tuple, Type
 from overseer.paths import MODELS_DIR
 from pathlib import Path
@@ -19,8 +19,165 @@ from PyQt6 import (
 )
 import subprocess
 
-# from parameters import Params, params_from_mapping
 logger = logging.getLogger(__name__)
+
+DEMO_ID_SEPARATOR = "::"
+
+@dataclass(frozen= True)
+class DemoSource:
+    model_name: str
+    local_key: str
+    path: Path
+
+@dataclass
+class DemoCatalog:
+    demos: dict[str, dict[str, Any]]
+    sources: dict[str, DemoSource]
+    documents: dict[str, dict[str, Any]]
+    warnings: list[str]
+    errors: list[str]
+
+def make_demo_id(model_name: str, local_key: str) -> str:
+    if DEMO_ID_SEPARATOR in model_name:
+        raise ValueError(
+            f"Model name cannot contain {DEMO_ID_SEPARATOR!r}: {model_name!r}"
+        )
+
+    if DEMO_ID_SEPARATOR in local_key:
+        raise ValueError(
+            f"Demo key cannot contain {DEMO_ID_SEPARATOR!r}: {local_key!r}"
+        )
+
+    return f"{model_name}{DEMO_ID_SEPARATOR}{local_key}"
+
+def demo_file_for_model(models_dir: Path, model_name: str) -> Path:
+    return Path(models_dir) / model_name / "demos.yml"
+
+def load_demo_document(path: Path) -> dict[str, Any]:
+    """
+    Read one model's demos.yml.
+
+    A missing file is treated as a valid empty document so DemoSettingsTab
+    can create it later.
+    """
+    path = Path(path)
+
+    if not path.exists():
+        return {"demos": {}}
+
+    with path.open("r", encoding="utf-8") as file:
+        document = yaml.safe_load(file) or {}
+
+    if not isinstance(document, dict):
+        raise ValueError(f"{path} must contain a YAML mapping.")
+
+    demos = document.get("demos")
+
+    if demos is None:
+        document["demos"] = {}
+    elif not isinstance(demos, dict):
+        raise ValueError(f"'demos' in {path} must be a mapping.")
+
+    return document
+
+def discover_model_demos(
+        models_dir: Path,
+        *,
+        include_models_without_files: bool = False,
+    ) -> DemoCatalog:
+    """
+    Discover demos.yml files in the immediate model directories.
+
+    The returned demo IDs are qualified as:
+        model_name::local_demo_key
+
+    The qualification is only an in-memory application detail. Individual
+    demos.yml files continue to use their ordinary local keys.
+    """
+    models_dir = Path(models_dir)
+
+    demos: dict[str, dict[str, Any]] = {}
+    sources: dict[str, DemoSource] = {}
+    documents: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+    errors: list[str] = []
+
+    if not models_dir.is_dir():
+        errors.append(f"Models directory does not exist: {models_dir}")
+        return DemoCatalog(demos, sources, documents, warnings, errors)
+
+    model_dirs = sorted(
+        path
+        for path in models_dir.iterdir()
+        if path.is_dir() and not path.name.startswith(".")
+    )
+
+    for model_dir in model_dirs:
+        model_name = model_dir.name
+        path = model_dir / "demos.yml"
+
+        if not path.exists() and not include_models_without_files:
+            continue
+
+        try:
+            document = load_demo_document(path)
+        except (OSError, yaml.YAMLError, ValueError) as error:
+            message = f"Could not load demos for model {model_name!r}: {error}"
+            errors.append(message)
+            logger.warning(message)
+            continue
+
+        documents[model_name] = document
+
+        for local_key, stored_demo in document["demos"].items():
+            if not isinstance(local_key, str):
+                warnings.append(
+                    f"Ignoring non-string demo key in {path}: {local_key!r}"
+                )
+                continue
+
+            if not isinstance(stored_demo, dict):
+                warnings.append(
+                    f"Ignoring invalid demo {local_key!r} in {path}: "
+                    "the demo must be a mapping."
+                )
+                continue
+
+            try:
+                demo_id = make_demo_id(model_name, local_key)
+            except ValueError as error:
+                warnings.append(str(error))
+                continue
+
+            runtime_demo = deepcopy(stored_demo)
+            details = runtime_demo.setdefault("details", {})
+
+            if not isinstance(details, dict):
+                warnings.append(
+                    f"Ignoring demo {local_key!r} in {path}: "
+                    "'details' must be a mapping."
+                )
+                continue
+
+            declared_model = details.get("simulation_model")
+            if declared_model and declared_model != model_name:
+                warnings.append(
+                    f"Demo {local_key!r} in {path} declares model "
+                    f"{declared_model!r}; using containing folder "
+                    f"{model_name!r} instead."
+                )
+
+            # Compatibility with the rest of Overseer.
+            details["simulation_model"] = model_name
+
+            demos[demo_id] = runtime_demo
+            sources[demo_id] = DemoSource(
+                model_name=model_name,
+                local_key=local_key,
+                path=path,
+            )
+
+    return DemoCatalog(demos, sources, documents, warnings, errors)
 
 def configure_matplotlib_cache() -> None:
     """
@@ -404,7 +561,7 @@ def load_parameters_class_from_file(parameters_py: str | Path) -> Type[Any]:
     return Parameters
 
 def get_user_data_dir(settings: dict, env) -> Path:
-    if settings.get("paper_release_mode", False):
+    if getattr(env, "release_mode", False):
         from overseer.paths import USER_APP_DIR
         return USER_APP_DIR
 
@@ -413,7 +570,7 @@ def get_user_data_dir(settings: dict, env) -> Path:
         return env.user_data_dir
 
     try:
-        raw_text = settings.get("user_data_dir")
+        raw_text = settings.get("user_data_dir", "")
         candidate = Path(raw_text).expanduser().resolve(strict= False)
     except Exception:
         return env.user_data_dir

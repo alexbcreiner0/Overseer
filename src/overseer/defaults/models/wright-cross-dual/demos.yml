@@ -1,0 +1,26 @@
+demos:
+  wright_s_cross_dual_disequilibrium_model:
+    name: Wright's Cross-Dual Disequilibrium Model
+    desc: Starting parameters are based on the example in Wright's PhD thesis. See
+      the GitHub wiki pages for detailed information.
+    details:
+      plot_preprocess: format_plot_config
+      simulation_function: simulate
+      default_preset: default_preset
+      simulation_speed: '0.01'
+      axis_settings:
+        dimension: [1, 1]
+        limits:
+          a1: [[0.302313, 101.661], [0.237253, 15.584]]
+        dropdown_indices: [0]
+        checked_plots:
+          a1: [Unit Prices, Unit Values]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+    default: true

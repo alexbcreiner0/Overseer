@@ -1,0 +1,89 @@
+divider1:
+  title: Parameters
+row1:
+  n_boids:
+    param_name: n_boids
+    tooltip: Number of boids
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [10, 1000]
+    label: $N=$
+  space_width:
+    param_name: space_width
+    tooltip: Width of the continuous space
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [10, 500]
+    label: $w=$
+  space_height:
+    param_name: space_height
+    tooltip: Height of the continuous space
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [10, 500]
+    label: $ht=$
+row2:
+  vision:
+    param_name: vision
+    tooltip: Vision radius of a boid
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.1, 100.0]
+    label: $\sigma=$
+  speed:
+    param_name: speed
+    tooltip: Speed of the boids
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.1, 20.0]
+    label: $v=$
+  separation:
+    param_name: separation
+    tooltip: Minimum distance to maintain to neighbors
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.1, 20.0]
+    label: $d=$
+row3:
+  cohere:
+    param_name: cohere
+    tooltip: Coherence - Weight which determines how closely boids try to match the
+      positions of their neighbors
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $c=$
+  separate:
+    param_name: separate
+    tooltip: Separation - Weight determining how aggressively the boids try to avoid
+      their neighbors
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $s=$
+  match:
+    param_name: match
+    tooltip: Match - Weight determining how aggressively boids try to match the direction
+      of their neighbors
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $m=$
+row4:
+  T:
+    param_name: T
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [100, 100000]
+    label: $T=$
+    tooltip: Nuimber of time steps to simulate

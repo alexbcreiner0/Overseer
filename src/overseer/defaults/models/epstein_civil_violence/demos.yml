@@ -1,0 +1,33 @@
+demos:
+  epstein_civil_violence_model:
+    name: Epstein Civil Violence Model
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      simulation_speed: '0.1'
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[0.0, 40.0], [0.0, 40.0]]
+          a2: [[-1.33536, 1.33024], [-0.891882, 1.10732]]
+        dropdown_indices: [0, 1]
+        checked_plots:
+          a1: [Grid]
+          a2: [Citizen States]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+      plot_preprocess: null

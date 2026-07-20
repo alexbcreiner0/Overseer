@@ -1,0 +1,33 @@
+demos:
+  boltzmann_wealth_distribution_agent_based_model:
+    name: Boltzmann Wealth Distribution Agent-Based Model
+    desc: TBA
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[0.0, 10.0], [0.0, 100.0]]
+      simulation_speed: 0.044
+      axis_settings:
+        dimension: [1, 2]
+        limits:
+          a1: [[-0.458536, 7.33996], [0.0839456, 78.0963]]
+          a2: [[1.30881, 328.206], [-0.00651863, 0.961886]]
+        dropdown_indices: [0, 1]
+        checked_plots:
+          a1: [Wealth Distribution]
+          a2: [Gini Coefficient, Total Money in Circulation]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true

@@ -7,7 +7,7 @@ row1:
     control_type: entry_block
     type: scalar
     scalar_type: int
-    range: [0, 1]
+    range: [0, 1000]
     label: $T=$
   N:
     param_name: N
@@ -15,7 +15,7 @@ row1:
     control_type: entry_block
     type: scalar
     scalar_type: int
-    range: [0, 1]
+    range: [0, 10000]
     label: $N=$
   M:
     param_name: M
@@ -23,7 +23,7 @@ row1:
     control_type: entry_block
     type: scalar
     scalar_type: int
-    range: [0, 1]
+    range: [0, 10000000]
     label: $M=$
 row2:
   w:

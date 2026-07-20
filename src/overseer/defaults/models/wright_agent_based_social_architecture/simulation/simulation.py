@@ -6,7 +6,7 @@ import inspect
 MODEL_READY = False # Set this to True when you think it's ready.
 HEAVY_COMPUTE = False # Set true if some sims are compute-heavy (app will attempt to boost performance in various ways).
 
-def get_trajectories(params: Params):
+def get_trajectories(params: Params, *, event_queue):
     t = [0]
     T, N, M, w = params.T, params.N, params.M, params.w
     economy = Economy(M, N, w)

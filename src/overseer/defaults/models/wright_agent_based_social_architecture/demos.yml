@@ -1,0 +1,52 @@
+demos:
+  wright_s_agent_based_social_architecture_model:
+    name: Wright's Agent-Based Social Architecture Model
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      starting_lims: [[0.0, 1000.0], [0.0, 0.03]]
+      axis_settings:
+        dimension: [2, 2]
+        limits:
+          a1: [[-88.9659, 917.14], [1.96124e-05, 0.0282907]]
+          a2: [[1.3891, 153.93], [-52.1151, 1074.69]]
+          a3: [[-808.175, 17125.0], [-0.000321317, 0.00348904]]
+          a4: [[2.33935, 154.88], [-61.4743, 1065.33]]
+        dropdown_indices: [0, 1, 3, 5]
+        checked_plots:
+          a1: [Number of Capitalists, Number of Workers, Number of Capitalists (Fitted),
+            Number of Workers (Fitted)]
+          a2: [Capitalists, Workers, Unemployed]
+          a3: [Worker Annual Income, Worker Annual Income (Fitted), Capitalist Annual
+              Income, Capitalist Annual Income (Fitted)]
+          a4: [Firm Sizes, Firm Sizes]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a2:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a3:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true
+          a4:
+            legend_visible: true
+            legend_fontsize: 8
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true

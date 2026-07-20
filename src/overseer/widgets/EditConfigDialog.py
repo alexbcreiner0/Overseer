@@ -55,7 +55,8 @@ class EditConfigDialog(qw.QDialog):
         self.nav.addItem("Preset Settings")
         self.nav.addItem("Control Settings")
         self.nav.addItem("Plot Settings")
-        self.nav.addItem("Demo Settings")
+        if not self.env.release_mode:
+            self.nav.addItem("Demo Settings")
 
         self.status = StatusBar()
         self.status.setSizeGripEnabled(False)
@@ -85,7 +86,8 @@ class EditConfigDialog(qw.QDialog):
         self.stack.addWidget(self.page_presets)
         self.stack.addWidget(self.page_controls)
         self.stack.addWidget(self.page_plots)
-        self.stack.addWidget(self.page_demos)
+        if not self.env.release_mode:
+            self.stack.addWidget(self.page_demos)
 
         self.idx_to_page = {
             0: self.page_global,

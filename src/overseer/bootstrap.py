@@ -14,13 +14,13 @@ from .paths import (
     LOG_DIR,
     MODELS_DIR,
     USER_APP_DIR,
-    DEMOS_FILE,
     CONFIG_FILE,
     KEYBINDINGS_FILE,
     APP_DIR,
     defaults_path,
     ensure_dirs,
     resolve_config,
+    release_mode
 )
 
 @dataclass
@@ -32,8 +32,8 @@ class BootstrapResult:
     log_dir: Path
     models_dir: Path
     config_file: Path
-    demos_file: Path
     app_dir: Path
+    release_mode: bool
 
 def copy_if_missing(src: Path, dest: Path) -> None:
     if dest.exists():
@@ -64,24 +64,25 @@ def initialize_dirs(src: Path, dst: Path) -> None:
                 shutil.copy2(item, target)
 
 def bootstrap_user_environment(config_override: str | None = None) -> BootstrapResult:
-    ensure_dirs()
-
-    try:
-        active_config_file = resolve_config(config_override, CONFIG_FILE)
-    except FileNotFoundError:
-        print(f"Error: {config_override} not found.")
-        active_config_file = CONFIG_FILE
-
     default_config = defaults_path("config.example.yml")
-    default_demos = defaults_path("demos.example.yml")
     default_keybinds = defaults_path("keybindings.yml")
     default_models = defaults_path("models")
 
-    if active_config_file == CONFIG_FILE  and not CONFIG_FILE.exists():
-        copy_if_missing(default_config, CONFIG_FILE)
+    if release_mode:
+        active_config_file = default_config
+    else:
+        ensure_dirs()
+        try:
+            active_config_file = resolve_config(
+                config_override,
+                CONFIG_FILE
+            )
+        except FileNotFoundError:
+            print(f"Error: {config_override} not found.")
+            active_config_file = CONFIG_FILE
 
-    if not DEMOS_FILE.exists():
-        copy_if_missing(default_demos, DEMOS_FILE)
+    if active_config_file == CONFIG_FILE and not CONFIG_FILE.exists():
+        copy_if_missing(default_config, CONFIG_FILE)
 
     if not KEYBINDINGS_FILE.exists():
         copy_if_missing(default_keybinds, KEYBINDINGS_FILE)
@@ -96,11 +97,13 @@ def bootstrap_user_environment(config_override: str | None = None) -> BootstrapR
         user_data_dir=USER_APP_DIR,
         log_dir=LOG_DIR,
         models_dir=MODELS_DIR,
-        demos_file=DEMOS_FILE,
         config_file=active_config_file,
         app_dir=APP_DIR,
+        release_mode=release_mode,
     )
 
+if __name__ == "__main__":
+    print(f"{bootstrap_user_environment().release_mode}")
 # print(f"{CONFIG_DIR=}")
 # print(f"{DATA_DIR=}")
 # print(f"{CACHE_DIR=}")

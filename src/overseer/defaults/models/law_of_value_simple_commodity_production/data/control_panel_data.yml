@@ -87,16 +87,20 @@ row5:
     type: vector
     label: $\mathbf{l}=$
     tooltip: ''
-    dim_from: L
-    safe_default: 1
+    dim_from: get_num_commodities
+    safe_default: 1.0
+    use_dim_func: true
+    dim: 1
   c:
     param_name: c
     control_type: entry_block
     type: vector
     label: $\mathbf{c}=$
     tooltip: ''
-    dim_from: L
-    safe_default: 10
+    dim_from: get_num_commodities
+    safe_default: 10.0
+    use_dim_func: true
+    dim: 1
 row6:
   omega:
     param_name: omega

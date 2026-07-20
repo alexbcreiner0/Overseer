@@ -1,9 +1,11 @@
 from __future__ import annotations
+import logging
+logger = logging.getLogger(__name__)
+
 from pathlib import Path
 import copy
 import yaml
 import importlib, inspect
-
 from PyQt6 import (
     QtWidgets as qw,
     QtCore as qc,
@@ -12,6 +14,7 @@ from PyQt6 import (
 
 from overseer.tools.loader import load_presets
 from .common import FormSection, make_shortname, replace_key_preserve_order, refresh_models
+from overseer.tools.loader import discover_model_demos, DemoSource, demo_file_for_model, make_demo_id
 from overseer.tools.creation_tools import flow_seqify, atomic_write
 
 class DemoSettingsTab(qw.QWidget):
@@ -23,10 +26,8 @@ class DemoSettingsTab(qw.QWidget):
         self.env = env
         self._loading_editor = False
 
-        with open(self.env.demos_file, "r") as f:
-            self.original_data = yaml.safe_load(f)
+        self._load_demo_catalog()
 
-        self.working_data = copy.deepcopy(self.original_data)
         self.names_dict = {}
         if self.working_data.get("demos"):
             for demo in self.working_data["demos"]:
@@ -91,7 +92,6 @@ class DemoSettingsTab(qw.QWidget):
         self.edit_demo_display_name = qw.QLineEdit()
         self.edit_demo_desc = qw.QPlainTextEdit()
         self.edit_demo_desc.setPlaceholderText("Description…")
-
 
         # Details
         self.combo_model = qw.QComboBox()
@@ -179,36 +179,72 @@ class DemoSettingsTab(qw.QWidget):
 
         self.window.status.show("Refreshed models.", 3000)
 
+    # def _refresh_demos(self, selected_key: str | None = None):
+    #     if selected_key is None:
+    #         selected_key = self._current_demo_key()
+
+    #     self.demo_list.blockSignals(True)
+    #     self.demo_list.clear()
+    #     self.names_dict.clear()
+
+    #     for intern_key, demo_dict in self.working_data["demos"].items():
+    #         if demo_dict is None:
+    #             continue
+    #         if not demo_dict.get("name"):
+    #             continue
+    #         display_name = demo_dict["name"]
+    #         self.names_dict[display_name] = intern_key
+
+    #         item = qw.QListWidgetItem(display_name)
+    #         item.setData(qc.Qt.ItemDataRole.UserRole, intern_key)
+    #         self.demo_list.addItem(item)
+
+    #     restored = False
+    #     if selected_key is not None:
+    #         for i in range(self.demo_list.count()):
+    #             it = self.demo_list.item(i)
+    #             if it.data(qc.Qt.ItemDataRole.UserRole) == selected_key:
+    #                 self.demo_list.setCurrentRow(i)
+    #                 restored = True
+    #                 break
+
+    #     if not restored and self.demo_list.count() > 0:
+    #         self.demo_list.setCurrentRow(0)
+
+    #     self.demo_list.blockSignals(False)
+    #     self._apply_default_styling()
+
     def _refresh_demos(self, selected_key: str | None = None):
         if selected_key is None:
             selected_key = self._current_demo_key()
 
         self.demo_list.blockSignals(True)
         self.demo_list.clear()
-        self.names_dict.clear()
 
-        for intern_key, demo_dict in self.working_data["demos"].items():
-            if demo_dict is None:
+        for demo_id, demo in self.working_data["demos"].items():
+            if not isinstance(demo, dict):
                 continue
-            if not demo_dict.get("name"):
-                continue
-            display_name = demo_dict["name"]
-            self.names_dict[display_name] = intern_key
 
-            item = qw.QListWidgetItem(display_name)
-            item.setData(qc.Qt.ItemDataRole.UserRole, intern_key)
+            source = self.demo_sources[demo_id]
+            display_name = demo.get("name") or source.local_key
+
+            item = qw.QListWidgetItem(
+                f"{display_name}"
+            )
+            item.setData(qc.Qt.ItemDataRole.UserRole, demo_id)
             self.demo_list.addItem(item)
 
         restored = False
+
         if selected_key is not None:
-            for i in range(self.demo_list.count()):
-                it = self.demo_list.item(i)
-                if it.data(qc.Qt.ItemDataRole.UserRole) == selected_key:
-                    self.demo_list.setCurrentRow(i)
+            for row in range(self.demo_list.count()):
+                item = self.demo_list.item(row)
+                if item.data(qc.Qt.ItemDataRole.UserRole) == selected_key:
+                    self.demo_list.setCurrentRow(row)
                     restored = True
                     break
 
-        if not restored and self.demo_list.count() > 0:
+        if not restored and self.demo_list.count():
             self.demo_list.setCurrentRow(0)
 
         self.demo_list.blockSignals(False)
@@ -218,6 +254,25 @@ class DemoSettingsTab(qw.QWidget):
         it = self.demo_list.currentItem()
         return it.data(qc.Qt.ItemDataRole.UserRole) if it else None
 
+    def _load_demo_catalog(self) -> None:
+        catalog = discover_model_demos(
+            self.env.models_dir,
+            include_models_without_files= True,
+        )
+
+        self.catalog_errors = list(catalog.errors)
+
+        self.original_documents = copy.deepcopy(catalog.documents)
+        self.original_data = {
+            "demos": copy.deepcopy(catalog.demos)
+        }
+
+        self.working_data = copy.deepcopy(self.original_data)
+        self.demo_sources = dict(catalog.sources)
+
+        for message in catalog.warnings:
+            logger.warning(message)
+
     def _delete_demo(self):
         key = self._current_demo_key()
         if not key:
@@ -225,6 +280,7 @@ class DemoSettingsTab(qw.QWidget):
 
         # delete from working copy only
         self.working_data["demos"].pop(key, None)
+        self.demo_sources.pop(key, None)
         self._refresh_demos()
 
     def _on_changes(self):
@@ -295,11 +351,22 @@ class DemoSettingsTab(qw.QWidget):
         return w
 
     def _filter_demo_list(self, text: str) -> None:
-        t = text.strip().lower()
-        for i in range(self.demo_list.count()):
-            it = self.demo_list.item(i)
-            key = (it.data(qc.Qt.ItemDataRole.UserRole) or "")
-            it.setHidden(t not in key.lower())
+        search_text = text.strip().lower()
+
+        for row in range(self.demo_list.count()):
+            item = self.demo_list.item(row)
+            demo_id = item.data(qc.Qt.ItemDataRole.UserRole) or ""
+            source = self.demo_sources.get(demo_id)
+
+            searchable_text = " ".join(
+                (
+                    item.text(),
+                    demo_id,
+                    source.model_name if source else "",
+                )
+            ).lower()
+
+            item.setHidden(search_text not in searchable_text)
 
     # def _set_lims_enabled(self, enabled: bool) -> None:
     #     for w in (self.edit_xlim_lo, self.edit_xlim_hi, self.edit_ylim_lo, self.edit_ylim_hi):
@@ -316,41 +383,87 @@ class DemoSettingsTab(qw.QWidget):
         self.working_data["demos"][self.lbl_internal_name.text()] = new_demo
         self._refresh_demos()
 
+    # def _new_demo(self):
+    #     # Generate a unique display + internal name
+    #     base_display = "New Demo"
+    #     i = 1
+    #     display_name = base_display
+    #     while display_name in self.names_dict:
+    #         i += 1
+    #         display_name = f"{base_display} {i}"
+
+    #     internal_name = make_shortname(display_name)
+
+    #     # Extremely minimal placeholder demo
+    #     new_demo = {
+    #         "name": display_name,
+    #         "desc": "",
+    #         "details": {
+    #             "simulation_model": "",
+    #             "simulation_function": "",
+    #             "default_preset": "",
+    #         },
+    #     }
+
+    #     # Insert into working copy
+    #     self.working_data["demos"][internal_name] = new_demo
+
+    #     # Refresh list
+    #     self._refresh_demos()
+
+    #     # Select the newly created demo
+    #     for row in range(self.demo_list.count()):
+    #         it = self.demo_list.item(row)
+    #         if it.data(qc.Qt.ItemDataRole.UserRole) == internal_name:
+    #             self.demo_list.setCurrentRow(row)
+    #             break
+
     def _new_demo(self):
+        model_name = self.combo_model.currentText().strip()
 
-        # Generate a unique display + internal name
+        if not model_name:
+            self.window.status.show(
+                "Select a model before creating a demo.",
+                4000,
+            )
+            return
+
         base_display = "New Demo"
-        i = 1
         display_name = base_display
-        while display_name in self.names_dict:
-            i += 1
-            display_name = f"{base_display} {i}"
+        number = 1
 
-        internal_name = make_shortname(display_name)
+        existing_names = {
+            demo.get("name")
+            for demo_id, demo in self.working_data["demos"].items()
+            if self.demo_sources[demo_id].model_name == model_name
+        }
 
-        # Extremely minimal placeholder demo
+        while display_name in existing_names:
+            number += 1
+            display_name = f"{base_display} {number}"
+
+        local_key = make_shortname(display_name)
+        demo_id = make_demo_id(model_name, local_key)
+
         new_demo = {
             "name": display_name,
             "desc": "",
             "details": {
-                "simulation_model": "",
+                # Runtime compatibility. Removed again when writing.
+                "simulation_model": model_name,
                 "simulation_function": "",
                 "default_preset": "",
             },
         }
 
-        # Insert into working copy
-        self.working_data["demos"][internal_name] = new_demo
+        self.working_data["demos"][demo_id] = new_demo
+        self.demo_sources[demo_id] = DemoSource(
+            model_name=model_name,
+            local_key=local_key,
+            path=demo_file_for_model(self.env.models_dir, model_name),
+        )
 
-        # Refresh list
-        self._refresh_demos()
-
-        # Select the newly created demo
-        for row in range(self.demo_list.count()):
-            it = self.demo_list.item(row)
-            if it.data(qc.Qt.ItemDataRole.UserRole) == internal_name:
-                self.demo_list.setCurrentRow(row)
-                break
+        self._refresh_demos(selected_key=demo_id)
 
     def _get_new_demo_dict(self, new= False):
         old_key = self._current_demo_key()
@@ -391,14 +504,19 @@ class DemoSettingsTab(qw.QWidget):
             return
 
         item = self.demo_list.currentItem()
-        choice = item.text()
-        demo = self.names_dict[choice]
-        demo_dict = self.working_data["demos"][demo]
+        demo_id = item.data(qc.Qt.ItemDataRole.UserRole)
+        source = self.demo_sources[demo_id]
+
+        # choice = item.text()
+        # demo = self.names_dict[choice]
+        demo_dict = self.working_data["demos"][demo_id]
+        # demo_dict = self.working_data["demos"][demo]
 
         self._loading_editor = True
         self._block_editor_signals(True)
         try:
-            self.lbl_internal_name.setText(demo)
+            self.lbl_internal_name.setText(source.local_key)
+            # self.lbl_internal_name.setText(demo)
             self.edit_demo_display_name.setText(demo_dict["name"])
             self.edit_demo_desc.setPlainText(demo_dict["desc"])
 
@@ -407,7 +525,8 @@ class DemoSettingsTab(qw.QWidget):
             self.entry_sim_speed.setText(str(sim_speed))
             model_index = self.combo_model.findText(details["simulation_model"])
 
-            self.combo_model.setCurrentIndex(model_index)
+            self.combo_model.setCurrentText(source.model_name)
+            # self.combo_model.setCurrentIndex(model_index)
             self._refresh_functions()
             self._refresh_presets()
             func_index = self.combo_function.findText(details["simulation_function"])
@@ -440,43 +559,90 @@ class DemoSettingsTab(qw.QWidget):
             self._block_editor_signals(False)
             self._loading_editor = False
 
+    # def _save_demo_changes(self):
+    #     if self._loading_editor:
+    #         print(f"returning becaue loading editor")
+    #         return
+    #     old_key = self._current_demo_key()
+    #     if not old_key:
+    #         print("returning because not old key")
+    #         return
+    #     new_key = self.lbl_internal_name.text().strip()
+    #     if not new_key:
+    #         print(f"returning becauese not new key")
+    #         return
+
+    #     new_demo = self._get_new_demo_dict()
+    #     old_demo = self.working_data["demos"].get(old_key, {})
+
+    #     if isinstance(old_demo, dict) and old_demo.get("default"):
+    #         new_demo["default"] = True
+
+    #     # update under current key first
+    #     self.working_data["demos"][old_key] = new_demo
+
+    #     item = self.demo_list.currentItem()
+    #     new_display = new_demo.get("name", "") or old_key
+    #     if item is not None and item.text() != new_display:
+    #         item.setText(new_display)
+
+    #     if new_key == old_key:
+    #         return
+
+    #     if new_key in self.working_data["demos"]:
+    #         self.window.status.show("That internal name is already in use.", msecs=2000)
+    #         return
+
+    #     replace_key_preserve_order(self.working_data["demos"], old_key, new_key, new_demo)
+    #     self._refresh_demos(selected_key= new_key)
+
     def _save_demo_changes(self):
         if self._loading_editor:
-            print(f"returning becaue loading editor")
             return
-        old_key = self._current_demo_key()
-        if not old_key:
-            print("returning because not old key")
+
+        old_id = self._current_demo_key()
+        if not old_id:
             return
-        new_key = self.lbl_internal_name.text().strip()
-        if not new_key:
-            print(f"returning becauese not new key")
+
+        old_source = self.demo_sources[old_id]
+
+        new_model = self.combo_model.currentText().strip()
+        new_local_key = self.lbl_internal_name.text().strip()
+
+        if not new_model or not new_local_key:
+            return
+
+        new_id = make_demo_id(new_model, new_local_key)
+
+        if new_id != old_id and new_id in self.working_data["demos"]:
+            self.window.status.show(
+                "That internal demo name is already used by this model.",
+                4000,
+            )
             return
 
         new_demo = self._get_new_demo_dict()
-        old_demo = self.working_data["demos"].get(old_key, {})
+        new_demo.setdefault("details", {})["simulation_model"] = new_model
 
-        if isinstance(old_demo, dict) and old_demo.get("default"):
-            new_demo["default"] = True
-
-        # update under current key first
-        self.working_data["demos"][old_key] = new_demo
-
-        item = self.demo_list.currentItem()
-        new_display = new_demo.get("name", "") or old_key
-        if item is not None and item.text() != new_display:
-            item.setText(new_display)
-
-        if new_key == old_key:
+        if new_id == old_id:
+            self.working_data["demos"][old_id] = new_demo
             return
 
-        if new_key in self.working_data["demos"]:
-            self.window.status.show("That internal name is already in use.", msecs=2000)
-            return
+        replace_key_preserve_order(
+            self.working_data["demos"],
+            old_id,
+            new_id,
+            new_demo,
+        )
 
-        replace_key_preserve_order(self.working_data["demos"], old_key, new_key, new_demo)
-        self._refresh_demos(selected_key= new_key)
+        self.demo_sources.pop(old_id)
+        self.demo_sources[new_id] = DemoSource(
+            model_name=new_model,
+            local_key=new_local_key,
+            path=demo_file_for_model(self.env.models_dir, new_model),
+        )
 
+        self._refresh_demos(selected_key=new_id)
 
     # def _on_save_changes_clicked(self) -> None:
     #     old_key = self._current_demo_key()
@@ -556,15 +722,73 @@ class DemoSettingsTab(qw.QWidget):
                 return k
         return None
 
+    # def on_apply_clicked(self):
+
+    #     self._normalize_for_dump(self.working_data)
+    #     path = self.env.demos_file
+    #     atomic_write(path, self.working_data)
+    #     self.original_data = copy.deepcopy(self.working_data)
+    #     self.working_data = copy.deepcopy(self.original_data)
+
+    #     self._refresh_demos()
+
     def on_apply_clicked(self):
+        if self.catalog_errors:
+            self.window.status.show(
+                "One or more demos.yml files could not be read. "
+                "Fix them before saving to avoid data loss.",
+                6000,
+            )
+            return
 
-        self._normalize_for_dump(self.working_data)
-        path = self.env.demos_file
-        atomic_write(path, self.working_data)
-        self.original_data = copy.deepcopy(self.working_data)
-        self.working_data = copy.deepcopy(self.original_data)
+        # Start with the original documents so future top-level fields survive.
+        documents = copy.deepcopy(self.original_documents)
 
+        # Include model folders that did not previously have demos.yml.
+        for model_name in refresh_models(self.env):
+            documents.setdefault(model_name, {"demos": {}})
+
+        # Rebuild only each document's demos mapping.
+        for document in documents.values():
+            document["demos"] = {}
+
+        for demo_id, runtime_demo in self.working_data["demos"].items():
+            source = self.demo_sources[demo_id]
+
+            stored_demo = copy.deepcopy(runtime_demo)
+            details = stored_demo.setdefault("details", {})
+
+            # The folder is the source of truth.
+            details.pop("simulation_model", None)
+
+            document = documents.setdefault(
+                source.model_name,
+                {"demos": {}},
+            )
+            document["demos"][source.local_key] = stored_demo
+
+        for model_name, document in documents.items():
+            path = demo_file_for_model(self.env.models_dir, model_name)
+            original = self.original_documents.get(
+                model_name,
+                {"demos": {}},
+            )
+
+            if document == original:
+                continue
+
+            # Avoid creating empty files for models that never had demos.
+            if not document["demos"] and not path.exists():
+                continue
+
+            output = copy.deepcopy(document)
+            self._normalize_for_dump(output)
+            atomic_write(path, output)
+
+        self._load_demo_catalog()
         self._refresh_demos()
+
+        self.window.status.show("Demo settings saved.", 3000)
 
     def _normalize_for_dump(self, data: dict) -> dict:
         """ Does basically nothing right now, but this is where you would apply any special formatting to the settings dict """

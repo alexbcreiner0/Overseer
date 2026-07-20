@@ -1,0 +1,43 @@
+presets:
+  default_preset:
+    name: Default
+    desc: ''
+    params: null
+  good_elite_numbers_stagnation:
+    name: Good Elite Numbers (Stagnation)
+    desc: ''
+    params:
+      T: 1000
+      h: 5
+      b: 1
+      b_2: 2
+      P_0: 50
+      E_0: 1
+      m: 4
+      m_2: 5
+      res: 3
+      mode: state_class
+      a: 5
+      e: 5
+      epsilon: 0.5
+      alpha: 3
+  good_settings_secular_cycles:
+    name: Good Settings (Secular Cycles)
+    desc: ''
+    params:
+      T: 1000
+      h: 5
+      b: 1
+      b_2: 2
+      P_0: 50
+      E_0: 1
+      m: 1
+      m_2: 15
+      res: 3
+      mode: state_class
+      a: 5
+      e: 5
+      epsilon: 0.5
+      alpha: 3
+      elite_conflict_mag: 0.8
+      elite_conflict_rolls: 50

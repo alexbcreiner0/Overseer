@@ -1,0 +1,59 @@
+grid:
+  name: Grid
+  tooltip: null
+  plots:
+    grid:
+      special: heatmap
+      checkbox_name: Grid
+      toggled: true
+      traj_key: grass_grid
+      discrete: true
+      colorbar: false
+      colorbar_labels: false
+      aspect: equal
+      interpolation: none
+      origin: upper
+      values: grass_values
+      colors: grass_colors
+      marker_values: agent_grid
+      overlay_markers:
+        codes: ['1', '2']
+        sizes: [100, 100]
+        labels: [Sheep, Wolf]
+        markers: [o, ^]
+        colors: ['#ffffff', '#0019ff']
+        edgecolors: ['#ffffff', '#0019ff']
+  projection: 2d
+  axis_visible: false
+  grid_visible: false
+  ticks_visible: false
+  frame_visible: false
+  default_lims: [[-2.51471, 30.8651], [-3.30437, 30.0754]]
+populations:
+  name: Populations
+  tooltip: null
+  plots:
+    sheep:
+      checkbox_name: Sheep
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Number of Sheep]
+      colors: [green]
+      traj_key: n_sheep
+    wolves:
+      checkbox_name: Wolves
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Number of Wolves]
+      colors: [red]
+      traj_key: n_wolves
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  default_lims: [[-0.0781319, 831.534], [-109.086, 514.623]]

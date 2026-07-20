@@ -1,0 +1,24 @@
+demos:
+  constrained_malthusian_population_growth:
+    name: Constrained Malthusian Population Growth
+    desc: ''
+    details:
+      simulation_function: get_trajectories
+      default_preset: default_preset
+      plot_preprocess: null
+      simulation_speed: '0.01'
+      axis_settings:
+        dimension: [1, 1]
+        limits:
+          a1: [[-0.0955682, 26.1658], [-643.965, 1887.12]]
+        dropdown_indices: [0]
+        checked_plots:
+          a1: [Population, Surplus, Population (Continuous)]
+        settings:
+          a1:
+            legend_visible: true
+            legend_fontsize: 10
+            legend_loc: upper right
+            title: true
+            xlabel: true
+            ylabel: true

@@ -1,0 +1,114 @@
+name: test
+desc: ''
+params:
+  A:
+  - - 0.0
+    - 0.36750596676069125
+    - 0.10500170478876893
+  - - 0.21000340957753785
+    - 0.0
+    - 0.3150051143663068
+  - - 0.26250426197192234
+    - 0.36750596676069125
+    - 0.26250426197192234
+  l:
+  - 0.3893229522745256
+  - 0.4294655665466998
+  - 0.5906119952909913
+  b_bar:
+  - 0.0
+  - 0.0
+  - 0.5895215417440931
+  c_bar:
+  - 0.0
+  - 3.7535832848769926
+  - 2.8571289067497347
+  alpha_w: 0.22502815362664524
+  alpha_c: 0.02295375366215393
+  alpha_L: 0.0
+  kappa:
+  - 1.0
+  - 1.0
+  - 1.0
+  eta:
+  - 2.0
+  - 2.0
+  - 2.0
+  eta_w: 0.25
+  eta_r: 2
+  L: 0.923165360592013
+  w: 0.8978457492051124
+  r: 0.5658065146789193
+  q:
+  - 0.27802259408290064
+  - 0.54034469864119
+  - 0.944096185254366
+  p:
+  - 0.007646782550312296
+  - 0.09586313098788934
+  - 0.030918064871823712
+  s:
+  - 0.3166970696729375
+  - 4.119804161292807
+  - 4.046728235464141
+  m_w: 0.08099815501851579
+  M: 1.0
+  M_change_type: none
+  money_injection_target: capitalists
+  M_change_interval: 20
+  M_change_duration: 1
+  delta_M: 1
+  shock_type: culs
+  change_type: none
+  economy_type: unrestricted
+  wage_deflation: 0.0
+  gamma_L: 0.3
+  atrophy_with_unemployment: always
+  supply_shock_mag: 0.5
+  supply_shock_interval: 50
+  supply_shock_setting: none
+  change_interval: 20
+  shock_mag: 0.03
+  cost_tradeoff: 0.01
+  stop_cts_changes_halfway: false
+  fix_sector_receiving_change: -1
+  init_tssi_melt: 1
+  output_equation: absolute
+  employment_guardrails: false
+  s_floor: 1.0e-05
+  mu_L: 0.5
+  eps_u: 1.0e-08
+  eps_m: 1.0e-08
+  T: 100
+  res: 3
+  n: 3
+axis_settings:
+  limits:
+    a1:
+    - - -0.195287
+      - 38.3186
+    - - -0.0712573
+      - 0.644496
+  dimension:
+  - 1
+  - 1
+  saved_limits:
+    a1:
+    - - -0.00556859
+      - 10.9558
+    - - -2.95211
+      - 17.5523
+  dropdown_indices:
+  - 0
+  checked_plots:
+    a1:
+    - Unit Prices
+    - Unit Values
+  settings:
+    a1:
+      legend_visible: true
+      legend_fontsize: 10
+      legend_loc: upper right
+      title: true
+      xlabel: false
+      ylabel: false

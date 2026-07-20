@@ -1,0 +1,40 @@
+space:
+  name: Space
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    boids:
+      special: vector
+      checkbox_name: Boids
+      toggled: true
+      traj_key_X: boid_x
+      traj_key_Y: boid_y
+      traj_key_U: boid_u
+      traj_key_V: boid_v
+      traj_key_W: ''
+      cmap: Greens
+      colorbar: false
+  x_label: ''''''
+scatter_test:
+  name: Scatter test
+  projection: 3d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  plots:
+    test:
+      special: scatter
+      checkbox_name: Test
+      toggled: true
+      traj_key_x: boid_x
+      traj_key_y: boid_y
+      labels: [Boids!]
+      color: red
+      marker: o
+      size_key: false
+      color_key: false
+      size: ''

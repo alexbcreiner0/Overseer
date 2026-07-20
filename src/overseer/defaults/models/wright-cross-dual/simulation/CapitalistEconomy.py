@@ -7,8 +7,6 @@ import random
 import queue
 from overseer.tools.dataclasses import Append, Extend, Replace
 
-logger.log(logging.INFO, "Testing, testing, one, two, three")
-
 class CapitalistEconomy:
     """Basic capitalist economy"""
     def __init__(self, params, restrictions = [], event_queue= None):
@@ -981,7 +979,6 @@ class CapitalistEconomy:
     #     return self.params.w * (num / denom) ** self.params.eta_w
 
     def _get_interest_rate(self, m_w: float) -> float:
-
         """Returns the current interest rate given the current capitalist savings"""
         M = self.traj["M"].value
         denom = max(M - float(m_w), self.params.eps_m)
@@ -989,17 +986,14 @@ class CapitalistEconomy:
         return self.params.r * (num / denom) ** self.params.eta_r
 
     def _get_consumption(self, M, m_w, p):
-
         b = (self.params.alpha_w * m_w)/(p.dot(self.params.b_bar))*self.params.b_bar
         c = (self.params.alpha_c * (M-m_w))/(p.dot(self.params.c_bar))*self.params.c_bar
         return b, c
 
     def _get_values(self, A, l):
-
         return np.linalg.inv(np.eye(self.n) - A.T)@l
 
     def _get_value_split(self, values, b, q, A):
-
         total_value = q.dot(values)
         val_ms = b.dot(values)
         val_cc = values.dot(A@q)
