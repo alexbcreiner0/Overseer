@@ -119,12 +119,14 @@ class MainWindow(qw.QMainWindow):
     
         (
             self.params,
+            self.current_preset_name,
             self.current_sim_func,
             self.presets,
             self.panel_data,
             self.plotting_data,
             self.functions
         ) = self._get_data(self.current_demo)
+
         self._reset_global_settings()
 
         desired_fps = self.settings.get("rendering_framerate", 30)
@@ -133,8 +135,8 @@ class MainWindow(qw.QMainWindow):
         self.model_label = qw.QLabel(f"Model: {self.current_demo.get("name", "")}")
         self.status_bar.addPermanentWidget(self.model_label)
 
-        # Create top bar menu
         self.presets_submenu, self.results_submenu = self._make_menu(self.presets, self.demos)
+        self._update_current_preset_indicator()
 
         self.figure, self.axis = plt.subplots(layout= self.settings.get("figure_mode", "tight"))
         self.canvas = FigureCanvasQTAgg(self.figure)
@@ -1463,6 +1465,16 @@ class MainWindow(qw.QMainWindow):
         self.sim_choice = qg.QActionGroup(self)
         self.sim_choice.setExclusive(True)
 
+        self.update_current_preset_action = qg.QAction("Save changes to current preset", self)
+        self.update_current_preset_action.triggered.connect(self._save_changes_to_current_preset)
+        params_menu.addAction(self.update_current_preset_action)
+
+        save_preset_action = qg.QAction("Save as new preset...", self)
+        save_preset_action.triggered.connect(self._save_preset)
+        params_menu.addAction(save_preset_action)
+
+        params_menu.addSeparator()
+
         self._create_presets_submenus(presets, params_menu)
         self._create_results_submenus(results_menu)
     
@@ -1547,11 +1559,6 @@ class MainWindow(qw.QMainWindow):
             load_action.triggered.connect(lambda _checked= False, name= demo: self.load_demo(name))
             view_desc_action.triggered.connect(lambda _checked= False, name= demo: self.view_demo_desc(name))
 
-        save_preset_action = qg.QAction("Save parameter settings", self)
-        save_preset_action.setData("save_preset_action")
-        params_menu.addAction(save_preset_action)
-        save_preset_action.triggered.connect(self._save_preset)
-
         save_results_action = qg.QAction("Save current results", self)
         save_results_action.setData("save_results_action")
         results_menu.addAction(save_results_action)
@@ -1606,6 +1613,55 @@ class MainWindow(qw.QMainWindow):
             rename_action.triggered.connect(lambda _checked= False, name= preset: self._rename_preset(name))
             view_desc_action.triggered.connect(lambda _checked= False, name= preset: self._view_preset_desc(name))
 
+    def _create_presets_submenus(self, presets, presets_submenu):
+        old_group = getattr(self, "preset_choice_group", None)
+
+        if old_group is not None:
+            old_group.deleteLater()
+
+        self.preset_choice_group = qg.QActionGroup(self)
+
+        # exclusive optional means either exactly 1 or none
+        self.preset_choice_group.setExclusionPolicy(qg.QActionGroup.ExclusionPolicy.ExclusiveOptional)
+        self.preset_menu_actions = {}
+
+        for preset, preset_data in presets.items():
+            name = preset_data.get("name", preset)
+
+            preset_options_submenu = (presets_submenu.addMenu(name))
+            preset_options_submenu.setProperty("preset_id", preset)
+
+            preset_menu_action = (preset_options_submenu.menuAction())
+            preset_menu_action.setCheckable(True)
+            preset_menu_action.setChecked(preset == self.current_preset_name)
+
+            self.preset_choice_group.addAction(preset_menu_action)
+            self.preset_menu_actions[preset] = preset_menu_action
+            
+
+            load_action = qg.QAction("Load preset", self)
+            delete_action = qg.QAction("Delete preset", self)
+            rename_action = qg.QAction("Rename preset", self)
+            view_desc_action = qg.QAction("View description", self)
+
+            preset_options_submenu.addAction(load_action)
+            preset_options_submenu.addAction(delete_action)
+            preset_options_submenu.addAction(rename_action)
+            preset_options_submenu.addAction(view_desc_action)
+
+            load_action.triggered.connect(
+                lambda _checked=False, name=preset: self._load_preset_by_name(name)
+            )
+            delete_action.triggered.connect(
+                lambda _checked=False, name=preset: self._delete_preset(name)
+            )
+            rename_action.triggered.connect(
+                lambda _checked=False, name=preset: self._rename_preset(name)
+            )
+            view_desc_action.triggered.connect(
+                lambda _checked=False, name=preset: self._view_preset_desc(name)
+            )
+
     def _clear_results_menu(self):
         for action in list(self.results_submenu.actions()):
             if action.data() == "save_results_action":
@@ -1617,12 +1673,16 @@ class MainWindow(qw.QMainWindow):
 
     def _clear_presets_menu(self):
         for action in list(self.presets_submenu.actions()):
-            if action.data() == "save_preset_action":
-                continue
             submenu = action.menu()
+
+            if submenu is None:
+                continue
+
+            if submenu.property("preset_id") is None:
+                continue
+
             self.presets_submenu.removeAction(action)
-            if submenu is not None:
-                submenu.deleteLater()
+            submenu.deleteLater()
 
     def _refresh_results_menu(self):
         self._clear_results_menu()
@@ -1631,6 +1691,7 @@ class MainWindow(qw.QMainWindow):
     def _refresh_presets_menu(self):
         self._clear_presets_menu()
         self._create_presets_submenus(self.presets, self.presets_submenu)
+        self._update_current_preset_indicator()
 
     def _test_for_problem_keys(self):
         problem_keys = []
@@ -1741,6 +1802,9 @@ class MainWindow(qw.QMainWindow):
             extra_data = settings_dict["problem_keys"]
             for key, data in extra_data.items():
                 extra_data[key] = data
+
+        self.current_preset_name = None
+        self._update_current_preset_indicator()
 
         self.show_results(traj, t, None)
 
@@ -2173,8 +2237,10 @@ class MainWindow(qw.QMainWindow):
                 self.status_bar.showMessage("Could not stop the running simulation.", msecs=5000)
                 return
         try:
+            preset = self.presets[name]
+
             self.params = params_from_mapping(
-                self.presets[name]["params"],
+                preset.get("params") or {},
                 self.env.models_dir / self.sim_model / "simulation" / "parameters.py"
             )
             raw_axis_settings = self.presets[name].get("axis_settings", {})
@@ -2182,6 +2248,10 @@ class MainWindow(qw.QMainWindow):
                 axis_settings = self._get_slot_settings(raw_axis_settings)
             else:
                 axis_settings = None
+
+            self.current_preset_name = name
+            self._update_current_preset_indicator()
+
             self.load_new_params(axis_settings)
         except Exception as e:
             self.status_bar.showMessage(f"Failed to load preset {name}: {e}")
@@ -2202,28 +2272,28 @@ class MainWindow(qw.QMainWindow):
         if start_sim_after:
             self.start_sim()
 
-    def load_preset(self, preset):
-        try:
-            self.params = params_from_mapping(
-                self.presets[preset]["params"],
-                self.env.models_dir / self.sim_model / "simulation" / "parameters.py"
-            )
-            axis_settings = self.presets[preset].get("axis_settings", {})
-            if axis_settings:
-                rows, cols, limits, saved_limits, dropdown_indices, slot_settings, checked = self._get_slot_settings(axis_settings)
-                self.graph_panel.blockSignals(True)
-                self.control_panel._alter_slot_layout(rows, cols, limits, saved_limits, dropdown_indices, checked, slot_settings)
-                self.graph_panel.blockSignals(False)
-                self._set_graph_lims(limits)
-            self.control_panel.load_new_params(self.params)
-            self.start_sim()
-        except Exception as e:
-            self.status_bar.showMessage(f"Failed to load preset {preset}: {e}")
-            extras = {
-                "Model": self.sim_model,
-                "Preset": preset
-            }
-            logger.log(logging.ERROR, f"Failed to load preset {preset}: {e}", extra= extras, exc_info= e)
+    # def load_preset(self, preset):
+    #     try:
+    #         self.params = params_from_mapping(
+    #             self.presets[preset]["params"],
+    #             self.env.models_dir / self.sim_model / "simulation" / "parameters.py"
+    #         )
+    #         axis_settings = self.presets[preset].get("axis_settings", {})
+    #         if axis_settings:
+    #             rows, cols, limits, saved_limits, dropdown_indices, slot_settings, checked = self._get_slot_settings(axis_settings)
+    #             self.graph_panel.blockSignals(True)
+    #             self.control_panel._alter_slot_layout(rows, cols, limits, saved_limits, dropdown_indices, checked, slot_settings)
+    #             self.graph_panel.blockSignals(False)
+    #             self._set_graph_lims(limits)
+    #         self.control_panel.load_new_params(self.params)
+    #         self.start_sim()
+    #     except Exception as e:
+    #         self.status_bar.showMessage(f"Failed to load preset {preset}: {e}")
+    #         extras = {
+    #             "Model": self.sim_model,
+    #             "Preset": preset
+    #         }
+    #         logger.log(logging.ERROR, f"Failed to load preset {preset}: {e}", extra= extras, exc_info= e)
 
     def reload_current_demo(self, restart_after= False):
         """
@@ -2238,6 +2308,7 @@ class MainWindow(qw.QMainWindow):
 
             (
                 default_params,
+                _,
                 self.current_sim_func,
                 self.presets,
                 _,
@@ -2248,6 +2319,8 @@ class MainWindow(qw.QMainWindow):
             if plotting_data is None:
                 plotting_data = {}
 
+            if self.current_preset_name not in self.presets:
+                self.current_preset_name = None
 
             new_values = to_plain(default_params)
             for name in new_values.keys() & old_values.keys():
@@ -2370,7 +2443,7 @@ class MainWindow(qw.QMainWindow):
 
         presets = self._load_presets(demo)
         sim_function, functions = self._load_functions(demo)
-        params = self._load_params(presets, sim_model)
+        params, preset_name = self._load_params(presets, sim_model, demo)
 
         try:
             with open(self.env.models_dir / sim_model / "data" / "plotting_data.yml") as f:
@@ -2386,7 +2459,7 @@ class MainWindow(qw.QMainWindow):
             logger.log(logging.ERROR, "Failed to load control_panel_data.yml", exc_info= e)
             panel_data = {}
 
-        return params, sim_function, presets, panel_data, plotting_data, functions
+        return params, preset_name, sim_function, presets, panel_data, plotting_data, functions
 
     def _load_presets(self, demo):
         sim_details = demo.get("details")
@@ -2432,8 +2505,36 @@ class MainWindow(qw.QMainWindow):
 
         return sim_function, functions
 
-    def _load_params(self, presets, sim_model):
-        preset_name = self.current_demo.get("details", {}).get("default_preset", "default_preset")
+    def _load_params(self, presets, sim_model, demo):
+        requested_preset = (
+            demo.get("details", {}).get("default_preset")
+        )
+
+        if requested_preset in presets:
+            preset_name = requested_preset
+        elif presets:
+            preset_name = next(iter(presets))
+
+            if requested_preset:
+                logger.warning(
+                    "Demo requested missing preset %r for model %r; "
+                    "using %r instead.",
+                    requested_preset,
+                    sim_model,
+                    preset_name,
+                )
+            else:
+                preset_name = None
+
+        if preset_name is None:
+            params_dict = {}
+        else:
+            params_dict = (presets[preset_name].get("params") or {})
+
+        params_module_name = (
+            f"models.{sim_model}.simulation.parameters"
+        )
+
         preset = presets.get(preset_name)
         if preset is not None:
             params_dict = preset.get("params")
@@ -2457,9 +2558,9 @@ class MainWindow(qw.QMainWindow):
         except Exception as e:
             self.status_bar.showMessage(f"Error loading parameters for {sim_model}: {e}", msecs= 5000)
             logger.log(logging.ERROR, f"Failed to load params for {sim_model}", exc_info= e)
-            return {}
+            return {}, None
 
-        return params
+        return params, preset_name
 
     def load_demo(self, demo_name, autostart= True):
         if self._sim_state in {"RUNNING", "STOPPING"}:
@@ -2469,7 +2570,15 @@ class MainWindow(qw.QMainWindow):
         try:
             demo = self.demos[demo_name]
             self.sim_model = demo["details"]["simulation_model"]
-            self.params, self.current_sim_func, self.presets, panel_data, plotting_data, functions = self._get_data(demo)
+            (
+                self.params,
+                new_preset_name,
+                self.current_sim_func,
+                self.presets,
+                panel_data,
+                plotting_data,
+                functions
+            )= self._get_data(demo)
 
             model_settings = self.config.get("model_specific_settings", {}).get(self.sim_model, None)
         except Exception as e:
@@ -2528,8 +2637,10 @@ class MainWindow(qw.QMainWindow):
 
         self.current_demo_name = demo_name
         self.current_demo = self.demos[self.current_demo_name]
+        self.current_preset_name = new_preset_name
         self._create_results_submenus(self.results_submenu)
         self._create_presets_submenus(self.presets, self.presets_submenu)
+        self._update_current_preset_indicator()
 
         self._load_saved_axis_settings()
 
@@ -2777,7 +2888,7 @@ class MainWindow(qw.QMainWindow):
 
         dropdown_choices, dropdown_tooltips = self._get_dropdown_choices(formatted)
 
-        self.params, _, _, _, _, _ = self._get_data(self.current_demo)
+        self.params, self.current_preset_name, _, _, _, _, _ = self._get_data(self.current_demo)
 
         # Build new panel and wire signals exactly like _make_panels()
         new_cp = ControlPanel(
@@ -2854,6 +2965,14 @@ class MainWindow(qw.QMainWindow):
             except Exception:
                 pass
 
+    def _write_presets(self) -> None:
+        presets_path = self.env.models_dir / self.sim_model / "data" / "params.yml"
+        presets_path.parent.mkdir(parents= True, exist_ok= True)
+
+        output = copy.deepcopy({"presets": self.presets})
+        flow_seqify(output)
+        atomic_write(presets_path, output)
+
     def _save_preset(self):
         params_dict = to_plain(self.params)
         dialog = SaveDialog(self.presets.keys(), title= "Save Preset", parent= self)
@@ -2866,12 +2985,37 @@ class MainWindow(qw.QMainWindow):
         if save_axis:
             self.presets[shortname]["axis_settings"] = self._get_current_axis_settings()
 
-        presets_dict = {"presets": self.presets}
+        try:
+            self._write_presets()
+        except OSError as e:
+            logger.error(f"Failed to save new preset {e}")
+            self.status_bar.showMessage(f"Could not save new preset: {e}", msecs= 5000)
+            return
 
-        atomic_write(self.env.models_dir / self.sim_model / "data" / "params.yml", presets_dict)
+        self.current_preset_name = shortname
+        self._refresh_presets_menu()
+        self.status_bar.showMessage(f"Saved preset under name {name}", msecs=3000)
+
+    def _save_changes_to_current_preset(self):
+        preset_name = self.current_preset_name
+
+        if preset_name is None or preset_name not in self.presets:
+            self.status_bar.showMessage("No preset is currently loaded! Try the other save option.", msecs=4000)
+            self.current_preset_name = None
+            self._update_current_preset_indicator()
+            return
+
+        preset = self.presets[preset_name]
+        preset["params"] = to_plain(self.params)
+        try:
+            self._write_presets()
+        except OSError as e:
+            logger.error(f"Failed to update preset {preset_name}")
+            self.status_bar.showMessage(f"Could not update preset: {e}", msecs= 5000)
+            return
 
         self._refresh_presets_menu()
-        self.status_bar.showMessage(f"Saved preset under name {name}", 3000)
+        self.status_bar.showMessage(f"Updated preset '{preset_name}'", msecs= 3000)
         
     def _delete_preset(self, preset, confirm= True):
         if confirm:
@@ -2886,22 +3030,21 @@ class MainWindow(qw.QMainWindow):
             if reply != qw.QMessageBox.StandardButton.Yes:
                 return
 
+        was_current = (preset == self.current_preset_name)
         del self.presets[preset]
-        presets_dict = flow_seqify({"presets": self.presets})
 
-        presets_path = self.env.models_dir / self.sim_model / "data" / "params.yml"
-
-        error_encountered = False
         try:
-            atomic_write(presets_path, presets_dict)
+            self._write_presets()
         except OSError as e:
-            self.status_bar.showMessage(f"Error encountered when deleting: {e}", 4000)
-            logger.log(logging.ERROR, f"Error encountered when deleting: {e}", exc_info= e)
-            error_encountered = True
+            logger.error(f"Failed to delete preset {preset}")
+            self.status_bar.showMessage(f"Could not delete preset: {e}", msecs= 5000)
+            return
+
+        if was_current:
+            self.current_preset_name = None
 
         self._refresh_presets_menu()
-        if not error_encountered:
-            self.status_bar.showMessage(f"Deleted preset {preset}.", 3000)
+        self.status_bar.showMessage(f"Deleted preset {preset}.", 3000)
 
     def _rename_preset(self, old_shortname):
         dialog = SaveDialog(self.presets.keys(), title= "Rename Preset", parent= self, name_text= "New Name: ", desc_text= "(Optional) New Description")
@@ -2910,34 +3053,59 @@ class MainWindow(qw.QMainWindow):
         except TypeError:
             return
 
+        if self.current_preset_name == old_shortname:
+            self.current_preset_name = shortname
+
         preset = self.presets[old_shortname]
         old_name = preset["name"]
         preset["name"] = new_name
         preset["desc"] = new_desc
         if save_axis:
             preset["axis_settings"] = self._get_current_axis_settings()
-        self.presets[shortname] = preset
-        del self.presets[old_shortname]
 
-        presets_dict = {"presets": self.presets}
-        presets_path = self.env.models_dir / self.sim_model / "data" / "params.yml"
+        if shortname != old_shortname:
+            self.presets[shortname] = preset
+            del self.presets[old_shortname]
+        else:
+            self.presets[old_shortname] = preset
 
-        error_encountered = False
         try:
-            atomic_write(presets_path, presets_dict)
+            self._write_presets()
         except OSError as e:
-            self.status_bar.showMessage(f"Error encountered when renaming: {e}", 4000)
-            logger.log(logging.ERROR, f"Error encountered when renaming: {e}", exc_info= e)
-            error_encountered = True
+            logger.error(f"Failed to rename preset {old_shortname}")
+            self.status_bar.showMessage(f"Failed to rename preset: {e}", msecs= 5000)
+            return
 
         self._refresh_presets_menu()
-        if not error_encountered:
-            self.status_bar.showMessage(f"Renamed preset from {old_name} to {new_name}.", 3000)
+        self.status_bar.showMessage(f"Renamed preset from {old_name} to {new_name}.", 3000)
 
     def _view_preset_desc(self, name):
         desc = self.presets[name]["desc"]
         dialog = DescDialog(self, desc)
         dialog.bootstrap()
+
+    def _update_current_preset_indicator(self):
+        has_current_preset = (
+            self.current_preset_name is not None
+            and self.current_preset_name in self.presets
+        )
+
+        if not has_current_preset:
+            self.current_preset_name = None
+
+        self.update_current_preset_action.setEnabled(
+            has_current_preset
+        )
+
+        for preset_name, action in getattr(
+            self,
+            "preset_menu_actions",
+            {},
+        ).items():
+            action.setChecked(
+                has_current_preset
+                and preset_name == self.current_preset_name
+            )
 
     def view_demo_desc(self, demo):
         desc = self.demos[demo]["desc"]
