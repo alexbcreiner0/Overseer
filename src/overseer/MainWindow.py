@@ -1625,6 +1625,8 @@ class MainWindow(qw.QMainWindow):
         self.preset_choice_group.setExclusionPolicy(qg.QActionGroup.ExclusionPolicy.ExclusiveOptional)
         self.preset_menu_actions = {}
 
+        if presets is None:
+            presets = {}
         for preset, preset_data in presets.items():
             name = preset_data.get("name", preset)
 
@@ -2509,6 +2511,9 @@ class MainWindow(qw.QMainWindow):
         requested_preset = (
             demo.get("details", {}).get("default_preset")
         )
+
+        if presets is None:
+            presets = {}
 
         if requested_preset in presets:
             preset_name = requested_preset

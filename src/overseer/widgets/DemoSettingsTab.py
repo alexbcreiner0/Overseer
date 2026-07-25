@@ -337,6 +337,8 @@ class DemoSettingsTab(qw.QWidget):
         if not current_model: return
         try:
             presets = load_presets(self.env, current_model)
+            if presets is None:
+                presets = []
         except Exception:
             presets = ["default_preset"]
         for preset in presets:
