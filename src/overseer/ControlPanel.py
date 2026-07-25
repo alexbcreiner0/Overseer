@@ -786,15 +786,13 @@ class ControlPanel(qw.QWidget):
         for name in names:
             dropdown.addItem(name)
 
-        init_val = getattr(params, param_name)
-        try:
-            dropdown.setCurrentIndex(values.index(init_val))
-        except ValueError:
-            # try:
-            dropdown.setCurrentIndex(values.index(str(init_val)))
-            # except ValueError:
-            #     # user had a dropdown option open and then reduced the number of choices
-            #     dropdown.setCurrentIndex(len(values)-1)
+        if hasattr(params, param_name):
+            init_val = getattr(params, param_name)
+            try:
+                dropdown.setCurrentIndex(values.index(init_val))
+            except ValueError:
+                dropdown.setCurrentIndex(values.index(str(init_val)))
+            
         dropdown.currentIndexChanged.connect(
             lambda idx, pn=param_name, vals=values, en= entry_name: self.update_plot(pn, vals[idx], widget_changed= en)
         )

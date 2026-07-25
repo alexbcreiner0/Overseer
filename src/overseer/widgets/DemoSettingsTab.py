@@ -338,7 +338,7 @@ class DemoSettingsTab(qw.QWidget):
         try:
             presets = load_presets(self.env, current_model)
         except Exception:
-            presets = []
+            presets = ["default_preset"]
         for preset in presets:
             self.combo_preset.addItem(preset)
 
