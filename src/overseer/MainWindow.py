@@ -2525,6 +2525,8 @@ class MainWindow(qw.QMainWindow):
                 )
             else:
                 preset_name = None
+        else:
+            preset_name = None
 
         if preset_name is None:
             params_dict = {}
