@@ -274,6 +274,11 @@ class GraphPanel(qw.QWidget):
 
         for ln in ax.lines:
             gid = ln.get_gid()
+
+
+            if isinstance(gid, str) and gid.startswith("__snap_"):
+                continue
+
             if gid:
                 bucket[gid] = ln
                 meta[gid] = {
@@ -1469,8 +1474,12 @@ class GraphPanel(qw.QWidget):
     def _build_discrete_graph(self, ax, slot_index: int, choice_name: str, plot_name: str, plot_dict: dict):
         matrix_key = plot_dict["traj_key"]
         A = np.asarray(self.traj[matrix_key])
+        directed = plot_dict.get("directed", False)
+        edge_color = plot_dict.get("edge_color", "k")
+        node_size = plot_dict.get("node_size", 300)
+        curve_radius = plot_dict.get("curve_radius", 0.15)
 
-        if plot_dict.get("directed", False):
+        if directed:
             G = nx.from_numpy_array(A, create_using=nx.DiGraph)
         else:
             G = nx.from_numpy_array(A)
@@ -1479,47 +1488,130 @@ class GraphPanel(qw.QWidget):
 
         pos = plot_dict.get("pos")
         if pos is None:
-            pos = nx.spring_layout(G, seed=plot_dict.get("seed", 0))
+            pos = nx.spring_layout(G, seed=plot_dict.get("seed", 0), weight= None, k= 0.15)
+            # pos = nx.planar_layout(G, dim= 3)
+            # pos = nx.shell_layout(G)
+            # pos = nx.spectral_layout(G)
+            # pos = nx.spiral_layout(G)
 
         # nodes
-        nodes = nx.draw_networkx_nodes(
-            G,
-            pos,
-            ax=ax,
-            node_color=colors,
-            node_size=plot_dict.get("node_size", 300),
-        )
-        nodes.set_gid(f"{choice_name}::{plot_name}::graph::nodes")
+        if directed:
 
-        # edges
-        edges = nx.draw_networkx_edges(
-            G,
-            pos,
-            ax=ax,
-            edge_color=plot_dict.get("edge_color", "k"),
-            arrows=plot_dict.get("directed", False),
-        )
+            straight_edges = []
+            curved_edges = []
 
-        # draw_networkx_edges may return a LineCollection or a list of FancyArrowPatch
-        if isinstance(edges, list):
-            for k, edge_artist in enumerate(edges):
-                if hasattr(edge_artist, "set_gid"):
-                    edge_artist.set_gid(f"{choice_name}::{plot_name}::graph::edge::{k}")
+            for source, target in G.edges():
+                if source != target and G.has_edge(target, source):
+                    curved_edges.append((source, target))
+                else:
+                    straight_edges.append((source, target))
+
+            edge_artists = []
+
+            # Draw ordinary one-way edges as straight lines.
+            if straight_edges:
+                artists = nx.draw_networkx_edges(
+                    G,
+                    pos,
+                    edgelist=straight_edges,
+                    ax=ax,
+                    edge_color=edge_color,
+                    arrows=True,
+                    node_size=node_size,
+                    connectionstyle="arc3,rad=0.0",
+                )
+
+                if isinstance(artists, list):
+                    edge_artists.extend(artists)
+
+            # Draw reciprocal edges separately so they curve in opposite directions.
+            for source, target in curved_edges:
+                connection_style = f"arc3,rad={curve_radius}"
+
+                artists = nx.draw_networkx_edges(
+                    G,
+                    pos,
+                    edgelist=[(source, target)],
+                    ax=ax,
+                    edge_color=edge_color,
+                    arrows=True,
+                    node_size=node_size,
+                    connectionstyle=connection_style,
+                )
+
+                if isinstance(artists, list):
+                    edge_artists.extend(artists)
+
+                if plot_dict.get("show_weights", True):
+                    nx.draw_networkx_edge_labels(
+                        G,
+                        pos,
+                        edge_labels={
+                            (source, target): G[source][target]["weight"]
+                        },
+                        ax=ax,
+                        connectionstyle=connection_style,
+                    )
+
+            # Draw labels for straight edges together.
+            if straight_edges and plot_dict.get("show_weights", True):
+                straight_labels = {
+                    edge: G[edge[0]][edge[1]]["weight"]
+                    for edge in straight_edges
+                }
+
+                nx.draw_networkx_edge_labels(
+                    G,
+                    pos,
+                    edge_labels=straight_labels,
+                    ax=ax,
+                    connectionstyle="arc3,rad=0.0",
+                )
+
+            for k, edge_artist in enumerate(edge_artists):
+                edge_artist.set_gid(
+                    f"{choice_name}::{plot_name}::graph::edge::{k}"
+                )
+                nodes = nx.draw_networkx_nodes(
+                    G,
+                    pos,
+                    ax=ax,
+                    node_color=colors,
+                    node_size=plot_dict.get("node_size", 300),
+                )
+                if plot_dict.get("with_labels", True):
+                    nx.draw_networkx_labels(G, pos, ax=ax)
+
+                nodes.set_gid(f"{choice_name}::{plot_name}::graph::nodes")
         else:
-            edges.set_gid(f"{choice_name}::{plot_name}::graph::edges")
-
-        # labels are texts; your inventory does not track texts, which is fine
-        if plot_dict.get("with_labels", True):
-            nx.draw_networkx_labels(G, pos, ax=ax)
-
-        if plot_dict.get("show_weights", True):
-            edge_labels = nx.get_edge_attributes(G, "weight")
-            nx.draw_networkx_edge_labels(
+            edges = nx.draw_networkx_edges(
                 G,
                 pos,
-                edge_labels=edge_labels,
                 ax=ax,
+                edge_color=plot_dict.get("edge_color", "k"),
+                arrows=plot_dict.get("directed", False),
             )
+
+            # draw_networkx_edges may return a LineCollection or a list of FancyArrowPatch
+            if isinstance(edges, list):
+                for k, edge_artist in enumerate(edges):
+                    if hasattr(edge_artist, "set_gid"):
+                        edge_artist.set_gid(f"{choice_name}::{plot_name}::graph::edge::{k}")
+            else:
+                edges.set_gid(f"{choice_name}::{plot_name}::graph::edges")
+
+            # labels are texts; your inventory does not track texts, which is fine
+            if plot_dict.get("with_labels", True):
+                nx.draw_networkx_labels(G, pos, ax=ax)
+
+            if plot_dict.get("show_weights", True):
+                edge_labels = nx.get_edge_attributes(G, "weight")
+                nx.draw_networkx_edge_labels(
+                    G,
+                    pos,
+                    edge_labels=edge_labels,
+                    ax=ax,
+                )
 
     def _on_canvas_draw(self, event):
         """
