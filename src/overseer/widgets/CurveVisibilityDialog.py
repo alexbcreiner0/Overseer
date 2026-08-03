@@ -24,6 +24,10 @@ class CurveVisibilityDialog(qw.QDialog):
         self.setWindowTitle("Curve visibility")
         self.resize(520, 600)
 
+        self.checkboxes_by_key: dict[object, qw.QCheckBox] = {}
+        self._items_signature = ()
+        self._rebuild_pending = False
+
         root = qw.QVBoxLayout(self)
 
         # help_label = qw.QLabel(
@@ -53,24 +57,47 @@ class CurveVisibilityDialog(qw.QDialog):
 
         self.rebuild()
 
+    # def _schedule_rebuild(self) -> None:
+    #     if not self.isVisible():
+    #         return
+
+    #     qc.QTimer.singleShot(0, self.rebuild)
+
     def _schedule_rebuild(self) -> None:
-        if not self.isVisible():
+        if not self.isVisible() or self._rebuild_pending:
             return
 
-        qc.QTimer.singleShot(0, self.rebuild)
+        self._rebuild_pending = True
+        qc.QTimer.singleShot(50, self._process_pending_rebuild)
 
-    def rebuild(self) -> None:
+    def rebuild(self, items: list[dict] | None = None) -> None:
         previous_axis_index = self._current_axis_index()
 
         self._clear_tabs()
         self.checkboxes_by_axis.clear()
+        self.checkboxes_by_key.clear()
         self.items_by_axis.clear()
         self._tab_axis_indices.clear()
 
-        items = self.toolbar.curve_visibility_items()
+        if items is None:
+            items = self.toolbar.curve_visibility_items()
+
+        self._items_signature = self._visibility_signature(items)
+
         if not items:
             self._add_empty_tab()
             return
+        # previous_axis_index = self._current_axis_index()
+
+        # self._clear_tabs()
+        # self.checkboxes_by_axis.clear()
+        # self.items_by_axis.clear()
+        # self._tab_axis_indices.clear()
+
+        # items = self.toolbar.curve_visibility_items()
+        # if not items:
+        #     self._add_empty_tab()
+        #     return
 
         by_axis: dict[int, list[dict]] = defaultdict(list)
         axis_titles: dict[int, str] = {}
@@ -141,6 +168,7 @@ class CurveVisibilityDialog(qw.QDialog):
             )
             form.addWidget(checkbox)
             self.checkboxes_by_axis[axis_index].append(checkbox)
+            self.checkboxes_by_key[item["key"]] = checkbox
 
         form.addStretch(1)
         scroll.setWidget(content)
@@ -205,3 +233,52 @@ class CurveVisibilityDialog(qw.QDialog):
             self.tabs.removeTab(0)
             if tab is not None:
                 tab.deleteLater()
+
+    def _process_pending_rebuild(self) -> None:
+        self._rebuild_pending = False
+
+        if not self.isVisible():
+            return
+
+        # Never replace a widget while the user is clicking it.
+        if (
+            qw.QApplication.mouseButtons()
+            != qc.Qt.MouseButton.NoButton
+        ):
+            self._schedule_rebuild()
+            return
+
+        items = self.toolbar.curve_visibility_items()
+        signature = self._visibility_signature(items)
+
+        if signature != self._items_signature:
+            self.rebuild(items)
+        else:
+            self._sync_checkbox_states(items)
+
+    def _visibility_signature(self, items: list[dict]) -> tuple:
+        return tuple(
+            (
+                item["axis_index"],
+                item["key"],
+                item["label"],
+                item["axis_title"],
+            )
+            for item in items
+        )
+
+
+    def _sync_checkbox_states(self, items: list[dict]) -> None:
+        for item in items:
+            checkbox = self.checkboxes_by_key.get(item["key"])
+            if checkbox is None:
+                continue
+
+            visible = bool(item["visible"])
+
+            if checkbox.isChecked() == visible:
+                continue
+
+            checkbox.blockSignals(True)
+            checkbox.setChecked(visible)
+            checkbox.blockSignals(False)

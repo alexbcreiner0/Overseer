@@ -2173,7 +2173,7 @@ class MainWindow(qw.QMainWindow):
                 "_remote_exc_info": tb,
             }
         logger.log(logging.ERROR, f"Simulation failed: {ex_repr}", extra= extra)
-        self.status_bar.showMessage(f"Simulation failed: {ex_repr}", 3000)
+        self.status_bar.showMessage(f"Simulation failed: (hello??) {ex_repr}", 3000)
         self._rerun_pending = False
         self._halt_sim_stack(force= True, clear_pending= True, clear_queue= False)
         self._sim_state = "IDLE"
