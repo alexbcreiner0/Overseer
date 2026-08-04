@@ -136,14 +136,12 @@ def _load_model_modules(model_name: str):
     Returns (ParamsCls, sim_module).
     """
     try:
-        print(f"importing {model_name}.simulation.parameters")
         params_mod = import_module(f"{model_name}.simulation.parameters")
         params_mod = reload(params_mod)
     except Exception as e:
         raise CheckFailure(f"Could not import parameters.py for model '{model_name}': {e}")
 
     try:
-        print(f"importing {model_name}.simulation.simulation")
         sim_mod = import_module(f"{model_name}.simulation.simulation")
         sim_mod = reload(sim_mod)
     except Exception as e:
