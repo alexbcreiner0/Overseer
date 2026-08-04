@@ -46,27 +46,12 @@ def copy_tree_if_missing(src: Path, dst: Path) -> None:
         return
     shutil.copytree(src, dst)
 
-def initialize_dirs(src: Path, dst: Path) -> None:
-    """
-        non-destructively create any missing directories and populate them
-    """
-    dst.mkdir(parents=True, exist_ok=True)
-
-    for item in src.iterdir():
-        target = dst / item.name
-        if item.is_dir():
-            if not target.exists():
-                shutil.copytree(item, target)
-            else:
-                initialize_dirs(item, target)
-        else:
-            if not target.exists():
-                shutil.copy2(item, target)
-
 def bootstrap_user_environment(config_override: str | None = None) -> BootstrapResult:
     default_config = defaults_path("config.example.yml")
     default_keybinds = defaults_path("keybindings.yml")
     default_models = defaults_path("models")
+
+    models_dir_already_existed = MODELS_DIR.exists()
 
     if release_mode:
         active_config_file = default_config
@@ -87,8 +72,15 @@ def bootstrap_user_environment(config_override: str | None = None) -> BootstrapR
     if not KEYBINDINGS_FILE.exists():
         copy_if_missing(default_keybinds, KEYBINDINGS_FILE)
 
-    if default_models.exists():
-        initialize_dirs(default_models, MODELS_DIR)
+    if (
+        default_models.exists()
+        and not models_dir_already_existed
+    ):
+        shutil.copytree(
+            default_models,
+            MODELS_DIR,
+            dirs_exist_ok=True,
+        )
 
     return BootstrapResult(
         config_dir=CONFIG_DIR,

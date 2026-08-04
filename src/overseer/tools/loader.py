@@ -581,7 +581,10 @@ def get_user_data_dir(settings: dict, env) -> Path:
     return env.user_data_dir
 
 def get_user_models_dir(settings: dict, env) -> Path:
-
+    """ 
+    Should return the custom user models directory if in their config,
+    or ~/Documents/Overseer/models if not. 
+    """
     raw_text = settings.get("user_models_dir")
     if raw_text is None:
         return env.models_dir
@@ -598,6 +601,7 @@ def get_user_models_dir(settings: dict, env) -> Path:
     return env.models_dir
 
 def get_user_logs_dir(settings: dict, env) -> Path:
+    """ Same as above, but logs instead of models """
     raw_text = settings.get("user_logs_dir")
     if raw_text is None:
         return env.log_dir
@@ -615,7 +619,7 @@ def get_user_logs_dir(settings: dict, env) -> Path:
 
 def try_instantiate_with_defaults(Params: Type[Any]) -> Tuple[Optional[Any], list[str]]:
     """
-    Attempt to instantiate an instance of the dataclas using defaults/default_factory.
+    Attempt to create an instance of the dataclas using defaults/default_factory.
     """
     missing = []
     for field in fields(Params):

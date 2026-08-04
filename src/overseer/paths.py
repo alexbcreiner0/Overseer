@@ -56,7 +56,6 @@ else:
     CONFIG_FILE = CONFIG_DIR / "config.yml"
 
 MODELS_DIR = USER_APP_DIR / "models"
-DEMOS_FILE = USER_APP_DIR / "demos.yml"
 DATA_DIR = Path(user_data_dir(APP_NAME, APP_AUTHOR))
 KEYBINDINGS_FILE = CONFIG_DIR / "keybindings.yml"
 LOG_DIR = USER_APP_DIR / "logs" if not release_mode else DATA_DIR / "logs"
