@@ -33,7 +33,7 @@ def _all_param_names(ParamsCls: type) -> set[str]:
 
 def _load_params_yml(env, model_name: str) -> dict[str, Any]:
     """
-    Load models/<model>/data/params.yml and return the parsed dict.
+    Load params.yml and return the parsed dict.
     """
     path = Path(env.models_dir / model_name / "data" / "params.yml")
     if not path.exists():
@@ -136,13 +136,15 @@ def _load_model_modules(model_name: str):
     Returns (ParamsCls, sim_module).
     """
     try:
-        params_mod = import_module(f"models.{model_name}.simulation.parameters")
+        print(f"importing {model_name}.simulation.parameters")
+        params_mod = import_module(f"{model_name}.simulation.parameters")
         params_mod = reload(params_mod)
     except Exception as e:
         raise CheckFailure(f"Could not import parameters.py for model '{model_name}': {e}")
 
     try:
-        sim_mod = import_module(f"models.{model_name}.simulation.simulation")
+        print(f"importing {model_name}.simulation.simulation")
+        sim_mod = import_module(f"{model_name}.simulation.simulation")
         sim_mod = reload(sim_mod)
     except Exception as e:
         raise CheckFailure(f"Could not import simulation.py for model '{model_name}': {e}")
