@@ -2413,9 +2413,6 @@ class MainWindow(qw.QMainWindow):
                 ).get("simulation_speed", 0)
             )
 
-            print(f"{self.env.log_dir=}")
-            print(f"{old_log_dir=}")
-
             if old_log_dir != self.env.log_dir:
                 from .__main__ import reconfigure_logging
                 reconfigure_logging(self.env, self.env.log_dir)

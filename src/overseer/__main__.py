@@ -163,5 +163,5 @@ def main():
     app.exec()
 
 if __name__ == "__main__":
-    print("hola!")
+    print("Hello! Starting Overseer...")
     main()

@@ -336,7 +336,6 @@ class ParamSettingsTab(qw.QWidget):
         return "float"
 
     def _load_specs_from_parameters_py(self, model: str) -> List[ParamSpec]:
-        print(f"Loading specs from parameters.py")
         path = self.env.models_dir / model / "simulation" / "parameters.py"
         try:
             Parameters = load_parameters_class_from_file(path)
