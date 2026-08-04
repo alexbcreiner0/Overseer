@@ -25,6 +25,8 @@ class GlobalSettingsTab(qw.QWidget):
             run_on_startup = global_settings.get("run_on_startup", True)
             autosave_axis_settings = global_settings.get("autosave_axis_settings", False)
             user_data_dir = global_settings.get("user_data_dir", str(env.user_data_dir))
+            user_models_dir = global_settings.get("user_models_dir", str(env.models_dir))
+            user_logs_dir = global_settings.get("user_logs_dir", str(env.log_dir))
             use_saved_cat_limits = global_settings.get("use_cat_limits", True)
             figure_mode = global_settings.get("figure_mode", "tight")
             preferred_editor = global_settings.get("preferred_editor", "Auto")
@@ -41,8 +43,12 @@ class GlobalSettingsTab(qw.QWidget):
 
         self.edit_default_save_dir = FilePicker()
         self.user_data_dir_entry = FilePicker()
+        self.user_models_dir_entry = FilePicker()
+        self.user_logs_dir_entry = FilePicker()
         self.edit_default_save_dir.setText(image_save_dir)
         self.user_data_dir_entry.setText(user_data_dir)
+        self.user_models_dir_entry.setText(user_models_dir)
+        self.user_logs_dir_entry.setText(user_logs_dir)
 
         self.window = self.window()
 
@@ -105,7 +111,10 @@ class GlobalSettingsTab(qw.QWidget):
         self.checkbox_row_lay.addWidget(self.scroll_zoom_check)
 
         sec.form.addRow("Default image save directory:", self.edit_default_save_dir)
-        sec.form.addRow("User data directory", self.user_data_dir_entry, help_text= "This is where Overseer will write logs to, where it will look for and store models you make, and information on demos you define.")
+        # sec.form.addRow("User data directory", self.user_data_dir_entry, help_text= "This is where Overseer will write logs to, where it will look for and store models you make, and information on demos you define.")
+        sec.form.addRow("User models directory", self.user_models_dir_entry, help_text= "This is where Overseer will look for your models.")
+        sec.form.addRow("User logs directory", self.user_logs_dir_entry, help_text= "This is where Overseer will write logs to.")
+
         # sec.form.addRow("User models directory:", self.edit_models_dir)
         # sec.form.addRow("Logging directory:", self.edit_logs_dir)
         help_text = "A template string for your save name to default to. Examples: \n \
@@ -137,6 +146,14 @@ class GlobalSettingsTab(qw.QWidget):
             "user_data_dir": {
                 "default_value": None,
                 "widget": self.user_data_dir_entry,
+            },
+            "user_models_dir": {
+                "default_value": None,
+                "widget": self.user_models_dir_entry,
+            },
+            "user_logs_dir": {
+                "default_value": None,
+                "widget": self.user_logs_dir_entry,
             },
             "run_on_startup": {
                 "default_value": True,

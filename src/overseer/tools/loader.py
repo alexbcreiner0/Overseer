@@ -581,7 +581,10 @@ def get_user_data_dir(settings: dict, env) -> Path:
     return env.user_data_dir
 
 def get_user_models_dir(settings: dict, env) -> Path:
-
+    """ 
+    Should return the custom user models directory if in their config,
+    or ~/Documents/Overseer/models if not. 
+    """
     raw_text = settings.get("user_models_dir")
     if raw_text is None:
         return env.models_dir
@@ -598,6 +601,7 @@ def get_user_models_dir(settings: dict, env) -> Path:
     return env.models_dir
 
 def get_user_logs_dir(settings: dict, env) -> Path:
+    """ Same as above, but logs instead of models """
     raw_text = settings.get("user_logs_dir")
     if raw_text is None:
         return env.log_dir
@@ -615,7 +619,7 @@ def get_user_logs_dir(settings: dict, env) -> Path:
 
 def try_instantiate_with_defaults(Params: Type[Any]) -> Tuple[Optional[Any], list[str]]:
     """
-    Attempt to instantiate an instance of the dataclas using defaults/default_factory.
+    Attempt to create an instance of the dataclas using defaults/default_factory.
     """
     missing = []
     for field in fields(Params):
@@ -717,19 +721,42 @@ def coerce_value(val, anno):
 
     return val  # default: no change
 
-def params_from_mapping(map: dict, dataclass_path: str):
+def params_from_mapping(mapping: dict | None, dataclass_path: str):
     Params = load_from_path(dataclass_path, "Params")
-    
-    params_fields = fields(Params)
-    kwargs = {}
-    if map is not None:
-        for f in params_fields:
-            if f.name in map:
-                kwargs[f.name] = coerce_value(map[f.name], f.type)
 
-    # field_names = {f.name for f in fields(Params)}
-    # filtered = {k: v for k, v in map.items() if k in field_names}
+    mapping = mapping or {}
+    kwargs = {}
+
+    for f in fields(Params):
+        if f.name in mapping:
+            kwargs[f.name] = coerce_value(mapping[f.name], f.type)
+
+        elif (
+            f.default is MISSING
+            and f.default_factory is MISSING
+        ):
+            # Required field absent from the preset.
+            # Supply an Overseer UI placeholder automatically.
+            if f.type is str:
+                kwargs[f.name] = ""
+            else:
+                kwargs[f.name] = None
+
     return Params(**kwargs)
+
+# def params_from_mapping(map: dict, dataclass_path: str):
+#     Params = load_from_path(dataclass_path, "Params")
+    
+#     params_fields = fields(Params)
+#     kwargs = {}
+#     if map is not None:
+#         for f in params_fields:
+#             if f.name in map:
+#                 kwargs[f.name] = coerce_value(map[f.name], f.type)
+
+#     # field_names = {f.name for f in fields(Params)}
+#     # filtered = {k: v for k, v in map.items() if k in field_names}
+#     return Params(**kwargs)
 
 def to_plain(obj): # opaque as fuck chatgpt code for converting the parameters dataclass to a yaml-friendly dictionary
     """Recursively convert dataclass / numpy types to YAML-friendly Python types."""

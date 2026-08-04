@@ -120,7 +120,7 @@ class SimController(qc.QObject):
         self.env = env
         self.sim_event_queue = sim_event_queue
 
-        self._module_path = f"models.{sim_model}.simulation.simulation" # multiprocessing expects the string
+        self._module_path = f"{sim_model}.simulation.simulation" # multiprocessing expects the string
         self._func_name = model_info["details"]["simulation_function"]
         self._params_path = self.env.models_dir / sim_model / "simulation" / "parameters.py" # but my own function needs a path
         self._params_plain = to_plain(params)

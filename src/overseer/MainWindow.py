@@ -26,7 +26,9 @@ from .tools.loader import (
     params_from_mapping,
     reload_package_folder, 
     open_with_default_app,
-    get_user_data_dir
+    get_user_data_dir,
+    get_user_models_dir,
+    get_user_logs_dir
 )
 from multiprocessing import get_context
 
@@ -34,11 +36,11 @@ from multiprocessing import get_context
 from .widgets.Dialogs import SaveDialog, DescDialog, NewModelDialog
 from .widgets.EditConfigDialog import EditConfigDialog
 
-def ensure_models_on_path(models_path: Path):
-    """ Add the models directory to the system path if it isn't """
-    models_parent = str(models_path.parent)
-    if models_parent not in sys.path:
-        sys.path.insert(0, models_parent)
+# def ensure_models_on_path(models_path: Path):
+#     """ Add the models directory to the system path if it isn't """
+#     models_parent = str(models_path.parent)
+#     if models_parent not in sys.path:
+#         sys.path.insert(0, models_parent)
 
 def refresh_models_path(old_models_dir: Path, new_models_dir: Path) -> None:
     old_parent = str(old_models_dir.parent)
@@ -57,8 +59,20 @@ def refresh_models_path(old_models_dir: Path, new_models_dir: Path) -> None:
         if name == "models" or name.startswith("models."):
             del sys.modules[name]
 
-class MainWindow(qw.QMainWindow):
+def ensure_models_on_path(
+    models_path: Path,
+) -> None:
+    import_root = str(
+        models_path.resolve()
+    )
 
+    if import_root in sys.path:
+        sys.path.remove(import_root)
+
+    sys.path.insert(0, import_root)
+    importlib.invalidate_caches()
+
+class MainWindow(qw.QMainWindow):
     def __init__(self, env):
         super().__init__()
         self.env = env
@@ -75,15 +89,11 @@ class MainWindow(qw.QMainWindow):
 
         data_dir = get_user_data_dir(self.settings, self.env)
         setattr(self.env, "user_data_dir", data_dir)
-        setattr(self.env, "models_dir", self.env.user_data_dir / "models")
-        setattr(self.env, "log_dir", self.env.user_data_dir / "logs")
         # setattr(self.env, "demos_file", self.env.user_data_dir / "demos.yml")
 
         if old_log_dir != self.env.log_dir:
             from .__main__ import reconfigure_logging
             reconfigure_logging(self.env, self.env.log_dir)
-
-        logger.info("Logging from mainwindow")
 
         # with open(env.demos_file, "r") as f:
         #     self.demos = yaml.safe_load(f).get("demos", {})
@@ -2376,11 +2386,12 @@ class MainWindow(qw.QMainWindow):
             self._set_anim_timer(desired_fps)
 
             new_data_dir = get_user_data_dir(self.settings, self.env)
+            new_models_dir = get_user_models_dir(self.settings, self.env)
+            new_log_dir = get_user_logs_dir(self.settings, self.env)
 
             self.env.user_data_dir = new_data_dir
-            
-            self.env.models_dir = new_data_dir / "models"
-            self.env.log_dir = new_data_dir / "logs" 
+            self.env.models_dir = new_models_dir
+            self.env.log_dir = new_log_dir
 
             if old_models_dir != self.env.models_dir:
                 refresh_models_path(old_models_dir, self.env.models_dir)
@@ -2396,15 +2407,14 @@ class MainWindow(qw.QMainWindow):
 
             self.sim_model = self.current_demo.get("details", {}).get("simulation_model", "")
 
-            # self.env.demos_file = new_data_dir / "demos.yml"
-
-            # with open(self.env.demos_file, "r") as f:
-            #     self.demos = yaml.safe_load(f).get("demos", {})
             self._sleep_time = float(
                 self.current_demo.get(
                     "details", {}
                 ).get("simulation_speed", 0)
             )
+
+            print(f"{self.env.log_dir=}")
+            print(f"{old_log_dir=}")
 
             if old_log_dir != self.env.log_dir:
                 from .__main__ import reconfigure_logging
@@ -2489,7 +2499,7 @@ class MainWindow(qw.QMainWindow):
             return None, {}
 
         try:
-            module_name = f"models.{sim_model}.simulation.simulation"
+            module_name = f"{sim_model}.simulation.simulation"
             trajectories_module = importlib.import_module(module_name)
             reload_package_folder(trajectories_module)
 

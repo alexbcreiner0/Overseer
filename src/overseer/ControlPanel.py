@@ -97,7 +97,7 @@ class ControlPanel(qw.QWidget):
         self.content.addTab(plot_controls_scroll_area, "Plot Controls")
 
         try:
-            extra_functions = importlib.import_module(f"models.{self.sim_model}.simulation.extra_functions")
+            extra_functions = importlib.import_module(f"{self.sim_model}.simulation.extra_functions")
             self.extra_functions_dict = dict(inspect.getmembers(extra_functions, inspect.isfunction))
         except Exception:
             self.extra_functions_dict = {}
@@ -821,7 +821,7 @@ class ControlPanel(qw.QWidget):
         button_lay.setContentsMargins(3, 15, 3, 15)
         button_lay.setSpacing(2)
 
-        extra_functions_module = importlib.import_module(f"models.{self.sim_model}.simulation.extra_functions")
+        extra_functions_module = importlib.import_module(f"{self.sim_model}.simulation.extra_functions")
 
         action_type = info.get("action_type", "replace_params")
         functions_dict = dict(inspect.getmembers(extra_functions_module, inspect.isfunction))
