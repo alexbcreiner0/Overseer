@@ -297,7 +297,7 @@ class DemoSettingsTab(qw.QWidget):
         current_model = self.combo_model.currentText()
         if not current_model: return
         try:
-            sim_functions_module = importlib.import_module(f"models.{current_model}.simulation.simulation")
+            sim_functions_module = importlib.import_module(f"{current_model}.simulation.simulation")
             sim_functions_dict = dict(inspect.getmembers(sim_functions_module, inspect.isfunction))
             sim_functions_list = list(sim_functions_dict.keys())
         except Exception as e:
@@ -317,7 +317,7 @@ class DemoSettingsTab(qw.QWidget):
             return
 
         try:
-            extra_functions_module = importlib.import_module(f"models.{current_model}.simulation.extra_functions")
+            extra_functions_module = importlib.import_module(f"{current_model}.simulation.extra_functions")
             extra_functions_dict = dict(inspect.getmembers(extra_functions_module, inspect.isfunction))
             extra_functions_list = list(extra_functions_dict.keys())
         except Exception as e:

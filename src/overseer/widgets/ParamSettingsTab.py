@@ -164,12 +164,12 @@ class ParamSettingsTab(qw.QWidget):
         self._refresh_models()
 
         if model is not None:
-            models = [self.model_combo.itemText(i) for i in range(self.model_combo.count())]
-            try:
-                self.model_combo.setCurrentIndex(models.index(model))
-            except ValueError:
-                pass
-            self._current_model = model
+            index = self.model_combo.findText(model)
+            if index >= 0:
+                self.model_combo.setCurrentIndex(index)
+                self._on_model_changed(model)
+        elif self.model_combo.count() > 0:
+            self._on_model_changed(self.model_combo.currentText())
 
         self._emit_available_params()
 

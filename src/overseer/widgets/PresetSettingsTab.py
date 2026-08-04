@@ -222,10 +222,21 @@ class PresetSettingsTab(qw.QWidget):
 
     def _refresh_models(self) -> None:
         models = refresh_models(self.env)
+
+        previous = self.model_combo.currentText()
+
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
         self.model_combo.addItems(models)
+
+        if previous in models:
+            self.model_combo.setCurrentText(previous)
+
         self.model_combo.blockSignals(False)
+
+        current = self.model_combo.currentText()
+        if current:
+            self._on_model_changed(current)
 
     def _on_model_changed(self, model: str) -> None:
         if not model:
