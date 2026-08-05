@@ -36,6 +36,9 @@ class EditConfigDialog(qw.QDialog):
         root.setContentsMargins(10, 10, 10, 10)
         root.setSpacing(10)
 
+        if model == {}:
+            model = None
+
         self.env = env
 
         body = qw.QHBoxLayout()

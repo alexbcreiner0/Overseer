@@ -118,6 +118,10 @@ class MainWindow(qw.QMainWindow):
         self._param_change_mode = "widgets_decide"
 
         self.current_demo_name, self.current_demo = self._find_default(self.demos)
+
+        if self.current_demo is None:
+            self.current_demo = {}
+
         self._sleep_time = self.current_demo.get("details", {}).get("simulation_speed", 0)
 
         self.sim_model = self.current_demo.get("details", {}).get("simulation_model", {})
@@ -223,7 +227,7 @@ class MainWindow(qw.QMainWindow):
         self.setCentralWidget(self.main_splitter)
         self._assign_keybinds(first_boot= True)
 
-        if self.settings.get("run_on_startup", True):
+        if self.settings.get("run_on_startup", True) and self.demos:
             self.start_sim()
 
     def _set_anim_timer(self, fps: int):
@@ -232,6 +236,7 @@ class MainWindow(qw.QMainWindow):
         self._anim_timer.setInterval(msecs)
 
     def _reload_demo_catalog(self) -> None:
+        print(f"{self.env.models_dir=}")
         catalog = discover_model_demos(self.env.models_dir)
 
         for message in catalog.warnings:
@@ -241,13 +246,8 @@ class MainWindow(qw.QMainWindow):
             logger.error(message)
 
         self.demo_catalog = catalog
-        self.demos = catalog.demos
+        self.demos = catalog.demos or {}
         self.demo_sources = catalog.sources
-
-        if not self.demos:
-            raise RuntimeError(
-                f"No valid demos were found under {self.env.models_dir}."
-            )
 
     def _assign_keybinds(self, first_boot = False):
         """ Does what it says """
@@ -1252,7 +1252,10 @@ class MainWindow(qw.QMainWindow):
         if defaults:
             return defaults[0]
 
-        return next(iter(demos.items()))
+        if len(defaults) > 0:
+            return next(iter(demos.items()))
+
+        return None, None
 
     # def _find_default(self, demos):
     #     for demo in demos:
@@ -1580,6 +1583,9 @@ class MainWindow(qw.QMainWindow):
         return params_menu, results_menu
 
     def _create_results_submenus(self, results_submenu):
+        if self.current_demo == {}:
+            return
+
         model_name = self.current_demo["details"]["simulation_model"]
         results_path = Path(self.env.models_dir / model_name / "saved_results")
         if not results_path.exists():
@@ -2405,6 +2411,9 @@ class MainWindow(qw.QMainWindow):
             else:
                 self.current_demo_name, self.current_demo = self._find_default(self.demos)
 
+            if self.current_demo is None:
+                self.current_demo = {}
+
             self.sim_model = self.current_demo.get("details", {}).get("simulation_model", "")
 
             self._sleep_time = float(
@@ -2442,7 +2451,7 @@ class MainWindow(qw.QMainWindow):
         self.canvas.draw_idle()
 
     def _get_data(self, demo):
-        sim_details = demo.get("details")
+        sim_details = demo.get("details", {})
         if not sim_details:
             self.status_bar.showMessage(f"No details found for {demo} in config.yml!", msecs= 5000)
 
@@ -2452,7 +2461,12 @@ class MainWindow(qw.QMainWindow):
 
         presets = self._load_presets(demo)
         sim_function, functions = self._load_functions(demo)
-        params, preset_name = self._load_params(presets, sim_model, demo)
+
+        if not demo:
+            params = None
+            preset_name = None
+        else:
+            params, preset_name = self._load_params(presets, sim_model, demo)
 
         try:
             with open(self.env.models_dir / sim_model / "data" / "plotting_data.yml") as f:

@@ -163,7 +163,7 @@ class ParamSettingsTab(qw.QWidget):
 
         self._refresh_models()
 
-        if model is not None:
+        if model:
             index = self.model_combo.findText(model)
             if index >= 0:
                 self.model_combo.setCurrentIndex(index)
