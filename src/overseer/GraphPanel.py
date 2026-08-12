@@ -946,9 +946,9 @@ class GraphPanel(qw.QWidget):
                     self._plot_line_vector(ax, slot_index, choice_name, plot_name, plot_dict, tt, Y, z)
 
             except KeyError as e:
-                self.status_bar.showMessage(f"Error, no key found: {e}", 4000)
+                # self.status_bar.showMessage(f"Error, no key found: {e}", 4000)
                 self._log_exception(
-                    logging.ERROR,
+                    logging.WARNING,
                     "Missing key in traj dict.",
                     extra={
                         "choice_name": choice_name,
