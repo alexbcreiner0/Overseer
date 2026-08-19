@@ -8,17 +8,17 @@ Overseer is a model visualization and exploration toolkit. It aims to make it ea
 Detailed documentation on using Overseer is available on [ReadTheDocs.io](https://overseer-modeling.readthedocs.io). Special mention should be made of the [quick-start tutorial](https://overseer-modeling.readthedocs.io) for folks who are looking to get started quickly and learn the details as they go.
 
 # Installation
-This software was primarily developed for the visualization of a few specific models which I am currently writing papers for. If you are just trying to use the accompanying software to those papers, special releases are available for you which can be simply downloaded and ran to display the relevant model. Just click the appropriate link in the section directly below this one. If you are interested in interacting directly with the tools yourself and making alterations or building your own models, see the instructions below that.
 
 ## Special Releases for Accompanying Papers
+This software was primarily developed for the visualization of a few specific models which I am currently writing papers for. If you are just trying to use the accompanying software to those papers, special releases are available for you which can be simply downloaded and ran to display the relevant model. Just click the appropriate link in this section. If you are interested in interacting directly with the tools yourself and making alterations or building your own models, see the instructions below that.
 
 - [For my upcoming paper titled 'Empirical Redemption of Marx's Law of the TEndential Fall in the Rate of Profit Within Dynamic Cross-Dual Disequilibrium Models, click here](https://github.com/alexbcreiner0/Overseer/releases/tag/v1.0.0)
    - [The paper (currently in pre-publishing](https://www.alexcreiner.com/documents/rate-of-profit-paper.pdf)
  
 ## General Releases
-[See the latest releases page for instructions](https://github.com/alexbcreiner0/Overseer/releases).
+While there are operating specific releases available, I cannot currently recommend using them because the project is being updated too frequently for me to keep these release scripts up to date. [In any case, you can find those links here](https://github.com/alexbcreiner0/Overseer/releases), but I highly recommend that you refer to the 'installing locally' section directly below this in order to install Overseer.
 
-## Running Locally
+## Installing Locally
 If you don't want to go with the official release route, it's easy to run the project directly:
 - Install [https://www.python.org/](Python) if you don't have it, make sure you check the 'add to system path' checkbox in the process if you are a Windows user.
 - Clone the repo onto your computer (either by opening up a terminal and typing `git clone https://github.com/alexbcreiner0/Overseer.git` (must have git installed) or by downloading and extract the zip folder (found by clicking the green code button))
