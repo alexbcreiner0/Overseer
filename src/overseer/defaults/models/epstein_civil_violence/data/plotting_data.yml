@@ -18,7 +18,7 @@ all:
       origin: lower
       values: cell_values
       colors: cell_colors
-      marker_values: cell_values
+      marker_values: u
       overlay_markers:
         codes: ['1', '2', '3', '4']
         sizes: [100, 100, 100, 100]

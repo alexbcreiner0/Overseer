@@ -1150,7 +1150,7 @@ class GraphPanel(qw.QWidget):
         ov = plot_dict.get("overlay_markers", {})
         if ov:
             if not frame2d_marker_vals.ndim == 2:
-                raise ValueError(f"Invalid frame2d shape for overlay markers. Data needs to be ")
+                raise ValueError(f"Invalid frame2d shape for overlay markers.")
             u = np.asarray(frame2d_marker_vals)
             markers = ov.get("markers", [])
             sizes = ov.get("sizes", [])
@@ -2643,7 +2643,7 @@ class GraphPanel(qw.QWidget):
             return
 
         # frame2d = self._heatmap_frame_from_dict(plot_dict, traj)
-        frame2d = traj.get(plot_dict.get("traj", {}))
+        frame2d = traj.get(plot_dict.get("traj", ""))
         if frame2d is None:
             return
 

@@ -1,0 +1,108 @@
+grid:
+  name: Grid
+  tooltip: null
+  plots:
+    grid:
+      special: heatmap
+      checkbox_name: Grid
+      toggled: true
+      traj_key: agent_grid
+      discrete: true
+      colorbar: false
+      colorbar_labels: false
+      aspect: equal
+      interpolation: none
+      origin: upper
+      values: grass_values
+      colors: grass_colors
+      marker_values: agent_grid
+      overlay_markers:
+        codes: ['1', '2']
+        sizes: [100, 100]
+        labels: [Sheep, Wolf]
+        markers: [o, ^]
+        colors: ['#ffffff', '#0019ff']
+        edgecolors: ['#ffffff', '#0019ff']
+  projection: 2d
+  axis_visible: false
+  grid_visible: false
+  ticks_visible: false
+  frame_visible: false
+  default_lims: [[-2.30687, 51.9829], [-3.27604, 51.0137]]
+populations:
+  name: Populations
+  tooltip: null
+  plots:
+    sheep:
+      checkbox_name: Sheep
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Number of Sheep]
+      colors: [green]
+      traj_key: n_sheep
+    wolves:
+      checkbox_name: Wolves
+      toggled: true
+      linestyle: solid
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Number of Wolves]
+      colors: [red]
+      traj_key: n_wolves
+    sheep_cts:
+      checkbox_name: Sheep (Cts)
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Sheep (Cts)]
+      colors: [green]
+      traj_key: n_sheep_cts
+      traj_key_x: t_cts
+    wolves_cts:
+      checkbox_name: Wolves (Cts)
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: [Wolves (Cts)]
+      colors: [red]
+      traj_key: n_wolves_cts
+      traj_key_x: t_cts
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true
+  default_lims: [[-0.0781319, 831.534], [-109.086, 514.623]]
+phase_space:
+  name: Phase Space
+  tooltip: null
+  plots:
+    trajectory_cts:
+      checkbox_name: Trajectory (Cts)
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: ['']
+      colors: [red]
+      traj_key: n_wolves_cts
+      traj_key_x: n_sheep_cts
+    trajectory:
+      checkbox_name: Trajectory
+      toggled: true
+      linestyle: dashed
+      linewidth: 1.5
+      markersize: 6.0
+      labels: ['']
+      colors: [red]
+      traj_key: n_wolves
+      traj_key_x: n_sheep
+  projection: 2d
+  axis_visible: true
+  grid_visible: true
+  ticks_visible: true
+  frame_visible: true

@@ -1,0 +1,61 @@
+divider1:
+  title: Parameters
+row1:
+  grid_x:
+    param_name: grid_x
+    tooltip: X-dimension of grid space
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $X=$
+  grid_y:
+    param_name: grid_y
+    tooltip: Y-dimension of grid-space
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $Y=$
+row2:
+  init_sheep_popn:
+    param_name: init_sheep_popn
+    tooltip: Initial sheep population
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $S_0=$
+  init_wolf_popn:
+    param_name: init_wolf_popn
+    tooltip: Initial wolf population
+    control_type: entry_block
+    type: scalar
+    scalar_type: int
+    range: [0, 100]
+    label: $W_0=$
+row3:
+  sheep_reprod_rate:
+    param_name: sheep_reprod_rate
+    tooltip: Sheep reproduction rate
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $s_r=$
+  wolf_reprod_rate:
+    param_name: wolf_reprod_rate
+    tooltip: Wolf reproduction rate
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $w_r=$
+  wolf_death_rate:
+    param_name: wolf_death_rate
+    control_type: entry_block
+    type: scalar
+    scalar_type: float
+    range: [0.0, 1.0]
+    label: $w_d=$
+    tooltip: Wolf death rate
