@@ -1998,18 +1998,27 @@ class MainWindow(qw.QMainWindow):
 
         if stop_bridge:
             bw = getattr(self, "bridge_worker", None)
+            bt = getattr(self, "bridge_thread", None)
 
-            if bw is not None:
+            if bw is not None and bt is not None and bt.isRunning():
                 try:
-                    bw.stop()
+                    qc.QMetaObject.invokeMethod(
+                        bw,
+                        "stop",
+                        qc.Qt.ConnectionType.BlockingQueuedConnection,
+                    )
                 except RuntimeError:
                     pass
+
+            if bt is not None:
                 try:
-                    bw.deleteLater()
-                except Exception:
+                    bt.quit()
+                    bt.wait()
+                except RuntimeError:
                     pass
 
             self.bridge_worker = None
+            self.bridge_thread = None
 
         if clear_queue:
             self._dispose_sim_queue()
@@ -2116,13 +2125,27 @@ class MainWindow(qw.QMainWindow):
         )
         self.sim_controller.start()
 
-        self.bridge_worker = BridgeWorker(self.sim_results_queue, self._run_id, self.plotting_data, parent= self)
+        self.bridge_thread = qc.QThread(self)
+
+        self.bridge_worker = BridgeWorker(
+            self.sim_results_queue,
+            self._run_id,
+            self.plotting_data,
+        )
+
+        self.bridge_worker.moveToThread(self.bridge_thread)
+
         self.bridge_worker.progress.connect(self._on_worker_progress)
-        # self.bridge_worker.done.connect(self._on_sim_thread_finished)
         self.bridge_worker.done.connect(self._on_sim_done)
         self.bridge_worker.error.connect(self._on_sim_error)
         self.bridge_worker.update.connect(self._receive_meta_update)
-        self.bridge_worker.start()
+
+        self.bridge_thread.started.connect(self.bridge_worker.start)
+
+        self.bridge_thread.finished.connect(self.bridge_worker.deleteLater)
+        self.bridge_thread.finished.connect(self.bridge_thread.deleteLater)
+
+        self.bridge_thread.start()
 
         if self._live_animation:
             self._anim_timer.start()

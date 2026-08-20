@@ -1,5 +1,5 @@
 from .parameters import Params
-from overseer.tools.dataclasses import Replace, Extend, Append
+from overseer.tools.dataclasses import Replace, Extend, Append, Update
 import numpy as np
 import queue
 
