@@ -1,8 +1,9 @@
 demos:
   various_examples:
     name: Example Model
-    desc: null
+    desc: ''
     details:
-      simulation_function: cts_heatmap_demo
+      simulation_function: surface_demo
       default_preset: default_preset
       simulation_speed: '0.01'
+      plot_preprocess: null

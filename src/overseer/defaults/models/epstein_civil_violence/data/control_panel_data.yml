@@ -3,7 +3,7 @@ divider1:
 row1:
   width:
     param_name: width
-    tooltip: ''
+    tooltip: 'Width of the 2D grid that agents exist on.   '
     control_type: entry_block
     type: scalar
     scalar_type: int
@@ -11,7 +11,7 @@ row1:
     label: $w=$
   height:
     param_name: height
-    tooltip: ''
+    tooltip: 'Height of the 2D grid that agents exist on.   '
     control_type: entry_block
     type: scalar
     scalar_type: int
@@ -19,7 +19,7 @@ row1:
     label: $h=$
   T:
     param_name: T
-    tooltip: ''
+    tooltip: Number of steps to simulate.
     control_type: entry_block
     type: scalar
     scalar_type: int
@@ -28,7 +28,8 @@ row1:
 row2:
   legitimacy:
     param_name: legitimacy
-    tooltip: Perceived legitimacy of the existing state
+    tooltip: 'Perceived legitimacy of the existing state. Lower values increase the
+      general grievance level of citizens '
     control_type: entry_block
     type: scalar
     scalar_type: float
@@ -36,8 +37,8 @@ row2:
     label: $L=$
   active_threshold:
     param_name: active_threshold
-    tooltip: Activation threshold. Citizens become active when their level of grievence
-      minus their level of perceived net risk exceeds this.
+    tooltip: 'Activation threshold. Citizens become active when their level of grievence
+      minus their level of perceived net risk exceeds this. '
     control_type: entry_block
     type: scalar
     scalar_type: float
@@ -45,7 +46,8 @@ row2:
     label: $\Gamma=$
   max_jail_term:
     param_name: max_jail_term
-    tooltip: Maximum jail sentence
+    tooltip: 'When an active agent is arrested by a cop, they are ''jailed'', and
+      unable to go active again, for this amount of time. '
     control_type: entry_block
     type: scalar
     scalar_type: int
@@ -54,7 +56,7 @@ row2:
 row3:
   citizen_density:
     param_name: citizen_density
-    tooltip: Citizen Density
+    tooltip: Citizen Density. Controls the number of citizens.
     control_type: entry_block
     type: scalar
     scalar_type: float
@@ -62,7 +64,7 @@ row3:
     label: $\rho_c=$
   cop_density:
     param_name: cop_density
-    tooltip: Cop Density
+    tooltip: 'Cop Density. Controls the number of cops. '
     control_type: entry_block
     type: scalar
     scalar_type: float

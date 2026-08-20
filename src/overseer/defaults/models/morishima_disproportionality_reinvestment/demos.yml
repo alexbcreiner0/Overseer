@@ -8,24 +8,14 @@ demos:
       axis_settings:
         limits:
           a1: [[0.403487, 7.31171], [2.67222, 465.913]]
-          a2: [[0.825615, 9.26361], [-0.464211, 1.83926]]
-        dimension: [1, 2]
-        dropdown_indices: [0, 1]
+        dimension: [1, 1]
+        dropdown_indices: [0]
         checked_plots:
           a1: [Value Outputs, Balanced Growth Paths]
-          a2: [Value Rate of Profit, Sectoral Profit Rates (Value), Money Rate of
-              Profit]
         settings:
           a1:
             legend_visible: true
             legend_fontsize: 10
-            legend_loc: upper right
-            title: true
-            xlabel: true
-            ylabel: true
-          a2:
-            legend_visible: true
-            legend_fontsize: 8
             legend_loc: upper right
             title: true
             xlabel: true

@@ -2116,7 +2116,6 @@ class MainWindow(qw.QMainWindow):
         )
         self.sim_controller.start()
 
-        # TODO: should never have listened to the chatbot telling me to take this off of it's own thread, return to a separate QThread
         self.bridge_worker = BridgeWorker(self.sim_results_queue, self._run_id, self.plotting_data, parent= self)
         self.bridge_worker.progress.connect(self._on_worker_progress)
         # self.bridge_worker.done.connect(self._on_sim_thread_finished)
