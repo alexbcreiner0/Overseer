@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from .parameters import Params
 from overseer.tools.dataclasses import Replace, Extend, Append, Update
 import numpy as np
